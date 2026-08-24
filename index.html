@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตัวแปลงไฟล์รูปภาพ — Workshop Utility</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sheet">
+
+  <header class="topbar">
+    <div class="eyebrow">TCS TOOLS — WORKSHOP UTILITY / NO.02</div>
+    <h1>ตัวแปลงไฟล์รูปภาพ</h1>
+    <p class="sub">ลากรูปมาวาง เลือกนามสกุลไฟล์ปลายทาง ปรับขนาดได้ตามต้องการ — ทำงานในเบราว์เซอร์ทั้งหมด ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์ใดๆ</p>
+  </header>
+
+  <section class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์">
+    <span class="mark tl"></span><span class="mark tr"></span><span class="mark bl"></span><span class="mark br"></span>
+    <div class="dz-inner">
+      <svg class="dz-icon" width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+        <rect x="3" y="3" width="18" height="18" rx="1.5"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <path d="M21 15l-5-5-9 9"/>
+      </svg>
+      <div class="dz-title">วางรูปภาพที่นี่</div>
+      <div class="dz-note">หรือคลิกเพื่อเลือกไฟล์ — รองรับหลายไฟล์พร้อมกัน (JPG · PNG · WEBP · GIF · BMP)</div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" multiple hidden>
+  </section>
+
+  <section class="bulkbar hidden" id="bulkbar">
+    <div class="bulk-left">
+      <span class="count-label">งาน:</span>
+      <span class="count" id="jobCount">0</span>
+      <span class="count-label">รายการ</span>
+    </div>
+    <div class="bulk-right">
+      <label class="field-inline">
+        <span>นามสกุลทั้งหมด</span>
+        <select id="bulkFormat" class="mono-select">
+          <option value="">— เลือกทีละไฟล์ —</option>
+          <option value="image/png">PNG</option>
+          <option value="image/jpeg">JPG</option>
+          <option value="image/webp">WEBP</option>
+        </select>
+      </label>
+      <button class="btn btn-ghost" id="clearAllBtn">ล้างทั้งหมด</button>
+      <button class="btn btn-primary" id="convertAllBtn">แปลงทั้งหมด</button>
+      <button class="btn btn-accent hidden" id="downloadZipBtn">ดาวน์โหลดทั้งหมด (.zip)</button>
+    </div>
+  </section>
+
+  <section class="jobs" id="jobs"></section>
+
+  <template id="jobTemplate">
+    <article class="ticket">
+      <div class="ticket-perf"></div>
+      <div class="ticket-body">
+        <div class="ticket-thumb">
+          <img alt="">
+        </div>
+        <div class="ticket-spec">
+          <div class="spec-row spec-name">
+            <span class="spec-label">ไฟล์</span>
+            <span class="spec-value js-filename mono">—</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">ต้นฉบับ</span>
+            <span class="spec-value mono"><span class="js-origdim">—</span> px · <span class="js-origsize">—</span> · <span class="js-origext">—</span></span>
+          </div>
+
+          <div class="spec-divider"></div>
+
+          <div class="control-row">
+            <span class="spec-label">แปลงเป็น</span>
+            <div class="seg-group js-format-group">
+              <button type="button" class="seg-btn is-active" data-format="image/png">PNG</button>
+              <button type="button" class="seg-btn" data-format="image/jpeg">JPG</button>
+              <button type="button" class="seg-btn" data-format="image/webp">WEBP</button>
+            </div>
+          </div>
+
+          <div class="control-row">
+            <span class="spec-label">ขนาด (px)</span>
+            <div class="dim-group">
+              <input type="number" class="dim-input js-width" min="1" placeholder="กว้าง">
+              <button type="button" class="lock-btn js-lock is-locked" title="ล็อกสัดส่วนภาพ" aria-label="ล็อกสัดส่วนภาพ">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="5" y="11" width="14" height="9" rx="1.5"/>
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                </svg>
+              </button>
+              <input type="number" class="dim-input js-height" min="1" placeholder="สูง">
+            </div>
+          </div>
+
+          <div class="control-row js-quality-row">
+            <span class="spec-label">คุณภาพ</span>
+            <div class="quality-group">
+              <input type="range" class="js-quality" min="0.3" max="1" step="0.01" value="0.9">
+              <span class="mono js-quality-val">90%</span>
+            </div>
+          </div>
+
+          <div class="ticket-footer">
+            <span class="status js-status mono">รอแปลง</span>
+            <div class="ticket-actions">
+              <button type="button" class="btn btn-small btn-primary js-convert-btn">แปลง</button>
+              <a class="btn btn-small btn-accent js-download-btn hidden" download>ดาวน์โหลด</a>
+              <button type="button" class="btn btn-small btn-ghost js-remove-btn" title="ลบ" aria-label="ลบรายการนี้">✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <footer class="foot">
+    <span class="mono">แปลงและปรับขนาดในเบราว์เซอร์ของคุณเอง — ไฟล์รูปไม่ถูกส่งออกไปที่ใด</span>
+  </footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
