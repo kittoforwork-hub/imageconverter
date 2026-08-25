@@ -17,9 +17,16 @@
 <div class="sheet">
 
   <header class="topbar">
-    <div class="eyebrow">TCS TOOLS — WORKSHOP UTILITY BY KITTO</div>
+    <div class="topbar-row">
+      <div class="eyebrow">TCS TOOLS — WORKSHOP UTILITY BY KITTO</div>
+      <button class="btn btn-ghost btn-clearcache" id="clearCacheBtn" type="button" title="ล้างไฟล์/หน่วยความจำที่ค้างอยู่ในทุกเครื่องมือ">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>
+        ล้างแคช
+      </button>
+    </div>
     <h1>ชุดเครื่องมือจัดการไฟล์</h1>
     <p class="sub">แปลงและแก้ไขรูปภาพ/PDF ทั้งหมดในเบราว์เซอร์ของคุณ ไม่มีการอัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์ใดๆ</p>
+    <div class="toast hidden" id="clearCacheToast">ล้างแคชแล้ว — คืนหน่วยความจำจากทุกเครื่องมือเรียบร้อย</div>
   </header>
 
   <!-- ===== Category switcher ===== -->
