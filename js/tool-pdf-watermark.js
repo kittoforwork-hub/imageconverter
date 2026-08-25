@@ -17,6 +17,7 @@
   const statusEl = formCard.querySelector('.js-status');
 
   let currentFile = null;
+  const result = {}; // holds .url so U.replaceObjectUrl can revoke the previous one
 
   opacityEl.addEventListener('input', () => {
     opacityVal.textContent = Math.round(parseFloat(opacityEl.value) * 100) + '%';
@@ -65,7 +66,7 @@
 
       const outBytes = await pdfDoc.save();
       const blob = new Blob([outBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
+      const url = U.replaceObjectUrl(result, 'url', blob);
       downloadBtn.href = url;
       downloadBtn.download = `${U.baseName(currentFile.name)}-watermark.pdf`;
       downloadBtn.classList.remove('hidden');
@@ -83,5 +84,12 @@
   U.setupDropzone(dropzone, fileInput, (files) => {
     const file = Array.from(files).find(f => f.type === 'application/pdf');
     if (file) loadFile(file);
+  });
+
+  U.onClearCache(() => {
+    if (result.url) { URL.revokeObjectURL(result.url); result.url = null; }
+    currentFile = null;
+    formCard.classList.add('hidden');
+    downloadBtn.classList.add('hidden');
   });
 })();
