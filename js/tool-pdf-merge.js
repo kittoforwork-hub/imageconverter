@@ -16,6 +16,7 @@
 
   let items = []; // { id, file, thumbUrl, pageCount }
   let seq = 0;
+  const result = {};
 
   function render() {
     listEl.innerHTML = '';
@@ -65,6 +66,7 @@
         canvas.height = viewport.height;
         await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
         entry.thumbUrl = canvas.toDataURL('image/png');
+        doc.destroy(); // only needed the thumbnail — free the decoded doc right away
       } catch (e) {
         entry.pageCount = '?';
       }
@@ -96,7 +98,7 @@
       }
       const outBytes = await outDoc.save();
       const blob = new Blob([outBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
+      const url = U.replaceObjectUrl(result, 'url', blob);
       resultDownload.href = url;
       resultDownload.download = 'merged.pdf';
       resultStrip.querySelector('.status').textContent = `รวมไฟล์สำเร็จ · ${outDoc.getPageCount()} หน้า · ${U.formatBytes(blob.size)}`;
@@ -114,4 +116,10 @@
   });
 
   U.setupDropzone(dropzone, fileInput, addFiles);
+
+  U.onClearCache(() => {
+    if (result.url) { URL.revokeObjectURL(result.url); result.url = null; }
+    items = [];
+    render();
+  });
 })();
