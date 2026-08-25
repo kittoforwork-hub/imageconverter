@@ -23,7 +23,9 @@
     bulkbar.classList.remove('hidden');
     grid.innerHTML = '';
     downloadZipBtn.classList.add('hidden');
+    rendered.forEach(r => URL.revokeObjectURL(r.url));
     rendered = [];
+    if (currentDoc) { currentDoc.destroy(); currentDoc = null; }
 
     const bytes = await U.readAsArrayBuffer(file);
     currentDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
@@ -34,6 +36,7 @@
     renderBtn.disabled = true;
     renderBtn.textContent = 'กำลังแปลง…';
     grid.innerHTML = '';
+    rendered.forEach(r => URL.revokeObjectURL(r.url));
     rendered = [];
 
     const format = formatEl.value;
@@ -89,5 +92,15 @@
   U.setupDropzone(dropzone, fileInput, (files) => {
     const file = Array.from(files).find(f => f.type === 'application/pdf');
     if (file) loadFile(file);
+  });
+
+  U.onClearCache(() => {
+    rendered.forEach(r => URL.revokeObjectURL(r.url));
+    rendered = [];
+    if (currentDoc) { currentDoc.destroy(); currentDoc = null; }
+    currentFile = null;
+    grid.innerHTML = '';
+    bulkbar.classList.add('hidden');
+    downloadZipBtn.classList.add('hidden');
   });
 })();
