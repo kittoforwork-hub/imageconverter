@@ -39,6 +39,7 @@
       const url = canvas.toDataURL('image/png');
       pageItems.push({ origIndex: i, thumbUrl: url, deleted: false, selected: false });
     }
+    pdfjsDoc.destroy(); // thumbnails are plain data URLs now — the decoded doc can go
 
     countEl.textContent = String(pageItems.length);
     renderGrid();
@@ -125,5 +126,13 @@
   U.setupDropzone(dropzone, fileInput, (files) => {
     const file = Array.from(files).find(f => f.type === 'application/pdf');
     if (file) loadFile(file);
+  });
+
+  U.onClearCache(() => {
+    pageItems = [];
+    currentFile = null;
+    grid.innerHTML = '';
+    bulkbar.classList.add('hidden');
+    noteEl.classList.add('hidden');
   });
 })();
