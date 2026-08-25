@@ -36,55 +36,41 @@
 
   showCategory('image');
 
-  // ---- Clear cache / free memory --------------------------------------
+  // ---- Clear cache / free memory (fully automatic, no button) ---------
   // Every tool holds its files as blob URLs (and pdf.js documents, for the
-  // PDF tools) while it's open. Those aren't released just by switching
-  // chips within a category, so on a long session — lots of files processed
-  // one after another — memory keeps climbing and the page can start to
-  // feel sluggish.
+  // PDF tools) while it's open. Those aren't released on their own, so on a
+  // long session — or a tab left open and forgotten — memory keeps climbing.
   //
-  // This now runs automatically at points where it's safe to assume the
-  // user is done with what's currently loaded:
+  // Three automatic triggers, no manual button:
   //   1. Switching category (image <-> pdf) — see showCategory() above.
-  //   2. Leaving/closing the tab (pagehide) — the browser would reclaim
-  //      this anyway, but we revoke explicitly for tidiness.
-  // It is deliberately NOT run when switching between tool chips inside
-  // the same category (e.g. Convert -> Crop), because each tool keeps its
-  // finished-job list and download links visible/clickable even after you
-  // switch away, so a user can come back and grab a result later without
-  // redoing the work. Auto-clearing there would silently break those
-  // download links.
+  //   2. Idle timeout — if there's been no user activity (click, keypress,
+  //      file drop, etc.) for IDLE_LIMIT_MS, everything gets swept. Checked
+  //      once a minute, so a tab left open gets cleared within roughly
+  //      IDLE_LIMIT_MS to IDLE_LIMIT_MS + 1 minute of being forgotten.
+  //   3. Leaving/closing the tab (pagehide).
   //
-  // The header button still exists for anyone who wants to free memory
-  // manually mid-session (e.g. after a big batch) without waiting for one
-  // of the automatic triggers.
-  const clearBtn = document.getElementById('clearCacheBtn');
-  const clearToast = document.getElementById('clearCacheToast');
-
+  // Note this DOES clear finished-but-undownloaded results if the tab sits
+  // idle long enough — that's the intended tradeoff for "never have to
+  // think about it," per how this is meant to be used.
   function runAutoClearCache() {
     window.Utils.clearCache();
-    showClearToast();
   }
 
-  function showClearToast() {
-    if (!clearToast) return;
-    clearToast.classList.remove('hidden');
-    // restart the animation on repeated triggers
-    clearToast.classList.remove('is-showing');
-    void clearToast.offsetWidth;
-    clearToast.classList.add('is-showing');
-    clearTimeout(showClearToast._timer);
-    showClearToast._timer = setTimeout(() => clearToast.classList.add('hidden'), 2200);
-  }
+  const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes of no activity
+  let lastActivity = Date.now();
 
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      window.Utils.clearCache();
-      showClearToast();
-    });
-  }
+  ['pointerdown', 'keydown', 'input', 'change', 'drop', 'wheel'].forEach(evt =>
+    document.addEventListener(evt, () => { lastActivity = Date.now(); }, { passive: true, capture: true })
+  );
+
+  setInterval(() => {
+    if (Date.now() - lastActivity >= IDLE_LIMIT_MS) {
+      runAutoClearCache();
+      lastActivity = Date.now(); // don't re-fire every minute while still idle
+    }
+  }, 60 * 1000);
 
   // Safety net: release everything when the tab is closed, refreshed, or
-  // navigated away from. No toast here — the user isn't looking anymore.
+  // navigated away from.
   window.addEventListener('pagehide', () => window.Utils.clearCache());
 })();
