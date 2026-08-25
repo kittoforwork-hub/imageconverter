@@ -75,7 +75,41 @@ window.Utils = (() => {
     });
   }
 
-  // Cache the Thai-capable font bytes (Sarabun) so multiple PDF tools share one fetch.
+  // ---------------------------------------------------------------------
+  // App-wide reset/cache registry.
+  //
+  // Every tool below holds file data as blob URLs (URL.createObjectURL) and,
+  // for the PDF tools, as pdf.js document objects. Both live outside the
+  // normal JS heap (blob URLs pin data in the browser's blob store; pdf.js
+  // documents keep decoded page data on a worker thread) so simply losing
+  // the JS reference to them does NOT free that memory — each one has to be
+  // revoked/destroyed explicitly, or it just accumulates for the life of the
+  // tab. That accumulation is what makes a long session feel slower over
+  // time. Each tool module registers a cleanup function here; the "clear
+  // cache" button in the header calls them all at once.
+  const resetHandlers = [];
+  function onClearCache(fn) { resetHandlers.push(fn); }
+  function clearCache() {
+    let count = 0;
+    resetHandlers.forEach(fn => {
+      try { fn(); count++; } catch (err) { console.warn('clearCache handler failed', err); }
+    });
+    return count;
+  }
+
+  /**
+   * Revokes `holder[key]` if it currently holds a blob URL, then stores the
+   * new one. Use this instead of a bare URL.createObjectURL assignment
+   * anywhere a result gets rebuilt more than once (re-applying a watermark,
+   * rebuilding a merge, etc.) so the previous blob doesn't linger unused.
+   */
+  function replaceObjectUrl(holder, key, blob) {
+    if (holder[key]) URL.revokeObjectURL(holder[key]);
+    holder[key] = URL.createObjectURL(blob);
+    return holder[key];
+  }
+
+
   // NOTE: cdn.jsdelivr.net's /gh/ proxy needs a release tag to resolve a "latest"
   // version, and google/fonts (a huge monorepo) doesn't publish one — so that URL
   // reliably 404s/hangs. raw.githubusercontent.com serves the same file directly
@@ -130,6 +164,7 @@ window.Utils = (() => {
 
   return {
     formatBytes, baseName, extOf, downloadBlob, setupDropzone,
-    readAsArrayBuffer, loadImage, embedThaiFont
+    readAsArrayBuffer, loadImage, embedThaiFont,
+    onClearCache, clearCache, replaceObjectUrl
   };
 })();
