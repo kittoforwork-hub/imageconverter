@@ -9,6 +9,7 @@
 
   const MIN_BOX = 24;
   let jobSeq = 0;
+  const jobs = []; // CropJob[] — tracked so "clear cache" can revoke every blob URL at once
 
   const RATIOS = { 'free': null, '1:1': 1, '4:3': 4 / 3, '16:9': 16 / 9 };
 
@@ -66,6 +67,8 @@
         URL.revokeObjectURL(this.objectUrl);
         if (this.resultUrl) URL.revokeObjectURL(this.resultUrl);
         el.remove();
+        const idx = jobs.indexOf(this);
+        if (idx >= 0) jobs.splice(idx, 1);
       });
 
       this.wireDrag();
@@ -242,9 +245,19 @@
   function addFiles(fileList) {
     Array.from(fileList).filter(f => f.type.startsWith('image/')).forEach(file => {
       const job = new CropJob(file);
+      jobs.push(job);
       jobsEl.appendChild(job.el);
     });
   }
 
   U.setupDropzone(dropzone, fileInput, addFiles);
+
+  U.onClearCache(() => {
+    jobs.forEach(job => {
+      URL.revokeObjectURL(job.objectUrl);
+      if (job.resultUrl) URL.revokeObjectURL(job.resultUrl);
+    });
+    jobs.length = 0;
+    jobsEl.innerHTML = '';
+  });
 })();
