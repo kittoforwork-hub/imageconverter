@@ -19,14 +19,9 @@
   <header class="topbar">
     <div class="topbar-row">
       <div class="eyebrow">TCS TOOLS — WORKSHOP UTILITY BY KITTO</div>
-      <button class="btn btn-ghost btn-clearcache" id="clearCacheBtn" type="button" title="ล้างไฟล์/หน่วยความจำที่ค้างอยู่ในทุกเครื่องมือ">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg>
-        ล้างแคช
-      </button>
     </div>
     <h1>ชุดเครื่องมือจัดการไฟล์</h1>
     <p class="sub">แปลงและแก้ไขรูปภาพ/PDF ทั้งหมดในเบราว์เซอร์ของคุณ ไม่มีการอัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์ใดๆ</p>
-    <div class="toast hidden" id="clearCacheToast">ล้างแคชแล้ว — คืนหน่วยความจำจากทุกเครื่องมือเรียบร้อย</div>
   </header>
 
   <!-- ===== Category switcher ===== -->
@@ -45,6 +40,7 @@
   <nav class="tool-chips" data-cat-group="image">
     <button class="tool-chip is-active" data-tool="img-convert" type="button">แปลงนามสกุล &amp; ปรับขนาด</button>
     <button class="tool-chip" data-tool="img-crop" type="button">ครอบตัดรูปภาพ</button>
+    <button class="tool-chip" data-tool="img-bgremove" type="button">ลบพื้นหลัง</button>
   </nav>
   <nav class="tool-chips hidden" data-cat-group="pdf">
     <button class="tool-chip is-active" data-tool="pdf-from-images" type="button">รวมรูปเป็น PDF</button>
@@ -204,6 +200,66 @@
                   <button type="button" class="btn btn-small btn-primary js-crop-btn">ตัด</button>
                   <a class="btn btn-small btn-accent js-download-btn hidden" download>ดาวน์โหลด</a>
                   <button type="button" class="btn btn-small btn-ghost js-remove-btn">✕</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </template>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- IMAGE: background removal                                     -->
+    <!-- ============================================================ -->
+    <section class="tool-panel hidden" id="panel-img-bgremove" data-cat="image">
+      <p class="panel-hint">ลบพื้นหลังรูปภาพอัตโนมัติด้วย AI — ประมวลผลในเบราว์เซอร์ทั้งหมด ไม่มีการอัปโหลดรูปขึ้นเซิร์ฟเวอร์</p>
+
+      <div class="model-note">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <span>ครั้งแรกที่ใช้งานจะโหลดโมเดล AI ขนาดประมาณ 40MB (ครั้งเดียว เบราว์เซอร์จะแคชไว้ให้ครั้งถัดไปเร็วขึ้น) และใช้เวลาประมวลผลต่อรูปสักครู่ขึ้นอยู่กับสเปกเครื่อง</span>
+      </div>
+
+      <section class="dropzone" id="dz-img-bgremove" tabindex="0" role="button" aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์">
+        <span class="mark tl"></span><span class="mark tr"></span><span class="mark bl"></span><span class="mark br"></span>
+        <div class="dz-inner">
+          <svg class="dz-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 3l18 18"/><path d="M10.5 4.5H19a2 2 0 0 1 2 2v11.5"/><path d="M4 7v11a2 2 0 0 0 2 2h11.5"/><circle cx="9" cy="10" r="1.5"/></svg>
+          <div class="dz-title">วางรูปภาพที่นี่</div>
+          <div class="dz-note">หรือคลิกเพื่อเลือกไฟล์ — เพิ่มได้หลายรูป ผลลัพธ์เป็น PNG พื้นหลังโปร่งใส</div>
+        </div>
+        <input type="file" id="input-img-bgremove" accept="image/*" multiple hidden>
+      </section>
+
+      <section class="bulkbar hidden" id="bulk-img-bgremove">
+        <div class="bulk-left"><span class="count-label">งาน:</span><span class="count" id="count-img-bgremove">0</span><span class="count-label">รายการ</span></div>
+        <div class="bulk-right">
+          <button class="btn btn-ghost" id="clearAll-img-bgremove" type="button">ล้างทั้งหมด</button>
+          <button class="btn btn-primary" id="processAll-img-bgremove" type="button">ลบพื้นหลังทั้งหมด</button>
+          <button class="btn btn-accent hidden" id="downloadZip-img-bgremove" type="button">ดาวน์โหลดทั้งหมด (.zip)</button>
+        </div>
+      </section>
+
+      <section class="jobs" id="jobs-img-bgremove"></section>
+
+      <template id="tpl-img-bgremove">
+        <article class="ticket">
+          <div class="ticket-perf"></div>
+          <div class="ticket-body ticket-body-bg">
+            <div class="thumb-pair">
+              <div class="ticket-thumb js-before"><img alt=""></div>
+              <svg class="thumb-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+              <div class="ticket-thumb js-after hidden"><img alt=""></div>
+            </div>
+            <div class="ticket-spec">
+              <div class="spec-row spec-name"><span class="spec-label">ไฟล์</span><span class="spec-value js-filename mono">—</span></div>
+              <div class="spec-row"><span class="spec-label">ต้นฉบับ</span><span class="spec-value mono js-origsize">—</span></div>
+              <div class="spec-divider"></div>
+              <div class="progress-track"><div class="progress-fill js-progress"></div></div>
+              <div class="ticket-footer">
+                <span class="status js-status mono">รอลบพื้นหลัง</span>
+                <div class="ticket-actions">
+                  <button type="button" class="btn btn-small btn-primary js-remove-bg-btn">ลบพื้นหลัง</button>
+                  <a class="btn btn-small btn-accent js-download-btn hidden" download>ดาวน์โหลด</a>
+                  <button type="button" class="btn btn-small btn-ghost js-remove-job-btn">✕</button>
                 </div>
               </div>
             </div>
@@ -489,6 +545,7 @@
 <script src="js/app.js"></script>
 <script src="js/tool-image-convert.js"></script>
 <script src="js/tool-image-crop.js"></script>
+<script src="js/tool-image-bgremove.js"></script>
 <script src="js/tool-images-to-pdf.js"></script>
 <script src="js/tool-pdf-to-images.js"></script>
 <script src="js/tool-pdf-pages.js"></script>
