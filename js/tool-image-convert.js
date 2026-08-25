@@ -283,4 +283,11 @@
   });
 
   U.setupDropzone(dropzone, fileInput, addFiles);
+
+  U.onClearCache(() => {
+    jobs.forEach(job => job.dispose());
+    jobs.length = 0;
+    jobsEl.innerHTML = '';
+    updateBulkUI();
+  });
 })();
