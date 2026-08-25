@@ -17,6 +17,7 @@
 
   const MARGIN = 34;
   let currentFile = null;
+  const result = {};
 
   function loadFile(file) {
     currentFile = file;
@@ -65,7 +66,7 @@
 
       const outBytes = await pdfDoc.save();
       const blob = new Blob([outBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
+      const url = U.replaceObjectUrl(result, 'url', blob);
       downloadBtn.href = url;
       downloadBtn.download = `${U.baseName(currentFile.name)}-numbered.pdf`;
       downloadBtn.classList.remove('hidden');
@@ -83,5 +84,12 @@
   U.setupDropzone(dropzone, fileInput, (files) => {
     const file = Array.from(files).find(f => f.type === 'application/pdf');
     if (file) loadFile(file);
+  });
+
+  U.onClearCache(() => {
+    if (result.url) { URL.revokeObjectURL(result.url); result.url = null; }
+    currentFile = null;
+    formCard.classList.add('hidden');
+    downloadBtn.classList.add('hidden');
   });
 })();
