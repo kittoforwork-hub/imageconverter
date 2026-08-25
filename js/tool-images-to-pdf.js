@@ -20,6 +20,7 @@
 
   let items = []; // { id, file, url, img }
   let seq = 0;
+  const result = {};
 
   function render() {
     listEl.innerHTML = '';
@@ -123,7 +124,7 @@
 
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
+      const url = U.replaceObjectUrl(result, 'url', blob);
       resultDownload.href = url;
       resultDownload.download = 'images.pdf';
       resultStatus.textContent = `สร้าง PDF สำเร็จ · ${items.length} หน้า · ${U.formatBytes(blob.size)}`;
@@ -138,4 +139,11 @@
   });
 
   U.setupDropzone(dropzone, fileInput, addFiles);
+
+  U.onClearCache(() => {
+    items.forEach(i => URL.revokeObjectURL(i.url));
+    if (result.url) { URL.revokeObjectURL(result.url); result.url = null; }
+    items = [];
+    render();
+  });
 })();
