@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ชุดเครื่องมือไฟล์ — Workshop Utility BY KITTO</title>
+<title>Workshop Utility BY KITTO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin>
@@ -541,6 +541,15 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  // Page-rendering (tool-pdf-to-images.js, tool-pdf-pages.js thumbnails,
+  // tool-pdf-merge.js thumbnails) runs here on the main thread. pdf.js
+  // already offloads its own binary parsing to this dedicated worker, so
+  // that part was never blocking the tab — only page rasterization to
+  // canvas is, and that's chunked with progress/cancel in each tool.
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+</script>
 <script src="js/utils.js"></script>
 <script src="js/pdf-worker-client.js"></script>
 <script src="js/app.js"></script>
