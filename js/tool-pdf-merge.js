@@ -52,10 +52,6 @@
   }
 
   async function addFiles(fileList) {
-    if (!PW.supported) {
-      alert('เบราว์เซอร์นี้ไม่รองรับการประมวลผล PDF แบบพื้นหลัง กรุณาอัปเดตเบราว์เซอร์');
-      return;
-    }
     const files = Array.from(fileList).filter(f => f.type === 'application/pdf');
     for (const file of files) {
       if (!U.confirmLargeFile(file, 50,
@@ -66,12 +62,21 @@
       items.push(entry);
       render();
       try {
+        // Thumbnail only — pdf.js runs on the main thread here (see
+        // js/pdf-worker.js for why it can't reliably run in the worker).
+        // The actual merge below is pure pdf-lib and does run in the worker.
         const bytes = await U.readAsArrayBuffer(file);
-        const opened = await PW.openDoc(bytes);
-        entry.pageCount = opened.numPages;
-        const { blob } = await PW.renderPage(opened.docId, { pageNum: 1, targetWidth: 160, mimeType: 'image/png' });
+        const doc = await pdfjsLib.getDocument({ data: bytes }).promise;
+        entry.pageCount = doc.numPages;
+        const page = await doc.getPage(1);
+        const viewport = page.getViewport({ scale: 0.25 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
         entry.thumbUrl = URL.createObjectURL(blob);
-        PW.closeDoc(opened.docId).catch(() => {}); // only needed the thumbnail — free the doc right away
+        doc.destroy(); // only needed the thumbnail — free the decoded doc right away
       } catch (e) {
         entry.pageCount = '?';
       }
