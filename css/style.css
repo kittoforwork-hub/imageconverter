@@ -285,8 +285,8 @@ body {
 
 /* Every tool disables its action button and swaps in a "กำลัง…" label while
    working — this spinner rides on that existing state everywhere for free. */
-.btn:disabled { position: relative; padding-left: 30px; }
-.btn:disabled::before {
+.btn:disabled, .btn.is-working { position: relative; padding-left: 30px; }
+.btn:disabled::before, .btn.is-working::before {
   content: '';
   position: absolute;
   left: 10px;
@@ -540,6 +540,24 @@ body {
   border: 1px solid var(--danger);
 }
 .page-check { position: absolute; top: 6px; left: 6px; z-index: 2; background: var(--card); border-radius: 3px; padding: 2px; line-height: 0; border: 1px solid var(--line-strong); }
+
+/* Thumbnail not rendered yet (queued behind the scroll viewport, or the
+   render itself hasn't finished) — a quiet pulse instead of a blank box so
+   a long document doesn't look broken while it lazily fills in. */
+.page-thumb.is-pending, .page-card.is-pending .page-thumb {
+  animation: thumb-pulse 1.4s ease-in-out infinite;
+}
+@keyframes thumb-pulse {
+  0%, 100% { background: var(--paper); }
+  50% { background: var(--paper-2); }
+}
+
+.convert-progress {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 14px;
+}
+.convert-progress .progress-track { flex: 1; margin-top: 0; }
+.convert-progress .js-progress-label { font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; }
 
 /* ---------- Background removal ---------- */
 .ticket-body-bg { grid-template-columns: auto 1fr; }
