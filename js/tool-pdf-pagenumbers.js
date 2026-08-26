@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const U = window.Utils;
-  const { PDFDocument, rgb } = window.PDFLib;
+  const PW = window.PdfWorkerClient;
 
   const dropzone = document.getElementById('dz-pdf-pagenumbers');
   const fileInput = document.getElementById('input-pdf-pagenumbers');
@@ -15,26 +15,24 @@
   const downloadBtn = document.getElementById('download-pdf-pagenumbers');
   const statusEl = formCard.querySelector('.js-status');
 
-  const MARGIN = 34;
   let currentFile = null;
   const result = {};
 
   function loadFile(file) {
+    if (!PW.supported) {
+      alert('เบราว์เซอร์นี้ไม่รองรับการประมวลผล PDF แบบพื้นหลัง กรุณาอัปเดตเบราว์เซอร์');
+      return;
+    }
+    if (!U.confirmLargeFile(file, 50,
+      'ไฟล์ PDF นี้มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) การใส่เลขหน้าอาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก')) {
+      return;
+    }
     currentFile = file;
     nameEl.textContent = file.name;
     formCard.classList.remove('hidden');
     downloadBtn.classList.add('hidden');
     statusEl.textContent = 'พร้อมใส่เลขหน้า';
     statusEl.classList.remove('is-ready', 'is-error');
-  }
-
-  function computePosition(position, width, height, textWidth) {
-    const [vSide, hSide] = position.split('-'); // e.g. 'bottom','center'
-    const x = hSide === 'center' ? (width - textWidth) / 2
-      : hSide === 'right' ? width - textWidth - MARGIN
-        : MARGIN;
-    const y = vSide === 'top' ? height - MARGIN : MARGIN - 10;
-    return { x, y };
   }
 
   applyBtn.addEventListener('click', async () => {
@@ -50,21 +48,7 @@
 
     try {
       const bytes = await U.readAsArrayBuffer(currentFile);
-      const pdfDoc = await PDFDocument.load(bytes);
-      const font = await U.embedThaiFont(pdfDoc);
-      const pages = pdfDoc.getPages();
-      const total = pages.length;
-
-      pages.forEach((page, idx) => {
-        const n = startAt + idx;
-        const text = template.replace(/\{n\}/g, String(n)).replace(/\{total\}/g, String(total));
-        const { width, height } = page.getSize();
-        const textWidth = font.widthOfTextAtSize(text, size);
-        const { x, y } = computePosition(position, width, height, textWidth);
-        page.drawText(text, { x, y, size, font, color: rgb(0.2, 0.2, 0.2) });
-      });
-
-      const outBytes = await pdfDoc.save();
+      const { bytes: outBytes } = await PW.applyPageNumbers(bytes, { template, startAt, size, position });
       const blob = new Blob([outBytes], { type: 'application/pdf' });
       const url = U.replaceObjectUrl(result, 'url', blob);
       downloadBtn.href = url;
