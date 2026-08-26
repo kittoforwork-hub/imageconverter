@@ -5,17 +5,17 @@
 // parsing/saving) happens in here, off the main thread. The main thread
 // only ever sends bytes in and gets bytes/blobs back — it never blocks on
 // any of this, so the tab stays responsive no matter how big the file is.
-//
-// pdf.js normally hands its own binary parsing off to a dedicated worker
-// (see GlobalWorkerOptions.workerSrc on the main thread, historically). We
-// are already inside a worker here with no further thread to delegate to,
-// so pdf.js detects that and parses inline on this same worker thread —
-// still off the main/UI thread, which is exactly what we want.
 importScripts(
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
   'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
   'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js'
 );
+
+// pdf.js always wants a workerSrc set — even running from in here, it will
+// spin up its own (nested) worker to do the binary parsing. Modern browsers
+// support worker-in-worker fine, and it's still entirely off the main/UI
+// thread either way.
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const { PDFDocument, rgb, degrees } = PDFLib;
 
