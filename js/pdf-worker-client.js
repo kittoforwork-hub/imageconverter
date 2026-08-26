@@ -1,11 +1,11 @@
-/* global window, Worker, OffscreenCanvas */
+/* global window, Worker */
 window.PdfWorkerClient = (() => {
   'use strict';
 
-  // Feature check up front — every method below assumes both exist.
-  // Supported in Chrome/Edge/Firefox for years, and Safari since 16.4
-  // (2023), so this covers essentially everyone by now.
-  const supported = typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined';
+  // This worker only does pdf-lib work now (merge / watermark / page
+  // numbers / page extraction) — see js/pdf-worker.js for why page
+  // rendering (pdf.js) stays on the main thread instead.
+  const supported = typeof Worker !== 'undefined';
 
   let worker = null;
   let seq = 0;
@@ -46,9 +46,6 @@ window.PdfWorkerClient = (() => {
 
   return {
     supported,
-    openDoc: (buffer) => call('openDoc', { buffer }, [buffer]),
-    closeDoc: (docId) => call('closeDoc', { docId }),
-    renderPage: (docId, opts) => call('renderPage', Object.assign({ docId }, opts)),
     mergePdfs: (buffers) => call('mergePdfs', { buffers }, buffers.slice()),
     buildPagesPdf: (buffer, indices) => call('buildPagesPdf', { buffer, indices }, [buffer]),
     applyWatermark: (buffer, opts) => call('applyWatermark', Object.assign({ buffer }, opts), [buffer]),
