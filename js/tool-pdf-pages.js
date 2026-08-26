@@ -23,7 +23,10 @@
   const LARGE_FILE_WARN_MB = 50;
 
   let currentFile = null;
-  let docId = null;
+  let currentDoc = null; // pdf.js document — thumbnails render on the main
+                          // thread (see js/pdf-worker.js for why); only the
+                          // final PDF assembly (buildPdf below) uses pdf-lib
+                          // in the worker.
   let pageItems = []; // { origIndex, thumbUrl, rendering, deleted, selected }
   let observer = null;
   const renderQueue = [];
@@ -34,10 +37,6 @@
   }
 
   async function loadFile(file) {
-    if (!PW.supported) {
-      alert('เบราว์เซอร์นี้ไม่รองรับการประมวลผล PDF แบบพื้นหลัง กรุณาอัปเดตเบราว์เซอร์');
-      return;
-    }
     if (!U.confirmLargeFile(file, LARGE_FILE_WARN_MB,
       'ไฟล์ PDF นี้มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) จึงอาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก')) {
       return;
@@ -52,16 +51,15 @@
     noteEl.classList.remove('hidden');
     countEl.textContent = '…';
 
-    if (docId) { PW.closeDoc(docId).catch(() => {}); docId = null; }
+    if (currentDoc) { currentDoc.destroy(); currentDoc = null; }
 
-    // Opening the document and reading its page count is cheap — the worker
-    // doesn't decode/render page content until a renderPage request comes
-    // in, so this step stays fast even for a very large file.
+    // Opening the document and reading its page count is cheap — pdf.js
+    // doesn't decode/render page content until getPage()/render() is
+    // called, so this step stays fast even for a very large file.
     const bytesForView = await U.readAsArrayBuffer(file);
-    const opened = await PW.openDoc(bytesForView);
-    docId = opened.docId;
+    currentDoc = await pdfjsLib.getDocument({ data: bytesForView }).promise;
 
-    for (let i = 0; i < opened.numPages; i++) {
+    for (let i = 0; i < currentDoc.numPages; i++) {
       pageItems.push({ origIndex: i, thumbUrl: null, rendering: false, deleted: false, selected: false });
     }
 
@@ -70,22 +68,30 @@
   }
 
   function maybeCloseDoc() {
-    if (!docId) return;
+    if (!currentDoc) return;
     if (pageItems.length && pageItems.every(i => i.thumbUrl)) {
-      PW.closeDoc(docId).catch(() => {});
-      docId = null;
+      currentDoc.destroy();
+      currentDoc = null;
     }
   }
 
   async function renderThumbnail(item) {
-    if (!docId || item.thumbUrl || item.rendering) return;
+    const doc = currentDoc;
+    if (!doc || item.thumbUrl || item.rendering) return;
     item.rendering = true;
     try {
-      const { blob } = await PW.renderPage(docId, {
-        pageNum: item.origIndex + 1,
-        targetWidth: THUMB_TARGET_WIDTH,
-        mimeType: 'image/png'
-      });
+      const page = await doc.getPage(item.origIndex + 1);
+      const base = page.getViewport({ scale: 1 });
+      const scale = Math.min(THUMB_TARGET_WIDTH / base.width, 2);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      // A blob URL keeps the pixel data off the JS heap (unlike toDataURL's
+      // base64 string), which matters a lot once a document has hundreds of
+      // these thumbnails alive at once.
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
       item.thumbUrl = URL.createObjectURL(blob);
       const img = grid.querySelector(`[data-idx="${item.origIndex}"] img`);
       if (img) img.src = item.thumbUrl;
@@ -182,6 +188,9 @@
   });
 
   async function buildPdf(indices) {
+    // This part (extracting/reordering pages into a new PDF) is pure
+    // pdf-lib byte work with no DOM dependency, so it runs in the worker —
+    // unlike the thumbnails above, it doesn't hit pdf.js's worker limitation.
     const srcBytes = await U.readAsArrayBuffer(currentFile);
     const { bytes } = await PW.buildPagesPdf(srcBytes, indices);
     return new Blob([bytes], { type: 'application/pdf' });
@@ -224,7 +233,7 @@
     if (observer) { observer.disconnect(); observer = null; }
     renderQueue.length = 0;
     queueRunning = false;
-    if (docId) { PW.closeDoc(docId).catch(() => {}); docId = null; }
+    if (currentDoc) { currentDoc.destroy(); currentDoc = null; }
     revokeThumbs();
     pageItems = [];
     currentFile = null;
