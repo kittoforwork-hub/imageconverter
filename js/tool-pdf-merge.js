@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const U = window.Utils;
-  const { PDFDocument } = window.PDFLib;
+  const PW = window.PdfWorkerClient;
 
   const dropzone = document.getElementById('dz-pdf-merge');
   const fileInput = document.getElementById('input-pdf-merge');
@@ -45,28 +45,33 @@
   }
 
   function removeItem(id) {
+    const item = items.find(i => i.id === id);
+    if (item && item.thumbUrl) URL.revokeObjectURL(item.thumbUrl);
     items = items.filter(i => i.id !== id);
     render();
   }
 
   async function addFiles(fileList) {
+    if (!PW.supported) {
+      alert('เบราว์เซอร์นี้ไม่รองรับการประมวลผล PDF แบบพื้นหลัง กรุณาอัปเดตเบราว์เซอร์');
+      return;
+    }
     const files = Array.from(fileList).filter(f => f.type === 'application/pdf');
     for (const file of files) {
+      if (!U.confirmLargeFile(file, 50,
+        `"${file.name}" มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) การรวมไฟล์อาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก`)) {
+        continue;
+      }
       const entry = { id: 'pdf-' + (++seq), file, thumbUrl: null, pageCount: null };
       items.push(entry);
       render();
       try {
         const bytes = await U.readAsArrayBuffer(file);
-        const doc = await pdfjsLib.getDocument({ data: bytes }).promise;
-        entry.pageCount = doc.numPages;
-        const page = await doc.getPage(1);
-        const viewport = page.getViewport({ scale: 0.25 });
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-        entry.thumbUrl = canvas.toDataURL('image/png');
-        doc.destroy(); // only needed the thumbnail — free the decoded doc right away
+        const opened = await PW.openDoc(bytes);
+        entry.pageCount = opened.numPages;
+        const { blob } = await PW.renderPage(opened.docId, { pageNum: 1, targetWidth: 160, mimeType: 'image/png' });
+        entry.thumbUrl = URL.createObjectURL(blob);
+        PW.closeDoc(opened.docId).catch(() => {}); // only needed the thumbnail — free the doc right away
       } catch (e) {
         entry.pageCount = '?';
       }
@@ -75,6 +80,7 @@
   }
 
   clearAllBtn.addEventListener('click', () => {
+    items.forEach(i => { if (i.thumbUrl) URL.revokeObjectURL(i.thumbUrl); });
     items = [];
     render();
   });
@@ -89,19 +95,15 @@
     buildBtn.disabled = true;
     buildBtn.textContent = 'กำลังรวม…';
     try {
-      const outDoc = await PDFDocument.create();
-      for (const item of items) {
-        const bytes = await U.readAsArrayBuffer(item.file);
-        const srcDoc = await PDFDocument.load(bytes);
-        const copied = await outDoc.copyPages(srcDoc, srcDoc.getPageIndices());
-        copied.forEach(p => outDoc.addPage(p));
-      }
-      const outBytes = await outDoc.save();
+      // Fresh reads — the thumbnail step above already consumed (and
+      // transferred away) its own copies of these buffers.
+      const buffers = await Promise.all(items.map(item => U.readAsArrayBuffer(item.file)));
+      const { bytes: outBytes, pageCount } = await PW.mergePdfs(buffers);
       const blob = new Blob([outBytes], { type: 'application/pdf' });
       const url = U.replaceObjectUrl(result, 'url', blob);
       resultDownload.href = url;
       resultDownload.download = 'merged.pdf';
-      resultStrip.querySelector('.status').textContent = `รวมไฟล์สำเร็จ · ${outDoc.getPageCount()} หน้า · ${U.formatBytes(blob.size)}`;
+      resultStrip.querySelector('.status').textContent = `รวมไฟล์สำเร็จ · ${pageCount} หน้า · ${U.formatBytes(blob.size)}`;
       resultStrip.querySelector('.status').classList.remove('is-error');
       resultStrip.querySelector('.status').classList.add('is-ready');
       resultStrip.classList.remove('hidden');
@@ -119,6 +121,7 @@
 
   U.onClearCache(() => {
     if (result.url) { URL.revokeObjectURL(result.url); result.url = null; }
+    items.forEach(i => { if (i.thumbUrl) URL.revokeObjectURL(i.thumbUrl); });
     items = [];
     render();
   });
