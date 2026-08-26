@@ -18,7 +18,7 @@
 
   <header class="topbar">
     <div class="topbar-row">
-      <div class="eyebrow">TCS TOOLS — WORKSHOP UTILITY BY KITTO</div>
+      <div class="eyebrow">WORKSHOP UTILITY BY KITTO</div>
     </div>
     <h1>ชุดเครื่องมือจัดการไฟล์</h1>
     <p class="sub">แปลงและแก้ไขรูปภาพ/PDF ทั้งหมดในเบราว์เซอร์ของคุณ ไม่มีการอัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์ใดๆ</p>
@@ -357,6 +357,11 @@
         </div>
       </section>
 
+      <div class="convert-progress hidden" id="progress-pdf-to-images">
+        <div class="progress-track"><div class="progress-fill js-progress"></div></div>
+        <span class="mono js-progress-label">หน้า 0/0</span>
+      </div>
+
       <div class="page-grid" id="grid-pdf-to-images"></div>
 
       <template id="tpl-page-thumb">
@@ -536,12 +541,8 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-</script>
 <script src="js/utils.js"></script>
+<script src="js/pdf-worker-client.js"></script>
 <script src="js/app.js"></script>
 <script src="js/tool-image-convert.js"></script>
 <script src="js/tool-image-crop.js"></script>
