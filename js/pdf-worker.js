@@ -1,26 +1,24 @@
-/* global importScripts, pdfjsLib, PDFLib, fontkit, OffscreenCanvas, self */
+/* global importScripts, PDFLib, fontkit, self */
 'use strict';
 
-// All the CPU/render-heavy PDF work (pdf.js page rasterization, pdf-lib
-// parsing/saving) happens in here, off the main thread. The main thread
-// only ever sends bytes in and gets bytes/blobs back — it never blocks on
-// any of this, so the tab stays responsive no matter how big the file is.
+// This worker handles the pdf-lib side of things only: merging, extracting
+// pages, watermarking, page numbers. pdf-lib is pure JS (no DOM/canvas
+// dependency), so it runs here reliably.
+//
+// Page-to-image rendering (pdf.js) deliberately does NOT live here. pdf.js's
+// own worker-fallback path references `document` unconditionally, so if its
+// attempt to spin up a nested worker fails (blocked in some browsers for
+// cross-origin nested workers), its fallback crashes with "document is not
+// defined" instead of recovering — a real limitation in the library, not
+// something fixable from our side. Rendering stays on the main thread,
+// where it's still kept from freezing the tab via lazy loading, chunked
+// rendering with progress feedback, and a cancel button.
 importScripts(
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
   'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
   'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js'
 );
 
-// pdf.js always wants a workerSrc set — even running from in here, it will
-// spin up its own (nested) worker to do the binary parsing. Modern browsers
-// support worker-in-worker fine, and it's still entirely off the main/UI
-// thread either way.
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
 const { PDFDocument, rgb, degrees } = PDFLib;
-
-const docs = new Map(); // docId -> pdf.js document
-let seq = 0;
 
 // ---- Thai font (for watermark / page numbers), fetched once and cached ----
 const THAI_FONT_MIRRORS = [
@@ -64,46 +62,6 @@ loadThaiFontBytes().catch(() => {});
 // buffer transferred (zero-copy) back to the main thread automatically.
 // ---------------------------------------------------------------------
 const handlers = {
-  async openDoc({ buffer }) {
-    const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
-    const docId = 'doc-' + (++seq);
-    docs.set(docId, doc);
-    return { docId, numPages: doc.numPages };
-  },
-
-  async closeDoc({ docId }) {
-    const doc = docs.get(docId);
-    if (doc) { doc.destroy(); docs.delete(docId); }
-    return {};
-  },
-
-  // Renders one page to a blob. Pass either `scale` directly, or
-  // `targetWidth` to have the scale computed so every thumbnail comes out
-  // the same pixel width regardless of the source page's own size.
-  async renderPage({ docId, pageNum, scale, targetWidth, mimeType, quality }) {
-    const doc = docs.get(docId);
-    if (!doc) throw new Error('เอกสารนี้ถูกปิดไปแล้ว หรือหมดอายุ');
-    const page = await doc.getPage(pageNum);
-    let useScale = scale || 1;
-    if (targetWidth) {
-      const base = page.getViewport({ scale: 1 });
-      useScale = Math.min(targetWidth / base.width, 2);
-    }
-    const viewport = page.getViewport({ scale: useScale });
-    const canvas = new OffscreenCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-    const ctx = canvas.getContext('2d');
-    const type = mimeType || 'image/png';
-    if (type === 'image/jpeg') {
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    const blob = await canvas.convertToBlob(
-      type === 'image/jpeg' ? { type, quality: quality || 0.92 } : { type }
-    );
-    return { blob };
-  },
-
   async mergePdfs({ buffers }) {
     const outDoc = await PDFDocument.create();
     for (const buffer of buffers) {
