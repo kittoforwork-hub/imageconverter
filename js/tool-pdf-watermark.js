@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const U = window.Utils;
-  const { PDFDocument, rgb, degrees } = window.PDFLib;
+  const PW = window.PdfWorkerClient;
 
   const dropzone = document.getElementById('dz-pdf-watermark');
   const fileInput = document.getElementById('input-pdf-watermark');
@@ -24,6 +24,14 @@
   });
 
   function loadFile(file) {
+    if (!PW.supported) {
+      alert('เบราว์เซอร์นี้ไม่รองรับการประมวลผล PDF แบบพื้นหลัง กรุณาอัปเดตเบราว์เซอร์');
+      return;
+    }
+    if (!U.confirmLargeFile(file, 50,
+      'ไฟล์ PDF นี้มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) การใส่ลายน้ำอาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก')) {
+      return;
+    }
     currentFile = file;
     nameEl.textContent = file.name;
     formCard.classList.remove('hidden');
@@ -43,28 +51,11 @@
 
     try {
       const bytes = await U.readAsArrayBuffer(currentFile);
-      const pdfDoc = await PDFDocument.load(bytes);
-      const font = await U.embedThaiFont(pdfDoc);
-
       const size = parseFloat(sizeEl.value) || 48;
       const opacity = parseFloat(opacityEl.value);
       const angle = parseFloat(angleEl.value) || 0;
-      const textWidth = font.widthOfTextAtSize(text, size);
 
-      pdfDoc.getPages().forEach(page => {
-        const { width, height } = page.getSize();
-        page.drawText(text, {
-          x: width / 2 - textWidth / 2,
-          y: height / 2,
-          size,
-          font,
-          color: rgb(0.45, 0.45, 0.45),
-          opacity,
-          rotate: degrees(angle)
-        });
-      });
-
-      const outBytes = await pdfDoc.save();
+      const { bytes: outBytes } = await PW.applyWatermark(bytes, { text, size, opacity, angle });
       const blob = new Blob([outBytes], { type: 'application/pdf' });
       const url = U.replaceObjectUrl(result, 'url', blob);
       downloadBtn.href = url;
