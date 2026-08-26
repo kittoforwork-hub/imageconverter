@@ -1,7 +1,6 @@
 (() => {
   'use strict';
   const U = window.Utils;
-  const PW = window.PdfWorkerClient;
 
   const dropzone = document.getElementById('dz-pdf-to-images');
   const fileInput = document.getElementById('input-pdf-to-images');
@@ -24,16 +23,11 @@
   const HEAVY_WORK_PAGE_THRESHOLD = 80;
 
   let currentFile = null;
-  let docId = null;
-  let numPages = 0;
+  let currentDoc = null;
   let rendered = []; // { pageNum, blob, url }
   let cancelRequested = false;
 
   async function loadFile(file) {
-    if (!PW.supported) {
-      alert('เบราว์เซอร์นี้ไม่รองรับการประมวลผล PDF แบบพื้นหลัง กรุณาอัปเดตเบราว์เซอร์');
-      return;
-    }
     if (!U.confirmLargeFile(file, LARGE_FILE_WARN_MB,
       'ไฟล์ PDF นี้มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) จึงอาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก')) {
       return;
@@ -47,14 +41,14 @@
     downloadZipBtn.classList.add('hidden');
     rendered.forEach(r => URL.revokeObjectURL(r.url));
     rendered = [];
-    if (docId) { PW.closeDoc(docId).catch(() => {}); docId = null; }
+    if (currentDoc) { currentDoc.destroy(); currentDoc = null; }
 
-    // Reading the file into an ArrayBuffer still happens here (fast, native
-    // browser I/O) — only the actual parsing/rendering moves to the worker.
+    // Parsing itself already happens off the main thread — pdf.js hands
+    // this off to its own dedicated worker (see the workerSrc setup in
+    // index.html). It's only the actual page-to-canvas rasterization below
+    // that runs here, which is why we chunk it with progress + cancel.
     const bytes = await U.readAsArrayBuffer(file);
-    const opened = await PW.openDoc(bytes);
-    docId = opened.docId;
-    numPages = opened.numPages;
+    currentDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
   }
 
   function setProgress(done, total) {
@@ -63,10 +57,10 @@
   }
 
   async function renderAll() {
-    if (!docId) return;
+    if (!currentDoc) return;
 
     const scale = parseFloat(scaleEl.value);
-    const total = numPages;
+    const total = currentDoc.numPages;
     if (total * scale >= HEAVY_WORK_PAGE_THRESHOLD) {
       const proceed = window.confirm(
         `ไฟล์นี้มี ${total} หน้า ที่ความละเอียด ${scale}× — การแปลงทุกหน้าพร้อมกันจะใช้แรมมาก และเบราว์เซอร์อาจค้างชั่วขณะระหว่างทำงาน\n\nต้องการดำเนินการต่อหรือไม่? (ลดความละเอียดเป็น 1× จะเบากว่ามาก)`
@@ -91,16 +85,19 @@
     for (let pageNum = 1; pageNum <= total; pageNum++) {
       if (cancelRequested) break;
 
-      // The actual rasterization happens on the worker thread — this await
-      // is the tab doing nothing but waiting, so the UI stays fully
-      // responsive (scrolling, clicking cancel, switching tools) the whole
-      // time a page is being rendered.
-      const { blob } = await PW.renderPage(docId, {
-        pageNum,
-        scale,
-        mimeType: format,
-        quality: format === 'image/jpeg' ? 0.92 : undefined
-      });
+      const page = await currentDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      if (format === 'image/jpeg') {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      const blob = await new Promise(res => canvas.toBlob(res, format, format === 'image/jpeg' ? 0.92 : undefined));
       const url = URL.createObjectURL(blob);
       const name = `${U.baseName(currentFile.name)}-page${String(pageNum).padStart(2, '0')}.${ext}`;
       rendered.push({ pageNum, blob, url, name });
@@ -114,6 +111,11 @@
       grid.appendChild(card);
 
       setProgress(pageNum, total);
+      // Give the tab a beat to repaint (grid, progress bar) and stay
+      // responsive to the cancel click — without this a big document renders
+      // as one long uninterrupted stretch that looks frozen even though it's
+      // technically making progress.
+      await U.yieldToUI();
     }
 
     renderBtn.classList.remove('is-working');
@@ -155,7 +157,7 @@
     cancelRequested = true;
     rendered.forEach(r => URL.revokeObjectURL(r.url));
     rendered = [];
-    if (docId) { PW.closeDoc(docId).catch(() => {}); docId = null; }
+    if (currentDoc) { currentDoc.destroy(); currentDoc = null; }
     currentFile = null;
     grid.innerHTML = '';
     bulkbar.classList.add('hidden');
