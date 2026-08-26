@@ -57,6 +57,32 @@ window.Utils = (() => {
     });
   }
 
+  /**
+   * Hands control back to the browser's event loop for a tick. Sprinkle this
+   * inside long synchronous-looking loops (page-by-page PDF rendering, etc.)
+   * so the tab can repaint, respond to clicks, and generally not look frozen
+   * while working through a big file.
+   */
+  function yieldToUI() {
+    return new Promise(resolve => setTimeout(resolve, 0));
+  }
+
+  /**
+   * Client-side PDF work (parsing, rendering, re-saving) scales with file
+   * size and page count, and it all happens in the tab's own memory — there's
+   * no server to offload to. Past a certain size that's genuinely slow and
+   * memory-heavy, and a silent freeze reads as "broken" to the user. Call
+   * this before starting expensive work on a large file so they get a heads
+   * up and a chance to back out instead of just watching the tab stall.
+   * Returns true if the caller should proceed.
+   */
+  function confirmLargeFile(file, thresholdMB, message) {
+    if (file.size <= thresholdMB * 1024 * 1024) return true;
+    return window.confirm(
+      `${message}\n\nขนาดไฟล์: ${formatBytes(file.size)} — ไฟล์ใหญ่ขนาดนี้อาจใช้เวลานานและกินแรมมาก ต้องการดำเนินการต่อหรือไม่?`
+    );
+  }
+
   function readAsArrayBuffer(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -109,62 +135,14 @@ window.Utils = (() => {
     return holder[key];
   }
 
-
-  // NOTE: cdn.jsdelivr.net's /gh/ proxy needs a release tag to resolve a "latest"
-  // version, and google/fonts (a huge monorepo) doesn't publish one — so that URL
-  // reliably 404s/hangs. raw.githubusercontent.com serves the same file directly
-  // and sends Access-Control-Allow-Origin: *, so it works from the browser with no
-  // proxy in between. A jsDelivr npm-based mirror is kept as a fallback in case
-  // GitHub itself is unreachable.
-  const THAI_FONT_MIRRORS = [
-    'https://raw.githubusercontent.com/google/fonts/main/ofl/sarabun/Sarabun-Regular.ttf',
-    'https://cdn.jsdelivr.net/gh/googlefonts/sarabun@main/fonts/ttf/Sarabun-Regular.ttf'
-  ];
-
-  let thaiFontPromise = null;
-  async function fetchFontWithFallback() {
-    let lastErr;
-    for (const url of THAI_FONT_MIRRORS) {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const buf = await res.arrayBuffer();
-        if (!buf || buf.byteLength < 1000) throw new Error('ไฟล์ฟอนต์ไม่สมบูรณ์');
-        return buf;
-      } catch (err) {
-        lastErr = err;
-      }
-    }
-    throw new Error('โหลดฟอนต์ภาษาไทยไม่สำเร็จ: ' + (lastErr && lastErr.message));
-  }
-
-  function loadThaiFontBytes() {
-    if (!thaiFontPromise) {
-      thaiFontPromise = fetchFontWithFallback().catch(err => {
-        // Let a later call retry (e.g. if it failed only because the user was offline).
-        thaiFontPromise = null;
-        throw err;
-      });
-    }
-    return thaiFontPromise;
-  }
-
-  // Kick off the font fetch in the background once the page is idle, so it's
-  // already cached in memory by the time someone opens the watermark/page-number
-  // tool and clicks apply — removes the wait on first use.
-  const scheduleIdle = window.requestIdleCallback || (fn => setTimeout(fn, 800));
-  scheduleIdle(() => { loadThaiFontBytes().catch(() => {}); });
-
-  async function embedThaiFont(pdfDoc) {
-    if (!pdfDoc.registerFontkit) return null;
-    if (window.fontkit) pdfDoc.registerFontkit(window.fontkit);
-    const bytes = await loadThaiFontBytes();
-    return pdfDoc.embedFont(bytes, { subset: true });
-  }
+  // NOTE: Thai-font embedding for the watermark/page-number tools now lives
+  // entirely inside js/pdf-worker.js, alongside the pdf-lib calls that
+  // actually use it — see that file for the font-fetch logic.
 
   return {
     formatBytes, baseName, extOf, downloadBlob, setupDropzone,
-    readAsArrayBuffer, loadImage, embedThaiFont,
-    onClearCache, clearCache, replaceObjectUrl
+    readAsArrayBuffer, loadImage,
+    onClearCache, clearCache, replaceObjectUrl,
+    yieldToUI, confirmLargeFile
   };
 })();
