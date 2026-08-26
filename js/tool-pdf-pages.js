@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const U = window.Utils;
-  const { PDFDocument } = window.PDFLib;
+  const PW = window.PdfWorkerClient;
 
   const dropzone = document.getElementById('dz-pdf-pages');
   const fileInput = document.getElementById('input-pdf-pages');
@@ -15,42 +15,137 @@
   const grid = document.getElementById('grid-pdf-pages');
   const cardTemplate = document.getElementById('tpl-page-manage');
 
+  // Thumbnails target a fixed pixel width regardless of the source page's
+  // actual size — a 4000px-wide scanned page and a normal A4 page end up
+  // the same small render cost. Without this, a handful of huge scanned
+  // pages was enough to blow past what the tab could hold.
+  const THUMB_TARGET_WIDTH = 420;
+  const LARGE_FILE_WARN_MB = 50;
+
   let currentFile = null;
-  let pageItems = []; // { origIndex, thumbUrl, deleted, selected }
+  let docId = null;
+  let pageItems = []; // { origIndex, thumbUrl, rendering, deleted, selected }
+  let observer = null;
+  const renderQueue = [];
+  let queueRunning = false;
+
+  function revokeThumbs() {
+    pageItems.forEach(i => { if (i.thumbUrl) URL.revokeObjectURL(i.thumbUrl); });
+  }
 
   async function loadFile(file) {
+    if (!PW.supported) {
+      alert('เบราว์เซอร์นี้ไม่รองรับการประมวลผล PDF แบบพื้นหลัง กรุณาอัปเดตเบราว์เซอร์');
+      return;
+    }
+    if (!U.confirmLargeFile(file, LARGE_FILE_WARN_MB,
+      'ไฟล์ PDF นี้มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) จึงอาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก')) {
+      return;
+    }
+
     currentFile = file;
     nameEl.textContent = file.name;
     grid.innerHTML = '';
+    revokeThumbs();
     pageItems = [];
     bulkbar.classList.remove('hidden');
     noteEl.classList.remove('hidden');
+    countEl.textContent = '…';
 
+    if (docId) { PW.closeDoc(docId).catch(() => {}); docId = null; }
+
+    // Opening the document and reading its page count is cheap — the worker
+    // doesn't decode/render page content until a renderPage request comes
+    // in, so this step stays fast even for a very large file.
     const bytesForView = await U.readAsArrayBuffer(file);
-    const pdfjsDoc = await pdfjsLib.getDocument({ data: bytesForView }).promise;
+    const opened = await PW.openDoc(bytesForView);
+    docId = opened.docId;
 
-    for (let i = 0; i < pdfjsDoc.numPages; i++) {
-      const page = await pdfjsDoc.getPage(i + 1);
-      const viewport = page.getViewport({ scale: 0.4 });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-      const url = canvas.toDataURL('image/png');
-      pageItems.push({ origIndex: i, thumbUrl: url, deleted: false, selected: false });
+    for (let i = 0; i < opened.numPages; i++) {
+      pageItems.push({ origIndex: i, thumbUrl: null, rendering: false, deleted: false, selected: false });
     }
-    pdfjsDoc.destroy(); // thumbnails are plain data URLs now — the decoded doc can go
 
     countEl.textContent = String(pageItems.length);
     renderGrid();
+  }
+
+  function maybeCloseDoc() {
+    if (!docId) return;
+    if (pageItems.length && pageItems.every(i => i.thumbUrl)) {
+      PW.closeDoc(docId).catch(() => {});
+      docId = null;
+    }
+  }
+
+  async function renderThumbnail(item) {
+    if (!docId || item.thumbUrl || item.rendering) return;
+    item.rendering = true;
+    try {
+      const { blob } = await PW.renderPage(docId, {
+        pageNum: item.origIndex + 1,
+        targetWidth: THUMB_TARGET_WIDTH,
+        mimeType: 'image/png'
+      });
+      item.thumbUrl = URL.createObjectURL(blob);
+      const img = grid.querySelector(`[data-idx="${item.origIndex}"] img`);
+      if (img) img.src = item.thumbUrl;
+      const card = grid.querySelector(`[data-idx="${item.origIndex}"]`);
+      if (card) card.classList.remove('is-pending');
+    } catch (err) {
+      console.warn('render thumbnail failed', err);
+    } finally {
+      item.rendering = false;
+      maybeCloseDoc();
+      processQueue();
+    }
+  }
+
+  function processQueue() {
+    if (queueRunning) return;
+    const idx = renderQueue.shift();
+    if (idx === undefined) return;
+    queueRunning = true;
+    const item = pageItems.find(i => i.origIndex === idx);
+    (item ? renderThumbnail(item) : Promise.resolve()).finally(() => {
+      queueRunning = false;
+      if (renderQueue.length) processQueue();
+    });
+  }
+
+  function queueRender(origIndex) {
+    const item = pageItems.find(i => i.origIndex === origIndex);
+    if (!item || item.thumbUrl || item.rendering) return;
+    if (!renderQueue.includes(origIndex)) renderQueue.push(origIndex);
+    processQueue();
+  }
+
+  function setupObserver() {
+    if (observer) observer.disconnect();
+    // rootMargin loads thumbnails a bit before they scroll into view, so
+    // scrolling through a long document doesn't show a flash of blank cards.
+    observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const idx = Number(entry.target.dataset.idx);
+        queueRender(idx);
+      });
+    }, { root: null, rootMargin: '600px 0px', threshold: 0.01 });
+
+    grid.querySelectorAll('.page-card-manage').forEach(card => {
+      const idx = Number(card.dataset.idx);
+      const item = pageItems.find(i => i.origIndex === idx);
+      if (item && !item.thumbUrl) observer.observe(card);
+    });
   }
 
   function renderGrid() {
     grid.innerHTML = '';
     pageItems.forEach((item, idx) => {
       const card = cardTemplate.content.firstElementChild.cloneNode(true);
+      card.dataset.idx = String(item.origIndex);
       card.classList.toggle('is-deleted', item.deleted);
-      card.querySelector('img').src = item.thumbUrl;
+      card.classList.toggle('is-pending', !item.thumbUrl);
+      if (item.thumbUrl) card.querySelector('img').src = item.thumbUrl;
       card.querySelector('.js-pagelabel').textContent = `หน้า ${idx + 1}`;
 
       const selectCb = card.querySelector('.js-select');
@@ -71,6 +166,7 @@
 
       grid.appendChild(card);
     });
+    setupObserver();
   }
 
   function moveItem(idx, dir) {
@@ -87,11 +183,7 @@
 
   async function buildPdf(indices) {
     const srcBytes = await U.readAsArrayBuffer(currentFile);
-    const srcDoc = await PDFDocument.load(srcBytes);
-    const outDoc = await PDFDocument.create();
-    const copied = await outDoc.copyPages(srcDoc, indices);
-    copied.forEach(p => outDoc.addPage(p));
-    const bytes = await outDoc.save();
+    const { bytes } = await PW.buildPagesPdf(srcBytes, indices);
     return new Blob([bytes], { type: 'application/pdf' });
   }
 
@@ -129,6 +221,11 @@
   });
 
   U.onClearCache(() => {
+    if (observer) { observer.disconnect(); observer = null; }
+    renderQueue.length = 0;
+    queueRunning = false;
+    if (docId) { PW.closeDoc(docId).catch(() => {}); docId = null; }
+    revokeThumbs();
     pageItems = [];
     currentFile = null;
     grid.innerHTML = '';
