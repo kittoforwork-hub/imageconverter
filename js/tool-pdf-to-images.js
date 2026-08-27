@@ -90,7 +90,13 @@
       const canvas = document.createElement('canvas');
       canvas.width = viewport.width;
       canvas.height = viewport.height;
-      const ctx = canvas.getContext('2d');
+      // willReadFrequently: pdf.js does its own internal getImageData
+      // readback on this context for soft-mask / knockout-group compositing
+      // on pages that use transparency groups. Without this flag the browser
+      // keeps that canvas GPU-backed and every readback forces a slow
+      // GPU→CPU sync — that's the "Multiple readback operations" warning,
+      // and on a file with many such pages it's a big chunk of the slowdown.
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (format === 'image/jpeg') {
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -101,6 +107,16 @@
       const url = URL.createObjectURL(blob);
       const name = `${U.baseName(currentFile.name)}-page${String(pageNum).padStart(2, '0')}.${ext}`;
       rendered.push({ pageNum, blob, url, name });
+
+      // Without this, pdf.js keeps every page's decoded fonts/images/operator
+      // list cached on both the main thread and the worker for the life of
+      // currentDoc — across a big document that cache grows for the entire
+      // loop and is exactly what turns into a freeze right as the last page
+      // finishes (the tab is suddenly holding hundreds of pages' worth of
+      // decoded resources and has to catch up). cleanup() drops everything
+      // for this page except the already-produced blob, which is all we
+      // still need.
+      page.cleanup();
 
       const card = pageTemplate.content.firstElementChild.cloneNode(true);
       card.querySelector('img').src = url;
