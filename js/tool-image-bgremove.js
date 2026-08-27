@@ -1,76 +1,202 @@
 (() => {
   'use strict';
+  const U = window.Utils;
 
-  const catButtons = Array.from(document.querySelectorAll('.cat-btn'));
-  const chipGroups = Array.from(document.querySelectorAll('.tool-chips'));
-  const panels = Array.from(document.querySelectorAll('.tool-panel'));
+  const dropzone = document.getElementById('dz-img-bgremove');
+  const fileInput = document.getElementById('input-img-bgremove');
+  const bulkbar = document.getElementById('bulk-img-bgremove');
+  const countEl = document.getElementById('count-img-bgremove');
+  const clearAllBtn = document.getElementById('clearAll-img-bgremove');
+  const processAllBtn = document.getElementById('processAll-img-bgremove');
+  const downloadZipBtn = document.getElementById('downloadZip-img-bgremove');
+  const jobsEl = document.getElementById('jobs-img-bgremove');
+  const jobTemplate = document.getElementById('tpl-img-bgremove');
 
-  let currentCat = null;
+  let jobSeq = 0;
+  const jobs = []; // BgJob[]
 
-  function showCategory(cat) {
-    // Auto-clear cache when actually crossing from one category to the other
-    // (image <-> pdf tools share nothing, so whatever the previous category
-    // was holding is safe to release). Skipped on the very first call (page
-    // load) and when re-clicking the already-active category.
-    if (currentCat && currentCat !== cat) {
-      runAutoClearCache();
+  // ---------------------------------------------------------------------
+  // The library itself is a small JS wrapper; the ~40MB AI model it needs
+  // is fetched lazily (by the library, from IMG.LY's CDN) the first time
+  // removeBackground() actually runs — not on page load — so visitors who
+  // never open this tool never pay that cost. The browser's HTTP cache
+  // keeps it around after the first run.
+  const LIB_URL = 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm';
+  let removeBackgroundFn = null;
+  let libPromise = null;
+  function loadLibrary() {
+    if (!libPromise) {
+      libPromise = import(/* webpackIgnore: true */ LIB_URL)
+        .then(mod => { removeBackgroundFn = mod.removeBackground; })
+        .catch(err => {
+          libPromise = null;
+          throw new Error('โหลดไลบรารีลบพื้นหลังไม่สำเร็จ (ตรวจสอบอินเทอร์เน็ต): ' + err.message);
+        });
     }
-    currentCat = cat;
-
-    catButtons.forEach(b => b.classList.toggle('is-active', b.dataset.cat === cat));
-    chipGroups.forEach(g => g.classList.toggle('hidden', g.dataset.catGroup !== cat));
-    const activeGroup = chipGroups.find(g => g.dataset.catGroup === cat);
-    const activeChip = activeGroup ? activeGroup.querySelector('.tool-chip.is-active') || activeGroup.querySelector('.tool-chip') : null;
-    if (activeChip) showTool(activeChip.dataset.tool);
+    return libPromise;
   }
 
-  function showTool(tool) {
-    document.querySelectorAll('.tool-chip').forEach(b => b.classList.toggle('is-active', b.dataset.tool === tool));
-    panels.forEach(p => p.classList.toggle('hidden', p.id !== 'panel-' + tool));
-  }
-
-  catButtons.forEach(b => b.addEventListener('click', () => showCategory(b.dataset.cat)));
-  document.querySelectorAll('.tool-chip').forEach(b =>
-    b.addEventListener('click', () => showTool(b.dataset.tool))
-  );
-
-  showCategory('image');
-
-  // ---- Clear cache / free memory (fully automatic, no button) ---------
-  // Every tool holds its files as blob URLs (and pdf.js documents, for the
-  // PDF tools) while it's open. Those aren't released on their own, so on a
-  // long session — or a tab left open and forgotten — memory keeps climbing.
-  //
-  // Three automatic triggers, no manual button:
-  //   1. Switching category (image <-> pdf) — see showCategory() above.
-  //   2. Idle timeout — if there's been no user activity (click, keypress,
-  //      file drop, etc.) for IDLE_LIMIT_MS, everything gets swept. Checked
-  //      once a minute, so a tab left open gets cleared within roughly
-  //      IDLE_LIMIT_MS to IDLE_LIMIT_MS + 1 minute of being forgotten.
-  //   3. Leaving/closing the tab (pagehide).
-  //
-  // Note this DOES clear finished-but-undownloaded results if the tab sits
-  // idle long enough — that's the intended tradeoff for "never have to
-  // think about it," per how this is meant to be used.
-  function runAutoClearCache() {
-    window.Utils.clearCache();
-  }
-
-  const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes of no activity
-  let lastActivity = Date.now();
-
-  ['pointerdown', 'keydown', 'input', 'change', 'drop', 'wheel'].forEach(evt =>
-    document.addEventListener(evt, () => { lastActivity = Date.now(); }, { passive: true, capture: true })
-  );
-
-  setInterval(() => {
-    if (Date.now() - lastActivity >= IDLE_LIMIT_MS) {
-      runAutoClearCache();
-      lastActivity = Date.now(); // don't re-fire every minute while still idle
+  class BgJob {
+    constructor(file) {
+      this.id = 'bg-' + (++jobSeq);
+      this.file = file;
+      this.resultBlob = null;
+      this.resultUrl = null;
+      this.el = jobTemplate.content.firstElementChild.cloneNode(true);
+      this.buildDom();
     }
-  }, 60 * 1000);
 
-  // Safety net: release everything when the tab is closed, refreshed, or
-  // navigated away from.
-  window.addEventListener('pagehide', () => window.Utils.clearCache());
+    buildDom() {
+      const el = this.el;
+      const url = URL.createObjectURL(this.file);
+      this.objectUrl = url;
+
+      this.beforeImg = el.querySelector('.js-before img');
+      this.afterWrap = el.querySelector('.js-after');
+      this.afterImg = el.querySelector('.js-after img');
+      this.statusEl = el.querySelector('.js-status');
+      this.progressFill = el.querySelector('.js-progress');
+      this.processBtn = el.querySelector('.js-remove-bg-btn');
+      this.downloadBtn = el.querySelector('.js-download-btn');
+
+      el.querySelector('.js-filename').textContent = this.file.name;
+      el.querySelector('.js-origsize').textContent = U.formatBytes(this.file.size);
+      this.beforeImg.src = url;
+
+      this.processBtn.addEventListener('click', () => this.process());
+
+      el.querySelector('.js-remove-job-btn').addEventListener('click', () => {
+        this.dispose();
+        el.remove();
+        const idx = jobs.indexOf(this);
+        if (idx >= 0) jobs.splice(idx, 1);
+        updateBulkUI();
+      });
+    }
+
+    setProgress(pct) {
+      if (this.progressFill) this.progressFill.style.width = Math.max(0, Math.min(100, pct)) + '%';
+    }
+
+    async process() {
+      if (this.resultBlob) return; // already done
+      this.processBtn.disabled = true;
+      this.statusEl.classList.remove('is-ready', 'is-error');
+      this.statusEl.textContent = 'กำลังเตรียมโมเดล…';
+      this.setProgress(0);
+
+      try {
+        await loadLibrary();
+        const blob = await removeBackgroundFn(this.file, {
+          output: { format: 'image/png' },
+          progress: (key, current, total) => {
+            if (!total) return;
+            const pct = Math.round((current / total) * 100);
+            this.setProgress(pct);
+            const downloading = typeof key === 'string' && key.toLowerCase().includes('fetch');
+            this.statusEl.textContent = (downloading ? 'กำลังโหลดโมเดล… ' : 'กำลังประมวลผล… ') + pct + '%';
+          }
+        });
+
+        if (this.resultUrl) URL.revokeObjectURL(this.resultUrl);
+        this.resultBlob = blob;
+        this.resultUrl = URL.createObjectURL(blob);
+        this.afterImg.src = this.resultUrl;
+        this.afterWrap.classList.remove('hidden');
+        this.downloadBtn.href = this.resultUrl;
+        this.downloadBtn.download = `${U.baseName(this.file.name)}-nobg.png`;
+        this.downloadBtn.classList.remove('hidden');
+        this.setProgress(100);
+        this.statusEl.textContent = `พร้อมดาวน์โหลด · ${U.formatBytes(blob.size)}`;
+        this.statusEl.classList.add('is-ready');
+      } catch (err) {
+        this.statusEl.textContent = 'ลบพื้นหลังไม่สำเร็จ: ' + err.message;
+        this.statusEl.classList.add('is-error');
+        this.setProgress(0);
+      } finally {
+        this.processBtn.disabled = false;
+      }
+    }
+
+    dispose() {
+      URL.revokeObjectURL(this.objectUrl);
+      if (this.resultUrl) URL.revokeObjectURL(this.resultUrl);
+    }
+  }
+
+  function updateBulkUI() {
+    countEl.textContent = String(jobs.length);
+    bulkbar.classList.toggle('hidden', jobs.length === 0);
+    if (!jobs.some(j => j.resultBlob)) downloadZipBtn.classList.add('hidden');
+  }
+
+  function addFiles(fileList) {
+    Array.from(fileList).filter(f => f.type.startsWith('image/')).forEach(file => {
+      const job = new BgJob(file);
+      jobs.push(job);
+      jobsEl.appendChild(job.el);
+    });
+    updateBulkUI();
+  }
+
+  clearAllBtn.addEventListener('click', () => {
+    jobs.forEach(job => job.dispose());
+    jobs.length = 0;
+    jobsEl.innerHTML = '';
+    updateBulkUI();
+  });
+
+  processAllBtn.addEventListener('click', async () => {
+    if (!jobs.length) return;
+    processAllBtn.disabled = true;
+    processAllBtn.textContent = 'กำลังลบพื้นหลังทั้งหมด…';
+    try {
+      // Sequential on purpose: this is a heavy in-browser AI model, not a
+      // cheap canvas op — running several at once would fight over
+      // CPU/memory and could stall or crash the tab, especially on
+      // lower-end machines.
+      for (const job of jobs) {
+        if (!job.resultBlob) {
+          // eslint-disable-next-line no-await-in-loop
+          await job.process();
+        }
+      }
+    } finally {
+      processAllBtn.disabled = false;
+      processAllBtn.textContent = 'ลบพื้นหลังทั้งหมด';
+      downloadZipBtn.classList.toggle('hidden', !jobs.some(j => j.resultBlob));
+    }
+  });
+
+  downloadZipBtn.addEventListener('click', async () => {
+    const ready = jobs.filter(j => j.resultBlob);
+    if (!ready.length) return;
+    downloadZipBtn.disabled = true;
+    downloadZipBtn.textContent = 'กำลังบีบอัด…';
+    try {
+      const zip = new JSZip();
+      const usedNames = new Set();
+      ready.forEach(job => {
+        let name = `${U.baseName(job.file.name)}-nobg.png`;
+        let n = 2;
+        while (usedNames.has(name)) name = `${U.baseName(job.file.name)}-nobg-${n++}.png`;
+        usedNames.add(name);
+        zip.file(name, job.resultBlob);
+      });
+      const content = await zip.generateAsync({ type: 'blob' });
+      U.downloadBlob(content, 'no-background.zip');
+    } finally {
+      downloadZipBtn.disabled = false;
+      downloadZipBtn.textContent = 'ดาวน์โหลดทั้งหมด (.zip)';
+    }
+  });
+
+  U.setupDropzone(dropzone, fileInput, addFiles);
+
+  U.onClearCache(() => {
+    jobs.forEach(job => job.dispose());
+    jobs.length = 0;
+    jobsEl.innerHTML = '';
+    updateBulkUI();
+  });
 })();
