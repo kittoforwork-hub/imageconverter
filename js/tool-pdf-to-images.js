@@ -27,6 +27,23 @@
   let rendered = []; // { pageNum, blob, url }
   let cancelRequested = false;
 
+  // The willReadFrequently we set on our own page canvas (below, in the
+  // render loop) only covers the canvas WE hand to page.render(). Pages
+  // that use soft masks / knockout transparency groups make pdf.js create
+  // its OWN extra canvases internally for compositing, and it reads pixels
+  // back from those via getImageData too — that's the warning that kept
+  // showing up. Those internal canvases come from pdf.js's canvasFactory
+  // option, which defaults to a plain `canvas.getContext("2d")` with no
+  // options. Supplying our own factory here is the only way to reach them.
+  class ReadbackFriendlyCanvasFactory extends pdfjsLib.DOMCanvasFactory {
+    create(width, height) {
+      if (width <= 0 || height <= 0) throw new Error('Invalid canvas size');
+      const canvas = this._createCanvas(width, height);
+      return { canvas, context: canvas.getContext('2d', { willReadFrequently: true }) };
+    }
+  }
+  const canvasFactory = new ReadbackFriendlyCanvasFactory();
+
   async function loadFile(file) {
     if (!U.confirmLargeFile(file, LARGE_FILE_WARN_MB,
       'ไฟล์ PDF นี้มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) จึงอาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก')) {
@@ -48,7 +65,7 @@
     // index.html). It's only the actual page-to-canvas rasterization below
     // that runs here, which is why we chunk it with progress + cancel.
     const bytes = await U.readAsArrayBuffer(file);
-    currentDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
+    currentDoc = await pdfjsLib.getDocument({ data: bytes, canvasFactory }).promise;
   }
 
   function setProgress(done, total) {
