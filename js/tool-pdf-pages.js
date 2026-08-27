@@ -16,102 +16,25 @@
   const grid = document.getElementById('grid-pdf-pages');
   const cardTemplate = document.getElementById('tpl-page-manage');
 
-  // ------------------------------------------------------------
-  // Thumbnail settings
-  // ------------------------------------------------------------
-
-  // Thumbnail จะมีความกว้างประมาณนี้ ไม่ว่าหน้าต้นฉบับจะใหญ่แค่ไหน
   const THUMB_TARGET_WIDTH = 420;
-
-  // จำกัดขนาดสูงสุดของ canvas เพื่อป้องกันไฟล์สแกนขนาดใหญ่มาก
-  const THUMB_MAX_DIMENSION = 2200;
-
+  const THUMB_MAX_DIMENSION = 1800;
   const LARGE_FILE_WARN_MB = 50;
 
-  // Render ทีละหน้า เพื่อลดการใช้ RAM
+  /*
+   * สำคัญ:
+   * render thumbnail ทีละหน้า
+   * เพื่อไม่ให้ PDF ใหญ่ยิง canvas หลายตัวพร้อมกัน
+   */
   const MAX_RENDER_QUEUE = 1;
 
   let currentFile = null;
   let currentDoc = null;
 
-  // {
-  //   origIndex,
-  //   thumbUrl,
-  //   rendering,
-  //   deleted,
-  //   selected
-  // }
   let pageItems = [];
 
   let observer = null;
-
-  const renderQueue = [];
+  let renderQueue = [];
   let queueRunning = false;
-
-  // ------------------------------------------------------------
-  // Canvas factory
-  // ------------------------------------------------------------
-
-  // ไม่ใช้ pdfjsLib.DOMCanvasFactory เพราะในบาง build/version
-  // DOMCanvasFactory ไม่ได้ถูก expose บน pdfjsLib
-  //
-  // ทำ factory เองและกำหนด willReadFrequently เพื่อให้ canvas
-  // ที่ PDF.js ใช้ตอน render thumbnail เหมาะกับงานที่มี getImageData
-  // หลายครั้ง เช่น soft mask / transparency group
-  const thumbnailCanvasFactory = {
-    create(width, height) {
-      if (width <= 0 || height <= 0) {
-        throw new Error('Invalid canvas size');
-      }
-
-      const canvas = document.createElement('canvas');
-
-      canvas.width = Math.ceil(width);
-      canvas.height = Math.ceil(height);
-
-      const context = canvas.getContext('2d', {
-        willReadFrequently: true
-      });
-
-      if (!context) {
-        throw new Error('Unable to create 2D canvas context');
-      }
-
-      return {
-        canvas,
-        context
-      };
-    },
-
-    reset(canvasAndContext, width, height) {
-      if (!canvasAndContext || !canvasAndContext.canvas) {
-        throw new Error('Canvas is not specified');
-      }
-
-      if (width <= 0 || height <= 0) {
-        throw new Error('Invalid canvas size');
-      }
-
-      canvasAndContext.canvas.width = Math.ceil(width);
-      canvasAndContext.canvas.height = Math.ceil(height);
-    },
-
-    destroy(canvasAndContext) {
-      if (!canvasAndContext || !canvasAndContext.canvas) {
-        return;
-      }
-
-      canvasAndContext.canvas.width = 1;
-      canvasAndContext.canvas.height = 1;
-
-      canvasAndContext.canvas = null;
-      canvasAndContext.context = null;
-    }
-  };
-
-  // ------------------------------------------------------------
-  // Utility
-  // ------------------------------------------------------------
 
   function revokeThumbs() {
     pageItems.forEach((item) => {
@@ -131,9 +54,18 @@
     });
   }
 
-  // ------------------------------------------------------------
-  // Load PDF
-  // ------------------------------------------------------------
+  async function destroyCurrentDoc() {
+    if (!currentDoc) return;
+
+    const doc = currentDoc;
+    currentDoc = null;
+
+    try {
+      await doc.destroy();
+    } catch (err) {
+      console.warn('PDF destroy warning:', err);
+    }
+  }
 
   async function loadFile(file) {
     if (
@@ -147,36 +79,31 @@
     }
 
     try {
-      // ยกเลิกงานเก่าก่อน
-      resetQueue();
-
       if (observer) {
         observer.disconnect();
         observer = null;
       }
 
+      resetQueue();
       revokeThumbs();
+      pageItems = [];
 
-      if (currentDoc) {
-        await currentDoc.destroy();
-        currentDoc = null;
-      }
+      await destroyCurrentDoc();
 
       currentFile = file;
 
       nameEl.textContent = file.name;
       grid.innerHTML = '';
 
-      pageItems = [];
-
       bulkbar.classList.remove('hidden');
       noteEl.classList.remove('hidden');
       countEl.textContent = '…';
 
-      const bytesForView = await U.readAsArrayBuffer(file);
+      const bytes = await U.readAsArrayBuffer(file);
 
       currentDoc = await pdfjsLib.getDocument({
-        data: bytesForView
+        data: bytes,
+        canvasFactory: window.KittoCanvasFactory
       }).promise;
 
       for (let i = 0; i < currentDoc.numPages; i++) {
@@ -196,14 +123,7 @@
     } catch (error) {
       console.error('PDF load error:', error);
 
-      if (currentDoc) {
-        try {
-          await currentDoc.destroy();
-        } catch (_) {
-          // ignore
-        }
-        currentDoc = null;
-      }
+      await destroyCurrentDoc();
 
       currentFile = null;
 
@@ -214,36 +134,31 @@
     }
   }
 
-  // ------------------------------------------------------------
-  // Thumbnail rendering
-  // ------------------------------------------------------------
-
+  /*
+   * สร้าง thumbnail
+   */
   async function renderThumbnail(origIndex) {
-    if (!currentDoc) {
-      return;
-    }
+    if (!currentDoc) return;
 
     const item = pageItems.find(
       (entry) => entry.origIndex === origIndex
     );
 
-    if (!item || item.deleted || item.thumbUrl) {
-      return;
-    }
-
-    if (item.rendering) {
-      return;
-    }
+    if (!item) return;
+    if (item.deleted) return;
+    if (item.thumbUrl) return;
+    if (item.rendering) return;
 
     item.rendering = true;
 
     let page = null;
-    let canvasAndContext = null;
+    let canvas = null;
+    let context = null;
+    let renderTask = null;
 
     try {
       page = await currentDoc.getPage(origIndex + 1);
 
-      // อ่านขนาดหน้าแบบ 1x ก่อน
       const baseViewport = page.getViewport({
         scale: 1
       });
@@ -252,34 +167,48 @@
         throw new Error('Invalid PDF page dimensions');
       }
 
-      // คำนวณ scale จากความกว้างเป้าหมาย
-      let scale = THUMB_TARGET_WIDTH / baseViewport.width;
+      /*
+       * ทำ thumbnail ให้กว้างประมาณ 420px
+       */
+      let scale =
+        THUMB_TARGET_WIDTH / baseViewport.width;
 
-      // จำกัด scale ไม่ให้ canvas ใหญ่เกินไป
-      const estimatedWidth = baseViewport.width * scale;
-      const estimatedHeight = baseViewport.height * scale;
+      let width =
+        baseViewport.width * scale;
 
-      const maxDimension = Math.max(
-        estimatedWidth,
-        estimatedHeight
-      );
+      let height =
+        baseViewport.height * scale;
+
+      /*
+       * จำกัดขนาดสูงสุด
+       */
+      const maxDimension =
+        Math.max(width, height);
 
       if (maxDimension > THUMB_MAX_DIMENSION) {
-        scale *= THUMB_MAX_DIMENSION / maxDimension;
+        scale *=
+          THUMB_MAX_DIMENSION / maxDimension;
       }
 
       const viewport = page.getViewport({
         scale
       });
 
-      canvasAndContext = thumbnailCanvasFactory.create(
-        viewport.width,
-        viewport.height
-      );
+      /*
+       * ใช้ Canvas Factory ตัวเดียวกับ PDF.js
+       */
+      const canvasInfo =
+        window.KittoCanvasFactory.create(
+          viewport.width,
+          viewport.height
+        );
 
-      const { canvas, context } = canvasAndContext;
+      canvas = canvasInfo.canvas;
+      context = canvasInfo.context;
 
-      // พื้นหลังขาวสำหรับ thumbnail
+      /*
+       * พื้นหลังขาว
+       */
       context.save();
       context.fillStyle = '#FFFFFF';
       context.fillRect(
@@ -290,111 +219,134 @@
       );
       context.restore();
 
-      // สำคัญ:
-      // canvasFactory ถูกส่งเข้า render() เพื่อให้ PDF.js
-      // สามารถใช้ factory เดียวกันกับ canvas ภายในของ render path
-      const renderTask = page.render({
+      /*
+       * สำคัญมาก:
+       * canvasFactory ถูกส่งเข้า page.render()
+       *
+       * ทำให้ canvas ภายในที่ PDF.js สร้างระหว่าง
+       * soft-mask / transparency compositing
+       * สามารถใช้ factory ของเราได้
+       */
+      renderTask = page.render({
         canvasContext: context,
         viewport,
-        canvasFactory: thumbnailCanvasFactory,
+        canvasFactory: window.KittoCanvasFactory,
         intent: 'display'
       });
 
       await renderTask.promise;
 
-      // JPEG เหมาะกว่า PNG สำหรับ thumbnail จำนวนมาก
-      // เพราะใช้ RAM และ storage น้อยกว่า
-      const blob = await new Promise((resolve, reject) => {
-        canvas.toBlob(
-          (result) => {
-            if (result) {
-              resolve(result);
-            } else {
-              reject(
-                new Error('Failed to create thumbnail blob')
-              );
-            }
-          },
-          'image/jpeg',
-          0.78
-        );
-      });
+      /*
+       * เปลี่ยน thumbnail เป็น JPEG
+       * เพื่อใช้ memory น้อยกว่า PNG
+       */
+      const blob = await new Promise(
+        (resolve, reject) => {
+          canvas.toBlob(
+            (result) => {
+              if (result) {
+                resolve(result);
+              } else {
+                reject(
+                  new Error(
+                    'ไม่สามารถสร้าง thumbnail ได้'
+                  )
+                );
+              }
+            },
+            'image/jpeg',
+            0.78
+          );
+        }
+      );
 
-      // อาจมีไฟล์ใหม่เข้ามาระหว่าง render
+      /*
+       * เช็กอีกครั้ง เผื่อผู้ใช้เปลี่ยนไฟล์
+       * ระหว่าง render
+       */
       if (!currentDoc || item.deleted) {
         return;
       }
 
-      item.thumbUrl = URL.createObjectURL(blob);
+      item.thumbUrl =
+        URL.createObjectURL(blob);
 
-      // อัปเดตเฉพาะ card ที่เกี่ยวข้อง
-      const card = grid.querySelector(
-        `.page-card-manage[data-idx="${origIndex}"]`
-      );
+      const card =
+        grid.querySelector(
+          `.page-card-manage[data-idx="${origIndex}"]`
+        );
 
       if (card) {
         card.classList.remove('is-pending');
 
-        const img = card.querySelector('img');
+        const img =
+          card.querySelector('img');
 
         if (img) {
           img.src = item.thumbUrl;
+          img.alt = `หน้า ${origIndex + 1}`;
         }
       }
 
     } catch (error) {
       console.error(
-        `Thumbnail render failed for page ${origIndex + 1}:`,
+        `Thumbnail render failed: page ${origIndex + 1}`,
         error
       );
 
     } finally {
       item.rendering = false;
 
+      /*
+       * ปล่อย resource ของ pdf.js
+       */
       if (page) {
         try {
           page.cleanup();
-        } catch (_) {
-          // ignore
-        }
+        } catch (_) {}
       }
 
-      if (canvasAndContext) {
-        thumbnailCanvasFactory.destroy(
-          canvasAndContext
-        );
-        canvasAndContext = null;
+      /*
+       * ทำลาย canvas
+       */
+      if (canvas) {
+        canvas.width = 1;
+        canvas.height = 1;
       }
+
+      canvas = null;
+      context = null;
+      renderTask = null;
     }
   }
 
-  // ------------------------------------------------------------
-  // Render queue
-  // ------------------------------------------------------------
-
+  /*
+   * เพิ่มหน้าเข้า queue
+   */
   function queueRender(origIndex) {
-    if (!currentDoc) {
-      return;
-    }
+    if (!currentDoc) return;
 
     const item = pageItems.find(
       (entry) => entry.origIndex === origIndex
     );
 
-    if (!item) {
-      return;
-    }
+    if (!item) return;
+    if (item.deleted) return;
+    if (item.thumbUrl) return;
+    if (item.rendering) return;
 
-    if (item.deleted || item.thumbUrl || item.rendering) {
-      return;
-    }
-
+    /*
+     * กัน duplicate queue
+     */
     if (renderQueue.includes(origIndex)) {
       return;
     }
 
-    // ป้องกัน queue โตผิดปกติ
-    if (renderQueue.length >= 5000) {
+    /*
+     * ถ้า queue เยอะเกินไป
+     * ไม่ต้องยัดเพิ่ม
+     */
+    if (renderQueue.length > 100) {
       return;
     }
 
@@ -403,6 +355,9 @@
     processQueue();
   }
 
+  /*
+   * ทำงานทีละหน้า
+   */
   async function processQueue() {
     if (queueRunning) {
       return;
@@ -411,135 +366,102 @@
     queueRunning = true;
 
     try {
-      let activeWorkers = 0;
-
-      while (
-        renderQueue.length > 0 &&
-        activeWorkers < MAX_RENDER_QUEUE
-      ) {
-        const origIndex = renderQueue.shift();
+      while (renderQueue.length > 0) {
+        const origIndex =
+          renderQueue.shift();
 
         if (origIndex == null) {
           continue;
         }
 
         const item = pageItems.find(
-          (entry) => entry.origIndex === origIndex
+          (entry) =>
+            entry.origIndex === origIndex
         );
 
-        if (!item || item.deleted || item.thumbUrl) {
+        if (!item) {
           continue;
         }
 
-        activeWorkers++;
-
-        try {
-          await renderThumbnail(origIndex);
-        } catch (error) {
-          console.error(
-            `Queue render error on page ${origIndex + 1}:`,
-            error
-          );
-        } finally {
-          activeWorkers--;
+        if (item.deleted) {
+          continue;
         }
 
-        // ให้ browser repaint UI ก่อน render หน้าถัดไป
+        if (item.thumbUrl) {
+          continue;
+        }
+
+        await renderThumbnail(origIndex);
+
+        /*
+         * เปิดโอกาสให้ browser repaint UI
+         */
         await U.yieldToUI();
       }
 
     } finally {
       queueRunning = false;
 
-      maybeCloseDoc();
-
-      // ถ้ามีงานเข้ามาระหว่างที่ queue กำลังหยุด
+      /*
+       * เผื่อมีงานเข้ามาระหว่าง process
+       */
       if (renderQueue.length > 0) {
         processQueue();
       }
     }
   }
 
-  // ------------------------------------------------------------
-  // Destroy PDF document when no more thumbnails are needed
-  // ------------------------------------------------------------
-
-  function maybeCloseDoc() {
-    if (!currentDoc) {
-      return;
-    }
-
-    // ยังมีงานใน queue
-    if (renderQueue.length > 0) {
-      return;
-    }
-
-    // ยังมีหน้าที่กำลัง render
-    if (pageItems.some((item) => item.rendering)) {
-      return;
-    }
-
-    // ตรวจเฉพาะหน้าที่ยัง active
-    const needsMoreRendering = pageItems.some(
-      (item) =>
-        !item.deleted &&
-        !item.thumbUrl
-    );
-
-    if (needsMoreRendering) {
-      return;
-    }
-
-    const doc = currentDoc;
-    currentDoc = null;
-
-    // ปล่อย resource ของ PDF.js
-    doc.destroy().catch(() => {});
-  }
-
-  // ------------------------------------------------------------
-  // IntersectionObserver
-  // ------------------------------------------------------------
-
+  /*
+   * Intersection Observer
+   */
   function setupObserver() {
     if (observer) {
       observer.disconnect();
     }
 
-    observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) {
-            return;
-          }
+    observer =
+      new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) {
+              return;
+            }
 
-          const idx = Number(
-            entry.target.dataset.idx
-          );
+            const idx =
+              Number(
+                entry.target.dataset.idx
+              );
 
-          queueRender(idx);
-        });
+            queueRender(idx);
+          });
 
-        processQueue();
-      },
-      {
-        root: null,
+          processQueue();
+        },
+        {
+          root: null,
 
-        // โหลดก่อนที่จะเข้าหน้าจอจริง
-        rootMargin: '600px 0px',
+          /*
+           * โหลดก่อนถึง viewport
+           */
+          rootMargin: '300px 0px',
 
-        threshold: 0.01
-      }
-    );
+          threshold: 0.01
+        }
+      );
 
     grid
-      .querySelectorAll('.page-card-manage')
+      .querySelectorAll(
+        '.page-card-manage'
+      )
       .forEach((card) => {
-        const idx = Number(card.dataset.idx);
+        const idx =
+          Number(card.dataset.idx);
 
-        const item = pageItems.find(
-          (entry) => entry.origIndex === idx
-        );
+        const item =
+          pageItems.find(
+            (entry) =>
+              entry.origIndex === idx
+          );
 
         if (
           item &&
@@ -551,10 +473,9 @@
       });
   }
 
-  // ------------------------------------------------------------
-  // Grid
-  // ------------------------------------------------------------
-
+  /*
+   * สร้าง Grid
+   */
   function renderGrid() {
     if (observer) {
       observer.disconnect();
@@ -562,115 +483,155 @@
 
     grid.innerHTML = '';
 
-    pageItems.forEach((item, idx) => {
-      const card =
-        cardTemplate.content.firstElementChild.cloneNode(true);
+    pageItems.forEach(
+      (item, idx) => {
+        const card =
+          cardTemplate.content
+            .firstElementChild
+            .cloneNode(true);
 
-      card.dataset.idx = String(item.origIndex);
+        card.dataset.idx =
+          String(item.origIndex);
 
-      card.classList.toggle(
-        'is-deleted',
-        item.deleted
-      );
+        card.classList.toggle(
+          'is-deleted',
+          item.deleted
+        );
 
-      card.classList.toggle(
-        'is-pending',
-        !item.thumbUrl
-      );
+        card.classList.toggle(
+          'is-pending',
+          !item.thumbUrl
+        );
 
-      // thumbnail
-      if (item.thumbUrl) {
-        const img = card.querySelector('img');
+        const img =
+          card.querySelector('img');
 
-        if (img) {
+        if (img && item.thumbUrl) {
           img.src = item.thumbUrl;
-          img.alt = `หน้า ${idx + 1}`;
+          img.alt =
+            `หน้า ${idx + 1}`;
         }
+
+        const label =
+          card.querySelector(
+            '.js-pagelabel'
+          );
+
+        if (label) {
+          label.textContent =
+            `หน้า ${idx + 1}`;
+        }
+
+        const selectCb =
+          card.querySelector(
+            '.js-select'
+          );
+
+        if (selectCb) {
+          selectCb.checked =
+            item.selected;
+
+          selectCb.addEventListener(
+            'change',
+            () => {
+              item.selected =
+                selectCb.checked;
+            }
+          );
+        }
+
+        const upBtn =
+          card.querySelector(
+            '.js-move-up'
+          );
+
+        if (upBtn) {
+          upBtn.disabled =
+            idx === 0;
+
+          upBtn.addEventListener(
+            'click',
+            () => {
+              moveItem(
+                idx,
+                -1
+              );
+            }
+          );
+        }
+
+        const downBtn =
+          card.querySelector(
+            '.js-move-down'
+          );
+
+        if (downBtn) {
+          downBtn.disabled =
+            idx ===
+            pageItems.length - 1;
+
+          downBtn.addEventListener(
+            'click',
+            () => {
+              moveItem(
+                idx,
+                1
+              );
+            }
+          );
+        }
+
+        const delBtn =
+          card.querySelector(
+            '.js-delete'
+          );
+
+        if (delBtn) {
+          delBtn.title =
+            item.deleted
+              ? 'กู้คืนหน้านี้'
+              : 'ลบหน้านี้';
+
+          delBtn.textContent =
+            item.deleted
+              ? '↺'
+              : '✕';
+
+          delBtn.addEventListener(
+            'click',
+            () => {
+              item.deleted =
+                !item.deleted;
+
+              if (
+                !item.deleted &&
+                !item.thumbUrl
+              ) {
+                queueRender(
+                  item.origIndex
+                );
+              }
+
+              renderGrid();
+            }
+          );
+        }
+
+        grid.appendChild(card);
       }
-
-      // label
-      const label =
-        card.querySelector('.js-pagelabel');
-
-      if (label) {
-        label.textContent = `หน้า ${idx + 1}`;
-      }
-
-      // select
-      const selectCb =
-        card.querySelector('.js-select');
-
-      if (selectCb) {
-        selectCb.checked = item.selected;
-
-        selectCb.addEventListener('change', () => {
-          item.selected = selectCb.checked;
-        });
-      }
-
-      // move up
-      const upBtn =
-        card.querySelector('.js-move-up');
-
-      if (upBtn) {
-        upBtn.disabled = idx === 0;
-
-        upBtn.addEventListener('click', () => {
-          moveItem(idx, -1);
-        });
-      }
-
-      // move down
-      const downBtn =
-        card.querySelector('.js-move-down');
-
-      if (downBtn) {
-        downBtn.disabled =
-          idx === pageItems.length - 1;
-
-        downBtn.addEventListener('click', () => {
-          moveItem(idx, 1);
-        });
-      }
-
-      // delete / restore
-      const delBtn =
-        card.querySelector('.js-delete');
-
-      if (delBtn) {
-        delBtn.title = item.deleted
-          ? 'กู้คืนหน้านี้'
-          : 'ลบหน้านี้';
-
-        delBtn.textContent = item.deleted
-          ? '↺'
-          : '✕';
-
-        delBtn.addEventListener('click', () => {
-          item.deleted = !item.deleted;
-
-          // ถ้ากู้คืน ให้เอากลับเข้า queue
-          if (!item.deleted && !item.thumbUrl) {
-            queueRender(item.origIndex);
-          }
-
-          renderGrid();
-        });
-      }
-
-      grid.appendChild(card);
-    });
+    );
 
     setupObserver();
 
-    // เริ่ม render หน้าแรก ๆ ทันที
-    // ไม่ต้องรอ IntersectionObserver อย่างเดียว
-    const preloadCount = Math.min(
-      4,
-      pageItems.length
-    );
-
-    for (let i = 0; i < preloadCount; i++) {
+    /*
+     * Preload แค่ 2 หน้าแรก
+     * จากเดิมที่ preload มากกว่านี้
+     */
+    for (
+      let i = 0;
+      i < Math.min(2, pageItems.length);
+      i++
+    ) {
       if (
         !pageItems[i].deleted &&
         !pageItems[i].thumbUrl
@@ -682,10 +643,9 @@
     }
   }
 
-  // ------------------------------------------------------------
-  // Reorder
-  // ------------------------------------------------------------
-
+  /*
+   * เรียงหน้า
+   */
   function moveItem(idx, dir) {
     const j = idx + dir;
 
@@ -702,33 +662,37 @@
     renderGrid();
   }
 
-  // ------------------------------------------------------------
-  // Select all
-  // ------------------------------------------------------------
-
+  /*
+   * Select all
+   */
   selectAllEl.addEventListener(
     'change',
     () => {
-      pageItems.forEach((item) => {
-        item.selected =
-          selectAllEl.checked;
-      });
+      pageItems.forEach(
+        (item) => {
+          item.selected =
+            selectAllEl.checked;
+        }
+      );
 
       renderGrid();
     }
   );
 
-  // ------------------------------------------------------------
-  // PDF building
-  // ------------------------------------------------------------
-
+  /*
+   * สร้าง PDF
+   */
   async function buildPdf(indices) {
     if (!currentFile) {
-      throw new Error('No PDF file selected');
+      throw new Error(
+        'ยังไม่ได้เลือกไฟล์ PDF'
+      );
     }
 
     const srcBytes =
-      await U.readAsArrayBuffer(currentFile);
+      await U.readAsArrayBuffer(
+        currentFile
+      );
 
     const { bytes } =
       await PW.buildPagesPdf(
@@ -744,23 +708,33 @@
     );
   }
 
-  // ------------------------------------------------------------
-  // Download edited PDF
-  // ------------------------------------------------------------
-
+  /*
+   * Download edited PDF
+   */
   downloadBtn.addEventListener(
     'click',
     async () => {
-      const indices = pageItems
-        .filter((item) => !item.deleted)
-        .map((item) => item.origIndex);
+      const indices =
+        pageItems
+          .filter(
+            (item) =>
+              !item.deleted
+          )
+          .map(
+            (item) =>
+              item.origIndex
+          );
 
-      if (!indices.length || !currentFile) {
+      if (
+        !indices.length ||
+        !currentFile
+      ) {
         return;
       }
 
       downloadBtn.disabled = true;
-      downloadBtn.textContent = 'กำลังสร้าง…';
+      downloadBtn.textContent =
+        'กำลังสร้าง…';
 
       try {
         const blob =
@@ -773,14 +747,14 @@
 
       } catch (error) {
         console.error(
-          'Build edited PDF error:',
+          'Build PDF error:',
           error
         );
 
         alert(
           'ไม่สามารถสร้าง PDF ได้\n\n' +
           (error?.message ||
-            'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ')
+            'เกิดข้อผิดพลาด')
         );
 
       } finally {
@@ -791,22 +765,33 @@
     }
   );
 
-  // ------------------------------------------------------------
-  // Download selected PDF
-  // ------------------------------------------------------------
-
+  /*
+   * Download selected
+   */
   downloadSelectedBtn.addEventListener(
     'click',
     async () => {
-      const indices = pageItems
-        .filter((item) => item.selected)
-        .map((item) => item.origIndex);
+      const indices =
+        pageItems
+          .filter(
+            (item) =>
+              item.selected
+          )
+          .map(
+            (item) =>
+              item.origIndex
+          );
 
-      if (!indices.length || !currentFile) {
+      if (
+        !indices.length ||
+        !currentFile
+      ) {
         return;
       }
 
-      downloadSelectedBtn.disabled = true;
+      downloadSelectedBtn.disabled =
+        true;
+
       downloadSelectedBtn.textContent =
         'กำลังสร้าง…';
 
@@ -828,21 +813,22 @@
         alert(
           'ไม่สามารถสร้าง PDF ได้\n\n' +
           (error?.message ||
-            'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ')
+            'เกิดข้อผิดพลาด')
         );
 
       } finally {
-        downloadSelectedBtn.disabled = false;
+        downloadSelectedBtn.disabled =
+          false;
+
         downloadSelectedBtn.textContent =
           'ดาวน์โหลดเฉพาะที่เลือก';
       }
     }
   );
 
-  // ------------------------------------------------------------
-  // Dropzone
-  // ------------------------------------------------------------
-
+  /*
+   * Dropzone
+   */
   U.setupDropzone(
     dropzone,
     fileInput,
@@ -850,7 +836,8 @@
       const file =
         Array.from(files).find(
           (f) =>
-            f.type === 'application/pdf'
+            f.type ===
+            'application/pdf'
         );
 
       if (file) {
@@ -859,10 +846,9 @@
     }
   );
 
-  // ------------------------------------------------------------
-  // Clear cache
-  // ------------------------------------------------------------
-
+  /*
+   * Clear cache
+   */
   U.onClearCache(
     async () => {
       if (observer) {
@@ -871,28 +857,23 @@
       }
 
       resetQueue();
-
       revokeThumbs();
 
       pageItems = [];
 
-      if (currentDoc) {
-        const doc = currentDoc;
-        currentDoc = null;
-
-        try {
-          await doc.destroy();
-        } catch (_) {
-          // ignore
-        }
-      }
+      await destroyCurrentDoc();
 
       currentFile = null;
 
       grid.innerHTML = '';
 
-      bulkbar.classList.add('hidden');
-      noteEl.classList.add('hidden');
+      bulkbar.classList.add(
+        'hidden'
+      );
+
+      noteEl.classList.add(
+        'hidden'
+      );
 
       countEl.textContent = '0';
 
