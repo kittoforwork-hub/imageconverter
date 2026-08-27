@@ -1,5 +1,6 @@
 (() => {
   'use strict';
+
   const U = window.Utils;
 
   const dropzone = document.getElementById('dz-pdf-to-images');
@@ -17,147 +18,239 @@
   const progressLabel = progressWrap.querySelector('.js-progress-label');
 
   const LARGE_FILE_WARN_MB = 50;
-  // High page count × high resolution is what actually blows up memory (each
-  // rendered page stays alive as a blob until the zip step), not file size on
-  // its own — a 300-page doc at 3× easily produces gigabytes of raw pixels.
   const HEAVY_WORK_PAGE_THRESHOLD = 80;
 
   let currentFile = null;
   let currentDoc = null;
-  let rendered = []; // { pageNum, blob, url }
+  let rendered = [];
   let cancelRequested = false;
 
-  // The willReadFrequently we set on our own page canvas (below, in the
-  // render loop) only covers the canvas WE hand to page.render(). Pages
-  // that use soft masks / knockout transparency groups make pdf.js create
-  // its OWN extra canvases internally for compositing, and it reads pixels
-  // back from those via getImageData too — that's the warning that kept
-  // showing up. Those internal canvases come from pdf.js's canvasFactory
-  // option, which defaults to a plain `canvas.getContext("2d")` with no
-  // options. Supplying our own factory here is the only way to reach them.
-  class ReadbackFriendlyCanvasFactory extends pdfjsLib.DOMCanvasFactory {
-    create(width, height) {
-      if (width <= 0 || height <= 0) throw new Error('Invalid canvas size');
-      const canvas = this._createCanvas(width, height);
-      return { canvas, context: canvas.getContext('2d', { willReadFrequently: true }) };
-    }
-  }
-  const canvasFactory = new ReadbackFriendlyCanvasFactory();
-
   async function loadFile(file) {
-    if (!U.confirmLargeFile(file, LARGE_FILE_WARN_MB,
-      'ไฟล์ PDF นี้มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) จึงอาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก')) {
+    if (
+      !U.confirmLargeFile(
+        file,
+        LARGE_FILE_WARN_MB,
+        'ไฟล์ PDF นี้มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) จึงอาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก'
+      )
+    ) {
       return;
     }
 
-    currentFile = file;
-    nameEl.textContent = file.name;
-    bulkbar.classList.remove('hidden');
-    grid.innerHTML = '';
-    progressWrap.classList.add('hidden');
-    downloadZipBtn.classList.add('hidden');
-    rendered.forEach(r => URL.revokeObjectURL(r.url));
-    rendered = [];
-    if (currentDoc) { currentDoc.destroy(); currentDoc = null; }
+    try {
+      currentFile = file;
+      nameEl.textContent = file.name;
+      bulkbar.classList.remove('hidden');
+      grid.innerHTML = '';
+      progressWrap.classList.add('hidden');
+      downloadZipBtn.classList.add('hidden');
 
-    // Parsing itself already happens off the main thread — pdf.js hands
-    // this off to its own dedicated worker (see the workerSrc setup in
-    // index.html). It's only the actual page-to-canvas rasterization below
-    // that runs here, which is why we chunk it with progress + cancel.
-    const bytes = await U.readAsArrayBuffer(file);
-    currentDoc = await pdfjsLib.getDocument({ data: bytes, canvasFactory }).promise;
+      rendered.forEach((r) => URL.revokeObjectURL(r.url));
+      rendered = [];
+
+      if (currentDoc) {
+        await currentDoc.destroy();
+        currentDoc = null;
+      }
+
+      const bytes = await U.readAsArrayBuffer(file);
+
+      currentDoc = await pdfjsLib.getDocument({
+        data: bytes
+      }).promise;
+    } catch (error) {
+      console.error('PDF loading error:', error);
+
+      currentDoc = null;
+      currentFile = null;
+      bulkbar.classList.add('hidden');
+
+      alert(
+        'ไม่สามารถเปิดไฟล์ PDF นี้ได้\n\n' +
+        (error?.message || 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ')
+      );
+    }
   }
 
   function setProgress(done, total) {
-    progressFill.style.width = total ? Math.round((done / total) * 100) + '%' : '0%';
+    progressFill.style.width =
+      total ? Math.round((done / total) * 100) + '%' : '0%';
+
     progressLabel.textContent = `หน้า ${done}/${total}`;
   }
 
   async function renderAll() {
-    if (!currentDoc) return;
+    if (!currentDoc || !currentFile) {
+      alert('กรุณาเลือกไฟล์ PDF ก่อน');
+      return;
+    }
 
-    const scale = parseFloat(scaleEl.value);
+    const scale = Number(scaleEl.value) || 1;
     const total = currentDoc.numPages;
+
     if (total * scale >= HEAVY_WORK_PAGE_THRESHOLD) {
       const proceed = window.confirm(
-        `ไฟล์นี้มี ${total} หน้า ที่ความละเอียด ${scale}× — การแปลงทุกหน้าพร้อมกันจะใช้แรมมาก และเบราว์เซอร์อาจค้างชั่วขณะระหว่างทำงาน\n\nต้องการดำเนินการต่อหรือไม่? (ลดความละเอียดเป็น 1× จะเบากว่ามาก)`
+        `ไฟล์นี้มี ${total} หน้า ที่ความละเอียด ${scale}× — ` +
+        `การแปลงทุกหน้าจะใช้แรมมาก และเบราว์เซอร์อาจค้างชั่วขณะระหว่างทำงาน\n\n` +
+        `ต้องการดำเนินการต่อหรือไม่?\n` +
+        `(ลดความละเอียดเป็น 1× จะเบากว่ามาก)`
       );
-      if (!proceed) return;
+
+      if (!proceed) {
+        return;
+      }
     }
 
     cancelRequested = false;
-    // Deliberately left enabled (just re-styled) rather than disabled — the
-    // button doubles as a cancel control while a big document is mid-render.
+
     renderBtn.classList.add('is-working');
     renderBtn.textContent = 'ยกเลิก';
+
     grid.innerHTML = '';
     progressWrap.classList.remove('hidden');
     setProgress(0, total);
-    rendered.forEach(r => URL.revokeObjectURL(r.url));
+
+    rendered.forEach((r) => URL.revokeObjectURL(r.url));
     rendered = [];
 
-    const format = formatEl.value;
+    const format =
+      formatEl.value === 'image/png'
+        ? 'image/png'
+        : 'image/jpeg';
+
     const ext = format === 'image/png' ? 'png' : 'jpg';
 
-    for (let pageNum = 1; pageNum <= total; pageNum++) {
-      if (cancelRequested) break;
+    try {
+      for (let pageNum = 1; pageNum <= total; pageNum++) {
+        if (cancelRequested) {
+          break;
+        }
 
-      const page = await currentDoc.getPage(pageNum);
-      const viewport = page.getViewport({ scale });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      // willReadFrequently: pdf.js does its own internal getImageData
-      // readback on this context for soft-mask / knockout-group compositing
-      // on pages that use transparency groups. Without this flag the browser
-      // keeps that canvas GPU-backed and every readback forces a slow
-      // GPU→CPU sync — that's the "Multiple readback operations" warning,
-      // and on a file with many such pages it's a big chunk of the slowdown.
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (format === 'image/jpeg') {
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const page = await currentDoc.getPage(pageNum);
+
+        const viewport = page.getViewport({
+          scale
+        });
+
+        const canvas = document.createElement('canvas');
+
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+
+        const ctx = canvas.getContext('2d', {
+          willReadFrequently: true
+        });
+
+        if (!ctx) {
+          throw new Error('ไม่สามารถสร้าง Canvas 2D Context ได้');
+        }
+
+        // JPEG ต้องมีพื้นหลังสีขาว เพราะ JPEG ไม่มี transparency
+        if (format === 'image/jpeg') {
+          ctx.save();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.restore();
+        }
+
+        await page.render({
+          canvasContext: ctx,
+          viewport
+        }).promise;
+
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob(
+            (result) => {
+              if (result) {
+                resolve(result);
+              } else {
+                reject(new Error('ไม่สามารถสร้างรูปภาพจาก PDF ได้'));
+              }
+            },
+            format,
+            format === 'image/jpeg' ? 0.92 : undefined
+          );
+        });
+
+        const url = URL.createObjectURL(blob);
+
+        const name =
+          `${U.baseName(currentFile.name)}-page` +
+          `${String(pageNum).padStart(2, '0')}.${ext}`;
+
+        rendered.push({
+          pageNum,
+          blob,
+          url,
+          name
+        });
+
+        // ช่วยให้ pdf.js คืนทรัพยากรของหน้าที่ render แล้ว
+        page.cleanup();
+
+        const card =
+          pageTemplate.content.firstElementChild.cloneNode(true);
+
+        const img = card.querySelector('img');
+        if (img) {
+          img.src = url;
+          img.alt = `หน้า ${pageNum}`;
+        }
+
+        const pageLabel = card.querySelector('.js-pagelabel');
+        if (pageLabel) {
+          pageLabel.textContent = `หน้า ${pageNum}`;
+        }
+
+        const dl = card.querySelector('.js-download');
+        if (dl) {
+          dl.href = url;
+          dl.download = name;
+        }
+
+        grid.appendChild(card);
+
+        setProgress(pageNum, total);
+
+        // คืนเวลาให้ browser update UI และรับ click "ยกเลิก"
+        await U.yieldToUI();
+
+        // ช่วยปล่อย reference ของ canvas
+        canvas.width = 1;
+        canvas.height = 1;
       }
-      await page.render({ canvasContext: ctx, viewport }).promise;
+    } catch (error) {
+      console.error('PDF render error:', error);
 
-      const blob = await new Promise(res => canvas.toBlob(res, format, format === 'image/jpeg' ? 0.92 : undefined));
-      const url = URL.createObjectURL(blob);
-      const name = `${U.baseName(currentFile.name)}-page${String(pageNum).padStart(2, '0')}.${ext}`;
-      rendered.push({ pageNum, blob, url, name });
+      progressLabel.textContent =
+        `เกิดข้อผิดพลาด: ${error?.message || 'ไม่ทราบสาเหตุ'}`;
 
-      // Without this, pdf.js keeps every page's decoded fonts/images/operator
-      // list cached on both the main thread and the worker for the life of
-      // currentDoc — across a big document that cache grows for the entire
-      // loop and is exactly what turns into a freeze right as the last page
-      // finishes (the tab is suddenly holding hundreds of pages' worth of
-      // decoded resources and has to catch up). cleanup() drops everything
-      // for this page except the already-produced blob, which is all we
-      // still need.
-      page.cleanup();
+      alert(
+        'เกิดข้อผิดพลาดระหว่างแปลง PDF\n\n' +
+        (error?.message || 'ไม่ทราบสาเหตุ')
+      );
+    } finally {
+      renderBtn.classList.remove('is-working');
+      renderBtn.textContent = 'แปลงทุกหน้า';
 
-      const card = pageTemplate.content.firstElementChild.cloneNode(true);
-      card.querySelector('img').src = url;
-      card.querySelector('.js-pagelabel').textContent = `หน้า ${pageNum}`;
-      const dl = card.querySelector('.js-download');
-      dl.href = url;
-      dl.download = name;
-      grid.appendChild(card);
+      const completed =
+        !cancelRequested &&
+        rendered.length === total;
 
-      setProgress(pageNum, total);
-      // Give the tab a beat to repaint (grid, progress bar) and stay
-      // responsive to the cancel click — without this a big document renders
-      // as one long uninterrupted stretch that looks frozen even though it's
-      // technically making progress.
-      await U.yieldToUI();
+      progressWrap.classList.toggle(
+        'hidden',
+        completed
+      );
+
+      if (cancelRequested) {
+        progressLabel.textContent =
+          `ยกเลิกแล้ว · แปลงไปแล้ว ${rendered.length}/${total} หน้า`;
+      }
+
+      downloadZipBtn.classList.toggle(
+        'hidden',
+        rendered.length === 0
+      );
     }
-
-    renderBtn.classList.remove('is-working');
-    renderBtn.textContent = 'แปลงทุกหน้า';
-    progressWrap.classList.toggle('hidden', !cancelRequested && rendered.length === total);
-    if (cancelRequested) {
-      progressLabel.textContent = `ยกเลิกแล้ว · แปลงไปแล้ว ${rendered.length}/${total} หน้า`;
-    }
-    downloadZipBtn.classList.toggle('hidden', rendered.length === 0);
   }
 
   renderBtn.addEventListener('click', () => {
@@ -166,35 +259,82 @@
       renderBtn.textContent = 'กำลังยกเลิก…';
       return;
     }
+
     renderAll();
   });
 
   downloadZipBtn.addEventListener('click', async () => {
-    if (!rendered.length) return;
+    if (!rendered.length || !currentFile) {
+      return;
+    }
+
     downloadZipBtn.disabled = true;
     downloadZipBtn.textContent = 'กำลังบีบอัด…';
-    const zip = new JSZip();
-    rendered.forEach(r => zip.file(r.name, r.blob));
-    const content = await zip.generateAsync({ type: 'blob' });
-    U.downloadBlob(content, `${U.baseName(currentFile.name)}-pages.zip`);
-    downloadZipBtn.disabled = false;
-    downloadZipBtn.textContent = 'ดาวน์โหลดทั้งหมด (.zip)';
+
+    try {
+      const zip = new JSZip();
+
+      rendered.forEach((r) => {
+        zip.file(r.name, r.blob);
+      });
+
+      const content = await zip.generateAsync({
+        type: 'blob'
+      });
+
+      U.downloadBlob(
+        content,
+        `${U.baseName(currentFile.name)}-pages.zip`
+      );
+    } catch (error) {
+      console.error('ZIP error:', error);
+
+      alert(
+        'ไม่สามารถสร้างไฟล์ ZIP ได้\n\n' +
+        (error?.message || 'ไม่ทราบสาเหตุ')
+      );
+    } finally {
+      downloadZipBtn.disabled = false;
+      downloadZipBtn.textContent = 'ดาวน์โหลดทั้งหมด (.zip)';
+    }
   });
 
-  U.setupDropzone(dropzone, fileInput, (files) => {
-    const file = Array.from(files).find(f => f.type === 'application/pdf');
-    if (file) loadFile(file);
-  });
+  U.setupDropzone(
+    dropzone,
+    fileInput,
+    (files) => {
+      const file = Array.from(files).find(
+        (f) => f.type === 'application/pdf'
+      );
+
+      if (file) {
+        loadFile(file);
+      }
+    }
+  );
 
   U.onClearCache(() => {
     cancelRequested = true;
-    rendered.forEach(r => URL.revokeObjectURL(r.url));
+
+    rendered.forEach((r) => {
+      URL.revokeObjectURL(r.url);
+    });
+
     rendered = [];
-    if (currentDoc) { currentDoc.destroy(); currentDoc = null; }
+
+    if (currentDoc) {
+      currentDoc.destroy();
+      currentDoc = null;
+    }
+
     currentFile = null;
+
     grid.innerHTML = '';
     bulkbar.classList.add('hidden');
     progressWrap.classList.add('hidden');
     downloadZipBtn.classList.add('hidden');
+
+    renderBtn.classList.remove('is-working');
+    renderBtn.textContent = 'แปลงทุกหน้า';
   });
 })();
