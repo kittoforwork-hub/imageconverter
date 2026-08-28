@@ -50,6 +50,7 @@
         el.querySelector('.js-ratio-group').querySelectorAll('.seg-btn').forEach(b => b.classList.remove('is-active'));
         btn.classList.add('is-active');
         this.ratio = RATIOS[btn.dataset.ratio];
+        this.invalidateResult();
         this.applyRatioToBox();
       });
 
@@ -59,6 +60,7 @@
         el.querySelector('.js-format-group').querySelectorAll('.seg-btn').forEach(b => b.classList.remove('is-active'));
         btn.classList.add('is-active');
         this.format = btn.dataset.format;
+        this.invalidateResult();
       });
 
       el.querySelector('.js-crop-btn').addEventListener('click', () => this.crop());
@@ -204,8 +206,27 @@
       });
     }
 
-    crop() {
-      const d = this.getDisplayRect();
+    invalidateResult() {
+      if (this.resultUrl) {
+        URL.revokeObjectURL(this.resultUrl);
+        this.resultUrl = null;
+      }
+      this.downloadBtn.removeAttribute('href');
+      this.downloadBtn.classList.add('hidden');
+      this.statusEl.textContent = 'พร้อมตัด';
+      this.statusEl.classList.remove('is-ready', 'is-error');
+    }
+
+    async crop() {
+      if (!this.imgEl.naturalWidth || !this.imgEl.naturalHeight) return;
+
+      const btn = this.el.querySelector('.js-crop-btn');
+      btn.disabled = true;
+      this.statusEl.classList.remove('is-ready', 'is-error');
+      this.statusEl.textContent = 'กำลังตัด…';
+
+      try {
+        const d = this.getDisplayRect();
       const scaleX = this.imgEl.naturalWidth / d.width;
       const scaleY = this.imgEl.naturalHeight / d.height;
       const sx = (this.box.left - d.left) * scaleX;
@@ -223,12 +244,11 @@
       }
       ctx.drawImage(this.imgEl, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          this.statusEl.textContent = 'ตัดไม่สำเร็จ';
-          this.statusEl.classList.add('is-error');
-          return;
-        }
+        const blob = await new Promise((resolve) => {
+          canvas.toBlob(resolve, this.format, this.format === 'image/jpeg' ? 0.92 : undefined);
+        });
+        if (!blob) throw new Error('สร้างไฟล์ไม่สำเร็จ');
+
         if (this.resultUrl) URL.revokeObjectURL(this.resultUrl);
         this.resultUrl = URL.createObjectURL(blob);
         const ext = this.format === 'image/png' ? 'png' : 'jpg';
@@ -236,9 +256,13 @@
         this.downloadBtn.download = `${U.baseName(this.file.name)}-cropped.${ext}`;
         this.downloadBtn.classList.remove('hidden');
         this.statusEl.textContent = `พร้อมดาวน์โหลด · ${U.formatBytes(blob.size)}`;
-        this.statusEl.classList.remove('is-error');
         this.statusEl.classList.add('is-ready');
-      }, this.format, this.format === 'image/jpeg' ? 0.92 : undefined);
+      } catch (err) {
+        this.statusEl.textContent = 'ตัดไม่สำเร็จ: ' + (err?.message || err);
+        this.statusEl.classList.add('is-error');
+      } finally {
+        btn.disabled = false;
+      }
     }
   }
 
