@@ -1,19 +1,16 @@
-/* global importScripts, PDFLib, fontkit, self */
+/* global importScripts, PDFLib, self */
 'use strict';
 
-// This worker handles the pdf-lib side of things only:
-// - merge PDFs
-// - extract/build pages
-// - watermark text
-// - watermark PNG
-// - page numbers
-//
-// Page rendering (pdf.js) remains on the main thread.
+
+// ============================================================
+// LOAD LIBRARIES
+// ============================================================
 
 importScripts(
   'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
   'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js'
 );
+
 
 const {
   PDFDocument,
@@ -33,63 +30,100 @@ const THAI_FONT_MIRRORS = [
 
 let thaiFontPromise = null;
 
+
 function loadThaiFontBytes() {
   if (!thaiFontPromise) {
-    thaiFontPromise = (async () => {
-      let lastErr;
 
-      for (const url of THAI_FONT_MIRRORS) {
-        try {
-          const res = await fetch(url);
+    thaiFontPromise =
+      (async () => {
 
-          if (!res.ok) {
-            throw new Error('HTTP ' + res.status);
+        let lastErr = null;
+
+
+        for (
+          const url of THAI_FONT_MIRRORS
+        ) {
+
+          try {
+
+            const res =
+              await fetch(url);
+
+
+            if (!res.ok) {
+              throw new Error(
+                'HTTP ' +
+                res.status
+              );
+            }
+
+
+            const bytes =
+              await res.arrayBuffer();
+
+
+            if (
+              !bytes ||
+              bytes.byteLength < 1000
+            ) {
+              throw new Error(
+                'ไฟล์ฟอนต์ไม่สมบูรณ์'
+              );
+            }
+
+
+            return bytes;
+
+          } catch (err) {
+            lastErr = err;
           }
-
-          const buf = await res.arrayBuffer();
-
-          if (!buf || buf.byteLength < 1000) {
-            throw new Error(
-              'ไฟล์ฟอนต์ไม่สมบูรณ์'
-            );
-          }
-
-          return buf;
-
-        } catch (err) {
-          lastErr = err;
         }
-      }
 
-      throw new Error(
-        'โหลดฟอนต์ภาษาไทยไม่สำเร็จ: ' +
-        (
-          lastErr &&
-          lastErr.message
-            ? lastErr.message
-            : String(lastErr)
-        )
-      );
-    })().catch(err => {
-      thaiFontPromise = null;
-      throw err;
-    });
+
+        throw new Error(
+          'โหลดฟอนต์ภาษาไทยไม่สำเร็จ: ' +
+          (
+            lastErr &&
+            lastErr.message
+              ? lastErr.message
+              : String(lastErr)
+          )
+        );
+
+      })().catch(err => {
+
+        thaiFontPromise = null;
+
+        throw err;
+
+      });
   }
+
 
   return thaiFontPromise;
 }
 
+
 async function embedThaiFont(pdfDoc) {
-  if (!pdfDoc.registerFontkit) {
+
+  if (
+    typeof pdfDoc.registerFontkit !==
+    'function'
+  ) {
     return null;
   }
 
+
   if (self.fontkit) {
-    pdfDoc.registerFontkit(self.fontkit);
+    pdfDoc.registerFontkit(
+      self.fontkit
+    );
   }
+
 
   const bytes =
     await loadThaiFontBytes();
+
 
   return pdfDoc.embedFont(
     bytes,
@@ -99,24 +133,28 @@ async function embedThaiFont(pdfDoc) {
   );
 }
 
-// Preload Thai font
-loadThaiFontBytes().catch(() => {});
+
+// Preload font
+loadThaiFontBytes()
+  .catch(() => {});
 
 
 // ============================================================
-// GENERIC HELPERS
+// GENERAL HELPERS
 // ============================================================
 
 function normalizeNumber(
   value,
   fallback
 ) {
-  const n = Number(value);
+  const number =
+    Number(value);
 
-  return Number.isFinite(n)
-    ? n
+  return Number.isFinite(number)
+    ? number
     : fallback;
 }
+
 
 function clamp(
   value,
@@ -125,63 +163,92 @@ function clamp(
 ) {
   return Math.min(
     max,
-    Math.max(min, value)
+    Math.max(
+      min,
+      value
+    )
+  );
+}
+
+
+function ensureArrayBuffer(
+  value,
+  label
+) {
+  if (
+    value instanceof ArrayBuffer
+  ) {
+    return value;
+  }
+
+  if (
+    value instanceof Uint8Array
+  ) {
+    return value.buffer;
+  }
+
+  throw new Error(
+    (label || 'ข้อมูล') +
+    ' ไม่ถูกต้อง'
   );
 }
 
 
 // ============================================================
-// WATERMARK IMAGE SIZE
+// IMAGE SIZE
 // ============================================================
 
 function getImageSize(
   image,
-  maxWidth
+  targetWidth
 ) {
-  const originalWidth =
-    image.width;
+  const sourceWidth =
+    Number(image.width) || 1;
 
-  const originalHeight =
-    image.height;
+  const sourceHeight =
+    Number(image.height) || 1;
 
-  if (
-    !originalWidth ||
-    !originalHeight
-  ) {
-    return {
-      width: maxWidth,
-      height: maxWidth
-    };
-  }
+
+  const width =
+    Math.max(
+      1,
+      targetWidth
+    );
+
 
   const ratio =
-    originalHeight /
-    originalWidth;
+    sourceHeight /
+    sourceWidth;
+
 
   return {
-    width: maxWidth,
-    height: maxWidth * ratio
+    width,
+    height:
+      width * ratio
   };
 }
 
 
 // ============================================================
-// CALCULATE ROTATED IMAGE POSITION
+// CENTER ROTATED OBJECT
 //
-// pdf-lib rotates around the image's x/y origin.
-// This function moves that origin so the visual center
-// of the rotated image lands exactly at the page center.
+// pdf-lib uses x/y as the rotation origin.
+// This calculates the origin so the object's visual center
+// remains at the center of the PDF page after rotation.
 // ============================================================
 
-function getCenteredRotatedImagePosition({
+function getCenteredRotatedPosition({
   pageWidth,
   pageHeight,
-  imageWidth,
-  imageHeight,
+  objectWidth,
+  objectHeight,
   angle
 }) {
   const radians =
-    angle * Math.PI / 180;
+    angle *
+    Math.PI /
+    180;
+
 
   const cos =
     Math.cos(radians);
@@ -189,23 +256,31 @@ function getCenteredRotatedImagePosition({
   const sin =
     Math.sin(radians);
 
+
   const centerX =
     pageWidth / 2;
 
   const centerY =
     pageHeight / 2;
 
-  /*
-   * Center of the image relative to its
-   * bottom-left origin after rotation.
-   */
+
   const rotatedCenterX =
-    (imageWidth / 2) * cos -
-    (imageHeight / 2) * sin;
+    (
+      objectWidth / 2
+    ) * cos -
+    (
+      objectHeight / 2
+    ) * sin;
+
 
   const rotatedCenterY =
-    (imageWidth / 2) * sin +
-    (imageHeight / 2) * cos;
+    (
+      objectWidth / 2
+    ) * sin +
+    (
+      objectHeight / 2
+    ) * cos;
+
 
   return {
     x:
@@ -220,7 +295,7 @@ function getCenteredRotatedImagePosition({
 
 
 // ============================================================
-// REQUEST HANDLERS
+// HANDLERS
 // ============================================================
 
 const handlers = {
@@ -232,28 +307,60 @@ const handlers = {
   async mergePdfs({
     buffers
   }) {
+
+    if (
+      !Array.isArray(buffers) ||
+      !buffers.length
+    ) {
+      throw new Error(
+        'ไม่พบไฟล์ PDF สำหรับรวม'
+      );
+    }
+
+
     const outDoc =
       await PDFDocument.create();
 
-    for (const buffer of buffers) {
+
+    for (
+      let i = 0;
+      i < buffers.length;
+      i++
+    ) {
+
+      const buffer =
+        ensureArrayBuffer(
+          buffers[i],
+          `ไฟล์ PDF ลำดับที่ ${i + 1}`
+        );
+
+
       const srcDoc =
         await PDFDocument.load(
           buffer
         );
 
-      const copied =
+
+      const copiedPages =
         await outDoc.copyPages(
           srcDoc,
           srcDoc.getPageIndices()
         );
 
-      copied.forEach(page => {
-        outDoc.addPage(page);
-      });
+
+      copiedPages.forEach(
+        page => {
+          outDoc.addPage(
+            page
+          );
+        }
+      );
     }
+
 
     const bytes =
       await outDoc.save();
+
 
     return {
       bytes,
@@ -271,26 +378,75 @@ const handlers = {
     buffer,
     indices
   }) {
+
+    const sourceBuffer =
+      ensureArrayBuffer(
+        buffer,
+        'ไฟล์ PDF'
+      );
+
+
+    if (
+      !Array.isArray(indices) ||
+      !indices.length
+    ) {
+      throw new Error(
+        'กรุณาเลือกหน้า PDF อย่างน้อย 1 หน้า'
+      );
+    }
+
+
     const srcDoc =
       await PDFDocument.load(
-        buffer
+        sourceBuffer
       );
+
+
+    const pageCount =
+      srcDoc.getPageCount();
+
+
+    const safeIndices =
+      indices
+        .map(Number)
+        .filter(
+          index =>
+            Number.isInteger(index) &&
+            index >= 0 &&
+            index < pageCount
+        );
+
+
+    if (!safeIndices.length) {
+      throw new Error(
+        'หมายเลขหน้า PDF ไม่ถูกต้อง'
+      );
+    }
+
 
     const outDoc =
       await PDFDocument.create();
 
-    const copied =
+
+    const copiedPages =
       await outDoc.copyPages(
         srcDoc,
-        indices
+        safeIndices
       );
 
-    copied.forEach(page => {
-      outDoc.addPage(page);
-    });
+
+    copiedPages.forEach(
+      page => {
+        outDoc.addPage(
+          page
+        );
+      }
+    );
+
 
     const bytes =
       await outDoc.save();
+
 
     return {
       bytes
@@ -311,29 +467,56 @@ const handlers = {
     watermarkImage,
     imageSize
   }) {
+
+    const sourceBuffer =
+      ensureArrayBuffer(
+        buffer,
+        'ไฟล์ PDF'
+      );
+
+
     const pdfDoc =
       await PDFDocument.load(
-        buffer
+        sourceBuffer
       );
+
 
     const pages =
       pdfDoc.getPages();
 
 
+    if (!pages.length) {
+      throw new Error(
+        'PDF ไม่มีหน้าให้ใส่ลายน้ำ'
+      );
+    }
+
+
     // --------------------------------------------------------
-    // SETTINGS
+    // TEXT SETTINGS
     // --------------------------------------------------------
 
     const cleanText =
-      typeof text === 'string'
+      typeof text ===
+      'string'
         ? text.trim()
         : '';
 
+
     const textSize =
-      normalizeNumber(
-        size,
-        48
+      clamp(
+        normalizeNumber(
+          size,
+          48
+        ),
+        1,
+        1000
       );
+
+
+    // --------------------------------------------------------
+    // COMMON SETTINGS
+    // --------------------------------------------------------
 
     const watermarkOpacity =
       clamp(
@@ -345,31 +528,41 @@ const handlers = {
         1
       );
 
+
     const watermarkAngle =
       normalizeNumber(
         angle,
         0
       );
 
+
     const pngSize =
-      normalizeNumber(
-        imageSize,
-        180
+      clamp(
+        normalizeNumber(
+          imageSize,
+          180
+        ),
+        1,
+        5000
       );
 
 
     // --------------------------------------------------------
-    // TEXT WATERMARK
+    // PREPARE TEXT
     // --------------------------------------------------------
 
     let font = null;
     let textWidth = 0;
+    let textHeight = textSize;
+
 
     if (cleanText) {
+
       font =
         await embedThaiFont(
           pdfDoc
         );
+
 
       if (!font) {
         throw new Error(
@@ -377,35 +570,65 @@ const handlers = {
         );
       }
 
+
       textWidth =
         font.widthOfTextAtSize(
           cleanText,
           textSize
         );
+
+
+      if (
+        typeof font.heightAtSize ===
+        'function'
+      ) {
+        textHeight =
+          font.heightAtSize(
+            textSize
+          );
+      }
     }
 
 
     // --------------------------------------------------------
-    // PNG WATERMARK
+    // PREPARE PNG
     // --------------------------------------------------------
 
     let embeddedImage = null;
 
+
     if (
       watermarkImage &&
-      watermarkImage.byteLength
+      (
+        watermarkImage instanceof
+          ArrayBuffer ||
+        watermarkImage instanceof
+          Uint8Array
+      )
     ) {
+
       try {
+
+        const imageBytes =
+          watermarkImage instanceof
+          Uint8Array
+            ? watermarkImage
+            : new Uint8Array(
+                watermarkImage
+              );
+
+
         embeddedImage =
           await pdfDoc.embedPng(
-            new Uint8Array(
-              watermarkImage
-            )
+            imageBytes
           );
+
       } catch (err) {
+
         throw new Error(
           'ไฟล์ลายน้ำไม่ใช่ PNG ที่ถูกต้อง'
         );
+
       }
     }
 
@@ -425,132 +648,150 @@ const handlers = {
 
 
     // --------------------------------------------------------
-    // DRAW WATERMARK ON EVERY PAGE
+    // DRAW EVERY PAGE
     // --------------------------------------------------------
 
-    pages.forEach(page => {
+    pages.forEach(
+      page => {
 
-      const {
-        width,
-        height
-      } = page.getSize();
-
-
-      // ======================================================
-      // TEXT WATERMARK
-      // ======================================================
-
-      if (
-        cleanText &&
-        font
-      ) {
-        page.drawText(
-          cleanText,
-          {
-            x:
-              width / 2 -
-              textWidth / 2,
-
-            y:
-              height / 2,
-
-            size:
-              textSize,
-
-            font,
-
-            color:
-              rgb(
-                0.45,
-                0.45,
-                0.45
-              ),
-
-            opacity:
-              watermarkOpacity,
-
-            rotate:
-              degrees(
-                watermarkAngle
-              )
-          }
-        );
-      }
+        const {
+          width,
+          height
+        } = page.getSize();
 
 
-      // ======================================================
-      // PNG WATERMARK
-      // ======================================================
+        // ====================================================
+        // TEXT
+        // ====================================================
 
-      if (embeddedImage) {
+        if (
+          cleanText &&
+          font
+        ) {
 
-        const dimensions =
-          getImageSize(
-            embeddedImage,
-            pngSize
-          );
+          const position =
+            getCenteredRotatedPosition(
+              {
+                pageWidth:
+                  width,
 
-        const drawWidth =
-          dimensions.width;
+                pageHeight:
+                  height,
 
-        const drawHeight =
-          dimensions.height;
+                objectWidth:
+                  textWidth,
+
+                objectHeight:
+                  textHeight,
+
+                angle:
+                  watermarkAngle
+              }
+            );
 
 
-        // ----------------------------------------------------
-        // IMPORTANT:
-        // Correct for pdf-lib rotation origin so that
-        // the visual center remains at page center.
-        // ----------------------------------------------------
-
-        const position =
-          getCenteredRotatedImagePosition(
+          page.drawText(
+            cleanText,
             {
-              pageWidth:
-                width,
+              x:
+                position.x,
 
-              pageHeight:
-                height,
+              y:
+                position.y,
 
-              imageWidth:
-                drawWidth,
+              size:
+                textSize,
 
-              imageHeight:
-                drawHeight,
+              font,
 
-              angle:
-                watermarkAngle
+              color:
+                rgb(
+                  0.45,
+                  0.45,
+                  0.45
+                ),
+
+              opacity:
+                watermarkOpacity,
+
+              rotate:
+                degrees(
+                  watermarkAngle
+                )
             }
           );
+        }
 
 
-        page.drawImage(
-          embeddedImage,
-          {
-            x:
-              position.x,
+        // ====================================================
+        // PNG
+        // ====================================================
 
-            y:
-              position.y,
+        if (embeddedImage) {
 
-            width:
-              drawWidth,
+          const dimensions =
+            getImageSize(
+              embeddedImage,
+              pngSize
+            );
 
-            height:
-              drawHeight,
 
-            opacity:
-              watermarkOpacity,
+          const drawWidth =
+            dimensions.width;
 
-            rotate:
-              degrees(
-                watermarkAngle
-              )
-          }
-        );
+          const drawHeight =
+            dimensions.height;
+
+
+          const position =
+            getCenteredRotatedPosition(
+              {
+                pageWidth:
+                  width,
+
+                pageHeight:
+                  height,
+
+                objectWidth:
+                  drawWidth,
+
+                objectHeight:
+                  drawHeight,
+
+                angle:
+                  watermarkAngle
+              }
+            );
+
+
+          page.drawImage(
+            embeddedImage,
+            {
+              x:
+                position.x,
+
+              y:
+                position.y,
+
+              width:
+                drawWidth,
+
+              height:
+                drawHeight,
+
+              opacity:
+                watermarkOpacity,
+
+              rotate:
+                degrees(
+                  watermarkAngle
+                )
+            }
+          );
+        }
+
       }
-
-    });
+    );
 
 
     // --------------------------------------------------------
@@ -559,6 +800,7 @@ const handlers = {
 
     const bytes =
       await pdfDoc.save();
+
 
     return {
       bytes
@@ -577,88 +819,164 @@ const handlers = {
     size,
     position
   }) {
-    const MARGIN = 34;
+
+    const sourceBuffer =
+      ensureArrayBuffer(
+        buffer,
+        'ไฟล์ PDF'
+      );
+
 
     const pdfDoc =
       await PDFDocument.load(
-        buffer
+        sourceBuffer
       );
+
 
     const font =
       await embedThaiFont(
         pdfDoc
       );
 
+
+    if (!font) {
+      throw new Error(
+        'ไม่สามารถโหลดฟอนต์สำหรับเลขหน้าได้'
+      );
+    }
+
+
     const pages =
       pdfDoc.getPages();
+
 
     const total =
       pages.length;
 
-    pages.forEach(
-      (page, idx) => {
 
-        const n =
-          startAt + idx;
+    const pageSize =
+      clamp(
+        normalizeNumber(
+          size,
+          11
+        ),
+        1,
+        200
+      );
+
+
+    const firstPage =
+      Math.trunc(
+        normalizeNumber(
+          startAt,
+          1
+        )
+      );
+
+
+    const pageTemplate =
+      typeof template ===
+      'string'
+        ? template
+        : '{n} / {total}';
+
+
+    const placement =
+      typeof position ===
+      'string'
+        ? position
+        : 'bottom-center';
+
+
+    const MARGIN =
+      34;
+
+
+    pages.forEach(
+      (page, index) => {
+
+        const pageNumber =
+          firstPage +
+          index;
+
 
         const text =
-          template
+          pageTemplate
             .replace(
               /\{n\}/g,
-              String(n)
+              String(pageNumber)
             )
             .replace(
               /\{total\}/g,
               String(total)
             );
 
+
         const {
           width,
           height
         } = page.getSize();
 
+
         const textWidth =
           font.widthOfTextAtSize(
             text,
-            size
+            pageSize
           );
 
+
         const [
-          vSide,
-          hSide
+          vertical,
+          horizontal
         ] =
-          position.split('-');
+          placement.split(
+            '-'
+          );
 
-        const x =
-          hSide === 'center'
-            ? (
-                width -
-                textWidth
-              ) / 2
 
-            : hSide === 'right'
-              ? (
-                  width -
-                  textWidth -
-                  MARGIN
-                )
+        let x =
+          MARGIN;
 
-              : MARGIN;
+
+        if (
+          horizontal ===
+          'center'
+        ) {
+
+          x =
+            (
+              width -
+              textWidth
+            ) / 2;
+
+        } else if (
+          horizontal ===
+          'right'
+        ) {
+
+          x =
+            width -
+            textWidth -
+            MARGIN;
+        }
+
 
         const y =
-          vSide === 'top'
+          vertical ===
+          'top'
             ? height -
               MARGIN
-
             : MARGIN -
               10;
+
 
         page.drawText(
           text,
           {
             x,
             y,
-            size,
+            size:
+              pageSize,
             font,
             color:
               rgb(
@@ -671,8 +989,10 @@ const handlers = {
       }
     );
 
+
     const bytes =
       await pdfDoc.save();
+
 
     return {
       bytes
@@ -683,86 +1003,80 @@ const handlers = {
 
 
 // ============================================================
-// WORKER RPC
+// RPC
 // ============================================================
 
-self.onmessage = async (e) => {
+self.onmessage =
+  async event => {
 
-  const {
-    reqId,
-    type,
-    payload
-  } = e.data;
-
-  const handler =
-    handlers[type];
+    const data =
+      event.data || {};
 
 
-  // ----------------------------------------------------------
-  // UNKNOWN COMMAND
-  // ----------------------------------------------------------
-
-  if (!handler) {
-    self.postMessage({
+    const {
       reqId,
-      ok: false,
-      error:
-        'ไม่รู้จักคำสั่ง: ' +
-        type
-    });
-
-    return;
-  }
+      type,
+      payload
+    } = data;
 
 
-  // ----------------------------------------------------------
-  // EXECUTE
-  // ----------------------------------------------------------
+    const handler =
+      handlers[type];
 
-  try {
 
-    const result =
-      await handler(
-        payload || {}
+    if (!handler) {
+
+      self.postMessage({
+        reqId,
+        ok: false,
+        error:
+          'ไม่รู้จักคำสั่ง: ' +
+          type
+      });
+
+      return;
+    }
+
+
+    try {
+
+      const result =
+        await handler(
+          payload || {}
+        );
+
+
+      const transfer =
+        result &&
+        result.bytes
+          ? [
+              result.bytes.buffer
+            ]
+          : [];
+
+
+      self.postMessage(
+        {
+          reqId,
+          ok: true,
+          result
+        },
+        transfer
       );
 
 
-    // --------------------------------------------------------
-    // Transfer generated PDF back to main thread
-    // --------------------------------------------------------
+    } catch (err) {
 
-    const transfer =
-      result &&
-      result.bytes
-        ? [
-            result.bytes.buffer
-          ]
-        : [];
-
-
-    self.postMessage(
-      {
+      self.postMessage({
         reqId,
-        ok: true,
-        result
-      },
-      transfer
-    );
+        ok: false,
+        error:
+          (
+            err &&
+            err.message
+          ) ||
+          String(err)
+      });
 
-
-  } catch (err) {
-
-    self.postMessage({
-      reqId,
-      ok: false,
-      error:
-        (
-          err &&
-          err.message
-        ) ||
-        String(err)
-    });
-
-  }
-
-};
+    }
+  };
