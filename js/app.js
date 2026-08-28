@@ -15,6 +15,7 @@
 
   let currentCat = null;
 
+
   // ------------------------------------------------------------
   // TOOL META
   // ------------------------------------------------------------
@@ -68,10 +69,11 @@
 
 
   // ------------------------------------------------------------
-  // CATEGORY / TOOL NAVIGATION
+  // CATEGORY
   // ------------------------------------------------------------
 
   function showCategory(cat) {
+
     if (
       currentCat &&
       currentCat !== cat
@@ -81,12 +83,14 @@
 
     currentCat = cat;
 
+
     catButtons.forEach(button => {
       button.classList.toggle(
         'is-active',
         button.dataset.cat === cat
       );
     });
+
 
     chipGroups.forEach(group => {
       group.classList.toggle(
@@ -95,11 +99,13 @@
       );
     });
 
+
     const activeGroup =
       chipGroups.find(
         group =>
           group.dataset.catGroup === cat
       );
+
 
     const activeChip =
       activeGroup
@@ -113,6 +119,7 @@
           )
         : null;
 
+
     if (activeChip) {
       showTool(
         activeChip.dataset.tool
@@ -121,7 +128,12 @@
   }
 
 
+  // ------------------------------------------------------------
+  // TOOL
+  // ------------------------------------------------------------
+
   function showTool(tool) {
+
     document
       .querySelectorAll('.tool-chip')
       .forEach(button => {
@@ -131,6 +143,7 @@
         );
       });
 
+
     panels.forEach(panel => {
       panel.classList.toggle(
         'hidden',
@@ -139,9 +152,14 @@
       );
     });
 
+
     scheduleCuteRefresh();
   }
 
+
+  // ------------------------------------------------------------
+  // EVENTS
+  // ------------------------------------------------------------
 
   catButtons.forEach(button => {
     button.addEventListener(
@@ -170,16 +188,19 @@
 
 
   // ------------------------------------------------------------
-  // CUTE TOOL UI
+  // CUTE UI
   // ------------------------------------------------------------
 
   function setupCuteToolUI() {
+
     panels.forEach(panel => {
+
       const tool =
         panel.id.replace(
           /^panel-/,
           ''
         );
+
 
       const meta =
         TOOL_META[tool] ||
@@ -187,6 +208,7 @@
           'image',
           'พร้อมเริ่มงานแล้ว ✨'
         ];
+
 
       panel.dataset.tool =
         tool;
@@ -222,13 +244,14 @@
 
 
       // --------------------------------------------------------
-      // Dropzone extras
+      // Dropzone
       // --------------------------------------------------------
 
       const dz =
         panel.querySelector(
           '.dropzone'
         );
+
 
       if (!dz) {
         return;
@@ -248,14 +271,17 @@
         empty.className =
           'cute-empty-state';
 
+
         empty.innerHTML =
           '<span class="cute-dot"></span>' +
           '<span class="cute-empty-copy"></span>';
+
 
         const inner =
           dz.querySelector(
             '.dz-inner'
           );
+
 
         (
           inner ||
@@ -269,6 +295,7 @@
           '.cute-empty-copy'
         );
 
+
       if (copy) {
         copy.textContent =
           meta[1];
@@ -276,7 +303,7 @@
 
 
       // --------------------------------------------------------
-      // Progress UI
+      // Progress
       // --------------------------------------------------------
 
       if (
@@ -289,18 +316,24 @@
             'div'
           );
 
+
         progress.className =
           'cute-progress';
+
 
         progress.innerHTML = `
           <div class="cute-progress-head">
             <strong>กำลังทำงาน…</strong>
-            <span class="cute-progress-count">กำลังประมวลผล</span>
+            <span class="cute-progress-count">
+              กำลังประมวลผล
+            </span>
           </div>
+
           <div class="cute-progress-track">
             <div class="cute-progress-bar"></div>
           </div>
         `;
+
 
         dz.appendChild(progress);
       }
@@ -318,19 +351,23 @@
           );
         };
 
+
       dz.addEventListener(
         'dragenter',
         () => setDrag(true)
       );
+
 
       dz.addEventListener(
         'dragover',
         () => setDrag(true)
       );
 
+
       dz.addEventListener(
         'dragleave',
         event => {
+
           if (
             !dz.contains(
               event.relatedTarget
@@ -338,14 +375,18 @@
           ) {
             setDrag(false);
           }
+
         }
       );
+
 
       dz.addEventListener(
         'drop',
         () => setDrag(false)
       );
+
     });
+
 
     refreshCuteStates();
   }
@@ -353,47 +394,59 @@
 
   // ------------------------------------------------------------
   // CUTE STATE REFRESH
-  //
-  // เดิมใช้ setInterval ทุก 350ms
-  // เปลี่ยนเป็น debounce + MutationObserver
   // ------------------------------------------------------------
 
-  let cuteRefreshQueued = false;
+  let cuteRefreshQueued =
+    false;
+
 
   function scheduleCuteRefresh() {
+
     if (cuteRefreshQueued) {
       return;
     }
 
-    cuteRefreshQueued = true;
 
-    requestAnimationFrame(() => {
-      cuteRefreshQueued = false;
-      refreshCuteStates();
-    });
+    cuteRefreshQueued =
+      true;
+
+
+    requestAnimationFrame(
+      () => {
+        cuteRefreshQueued =
+          false;
+
+        refreshCuteStates();
+      }
+    );
   }
 
 
   function isCardProcessing(card) {
+
     if (
-      card.dataset.processing === 'true'
+      card.dataset.processing ===
+      'true'
     ) {
       return true;
     }
 
+
     if (
-      card.dataset.processing === 'false'
+      card.dataset.processing ===
+      'false'
     ) {
       return false;
     }
 
-    // Fallback สำหรับ tool เก่าที่ยังไม่ได้
-    // set data-processing
+
+    // fallback สำหรับ tool เดิม
     const text =
       (
         card.textContent ||
         ''
       ).toLowerCase();
+
 
     return /กำลัง|processing|converting|removing|loading|building|merging|exporting|saving|working|จัดทำ|ประมวลผล/.test(
       text
@@ -402,11 +455,14 @@
 
 
   function refreshCuteStates() {
+
     panels.forEach(panel => {
+
       const dz =
         panel.querySelector(
           '.dropzone'
         );
+
 
       if (!dz) {
         return;
@@ -418,10 +474,12 @@
           '[id^="jobs-"]'
         );
 
+
       const list =
         panel.querySelector(
           '[id^="list-"]'
         );
+
 
       const result =
         panel.querySelector(
@@ -452,6 +510,7 @@
           '.cute-empty-state'
         );
 
+
       if (empty) {
         empty.classList.toggle(
           'is-hidden',
@@ -460,21 +519,28 @@
       }
 
 
-      let processing = false;
+      let processing =
+        false;
 
 
       cards.forEach(card => {
+
         const busy =
-          isCardProcessing(card);
+          isCardProcessing(
+            card
+          );
+
 
         card.classList.toggle(
           'is-processing',
           busy
         );
 
+
         if (busy) {
           processing = true;
         }
+
       });
 
 
@@ -493,39 +559,48 @@
           '.cute-progress'
         );
 
+
       if (progress) {
+
         progress.classList.toggle(
           'is-visible',
           processing
         );
 
+
         if (
           !processing &&
           hasFiles
         ) {
+
           progress.classList.add(
             'is-done'
           );
+
 
           const strong =
             progress.querySelector(
               'strong'
             );
 
+
           const count =
             progress.querySelector(
               '.cute-progress-count'
             );
+
 
           if (strong) {
             strong.textContent =
               'พร้อมแล้ว ✨';
           }
 
+
           if (count) {
             count.textContent =
               'ทำงานเสร็จ';
           }
+
 
         } else if (processing) {
 
@@ -533,33 +608,41 @@
             'is-done'
           );
 
+
           const strong =
             progress.querySelector(
               'strong'
             );
+
 
           const count =
             progress.querySelector(
               '.cute-progress-count'
             );
 
+
           if (strong) {
             strong.textContent =
               'กำลังทำงาน…';
           }
 
+
           if (count) {
+
             count.textContent =
               cards.length
                 ? `${cards.length} รายการ`
                 : 'กำลังประมวลผล';
+
           }
+
 
         } else {
 
           progress.classList.remove(
             'is-done'
           );
+
         }
       }
 
@@ -568,6 +651,7 @@
         'is-busy',
         processing
       );
+
     });
   }
 
@@ -576,80 +660,106 @@
 
 
   // ------------------------------------------------------------
-  // WATCH DOM CHANGES
+  // MUTATION OBSERVER
   // ------------------------------------------------------------
 
-  const cuteObserver =
-    new MutationObserver(
-      mutations => {
-        let relevant = false;
+  let cuteObserver =
+    null;
 
-        for (
-          const mutation of mutations
-        ) {
-          if (
-            mutation.type ===
-              'childList' &&
-            (
-              mutation.addedNodes.length ||
-              mutation.removedNodes.length
-            )
-          ) {
-            relevant = true;
-            break;
-          }
 
-          if (
-            mutation.type ===
-            'attributes'
+  const panelContainer =
+    document.querySelector(
+      '.panels'
+    );
+
+
+  if (panelContainer) {
+
+    cuteObserver =
+      new MutationObserver(
+        mutations => {
+
+          let relevant =
+            false;
+
+
+          for (
+            const mutation
+            of mutations
           ) {
-            const target =
-              mutation.target;
 
             if (
-              target &&
+              mutation.type ===
+                'childList' &&
               (
-                target.classList?.contains(
-                  'hidden'
-                ) ||
-                target.classList?.contains(
-                  'is-processing'
-                )
+                mutation.addedNodes.length ||
+                mutation.removedNodes.length
               )
             ) {
               relevant = true;
               break;
             }
-          }
-        }
 
-        if (relevant) {
-          scheduleCuteRefresh();
+
+            if (
+              mutation.type ===
+              'attributes'
+            ) {
+
+              const target =
+                mutation.target;
+
+
+              if (
+                target &&
+                (
+                  target.classList?.contains(
+                    'hidden'
+                  ) ||
+                  target.classList?.contains(
+                    'is-processing'
+                  )
+                )
+              ) {
+                relevant = true;
+                break;
+              }
+
+            }
+
+          }
+
+
+          if (relevant) {
+            scheduleCuteRefresh();
+          }
+
         }
+      );
+
+
+    cuteObserver.observe(
+      panelContainer,
+      {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: [
+          'class',
+          'data-processing'
+        ]
       }
     );
 
-  cuteObserver.observe(
-    document.querySelector(
-      '.panels'
-    ),
-    {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: [
-        'class',
-        'data-processing'
-      ]
-    }
-  );
+  }
 
 
   // ------------------------------------------------------------
-  // AUTO CLEAR CACHE
+  // CACHE CLEAR
   // ------------------------------------------------------------
 
   function runAutoClearCache() {
+
     if (
       window.Utils &&
       typeof window.Utils.clearCache ===
@@ -657,6 +767,7 @@
     ) {
       window.Utils.clearCache();
     }
+
 
     if (
       window.PdfWorkerClient &&
@@ -666,16 +777,18 @@
       window.PdfWorkerClient.dispose();
     }
 
+
     scheduleCuteRefresh();
   }
 
 
   // ------------------------------------------------------------
-  // ACTIVITY / IDLE
+  // IDLE MANAGEMENT
   // ------------------------------------------------------------
 
   const IDLE_LIMIT_MS =
     5 * 60 * 1000;
+
 
   let lastActivity =
     Date.now();
@@ -695,6 +808,7 @@
     'drop',
     'wheel'
   ].forEach(eventName => {
+
     document.addEventListener(
       eventName,
       markActivity,
@@ -703,17 +817,21 @@
         capture: true
       }
     );
+
   });
 
 
   function hasProcessingWork() {
+
     return !!document.querySelector(
       '.tool-panel:not(.hidden) .is-processing'
     );
+
   }
 
 
   function hasVisibleResult() {
+
     return !!document.querySelector(
       [
         '.tool-panel:not(.hidden) .js-download-btn:not(.hidden)',
@@ -722,16 +840,20 @@
         '.tool-panel:not(.hidden) .is-ready'
       ].join(',')
     );
+
   }
 
 
   function isUserEditing() {
+
     const active =
       document.activeElement;
+
 
     if (!active) {
       return false;
     }
+
 
     return !!active.closest(
       '.tool-panel:not(.hidden)'
@@ -741,45 +863,50 @@
       ) ||
       active.isContentEditable
     );
+
   }
 
 
-  setInterval(() => {
-    const idleFor =
-      Date.now() -
-      lastActivity;
+  setInterval(
+    () => {
 
-    if (
-      idleFor < IDLE_LIMIT_MS
-    ) {
-      return;
-    }
+      const idleFor =
+        Date.now() -
+        lastActivity;
 
 
-    // อย่าล้างขณะประมวลผล
-    if (hasProcessingWork()) {
-      return;
-    }
+      if (
+        idleFor <
+        IDLE_LIMIT_MS
+      ) {
+        return;
+      }
 
 
-    // อย่าล้าง result ที่ยังรอดาวน์โหลด
-    if (hasVisibleResult()) {
-      return;
-    }
+      if (hasProcessingWork()) {
+        return;
+      }
 
 
-    // อย่าล้างตอนผู้ใช้กำลังกรอกฟอร์ม
-    if (isUserEditing()) {
-      return;
-    }
+      if (hasVisibleResult()) {
+        return;
+      }
 
 
-    runAutoClearCache();
+      if (isUserEditing()) {
+        return;
+      }
 
-    lastActivity =
-      Date.now();
 
-  }, 60 * 1000);
+      runAutoClearCache();
+
+
+      lastActivity =
+        Date.now();
+
+    },
+    60 * 1000
+  );
 
 
   // ------------------------------------------------------------
@@ -789,6 +916,7 @@
   window.addEventListener(
     'pagehide',
     () => {
+
       if (
         window.Utils &&
         typeof window.Utils.clearCache ===
@@ -796,6 +924,7 @@
       ) {
         window.Utils.clearCache();
       }
+
 
       if (
         window.PdfWorkerClient &&
@@ -805,9 +934,13 @@
         window.PdfWorkerClient.dispose();
       }
 
-      try {
-        cuteObserver.disconnect();
-      } catch (_) {}
+
+      if (cuteObserver) {
+        try {
+          cuteObserver.disconnect();
+        } catch (_) {}
+      }
+
     }
   );
 
