@@ -76,7 +76,7 @@
         await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
         const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
         entry.thumbUrl = URL.createObjectURL(blob);
-        doc.destroy(); // only needed the thumbnail — free the decoded doc right away
+        await doc.destroy(); // only needed the thumbnail — free the decoded doc right away
       } catch (e) {
         entry.pageCount = '?';
       }
