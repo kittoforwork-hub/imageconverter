@@ -44,6 +44,10 @@
     document.getElementById('tpl-page-manage');
 
 
+  // ============================================================
+  // GUARD
+  // ============================================================
+
   if (
     !U ||
     !PW ||
@@ -56,7 +60,6 @@
     console.error(
       'PDF Pages: required elements are missing'
     );
-
     return;
   }
 
@@ -69,10 +72,10 @@
   const THUMB_MAX_DIMENSION = 1800;
   const LARGE_FILE_WARN_MB = 50;
 
-  // Render ทีละหน้าเพื่อคุม RAM
+  // render thumbnail ทีละหน้า
   const MAX_RENDER_QUEUE = 1;
 
-  // ระยะที่ลากแล้วจึงถือว่าเริ่ม reorder
+  // ต้องลากเกินระยะนี้ก่อนจึงเริ่ม reorder
   const DRAG_START_DISTANCE = 6;
 
 
@@ -98,7 +101,26 @@
 
 
   // ============================================================
-  // STATE HELPERS
+  // PANEL STATE
+  // ============================================================
+
+  function setToolProcessing(on) {
+    const panel =
+      document.getElementById(
+        'panel-pdf-pages'
+      );
+
+    if (!panel) {
+      return;
+    }
+
+    panel.dataset.processing =
+      on ? 'true' : 'false';
+  }
+
+
+  // ============================================================
+  // PAGE HELPERS
   // ============================================================
 
   function getVisibleItems() {
@@ -135,52 +157,35 @@
     }
 
     if (selectAllEl) {
-      const selectable =
-        visible;
-
       selectAllEl.checked =
-        selectable > 0 &&
-        selected === selectable;
+        visible > 0 &&
+        selected === visible;
 
       selectAllEl.indeterminate =
         selected > 0 &&
-        selected < selectable;
-    }
-  }
-
-
-  function setToolProcessing(on) {
-    const panel =
-      document.getElementById(
-        'panel-pdf-pages'
-      );
-
-    if (panel) {
-      panel.dataset.processing =
-        on ? 'true' : 'false';
+        selected < visible;
     }
   }
 
 
   // ============================================================
-  // THUMB CLEANUP
+  // THUMBNAIL CLEANUP
   // ============================================================
 
   function revokeThumbs() {
-    pageItems.forEach(
-      item => {
-        if (item.thumbUrl) {
-          try {
-            URL.revokeObjectURL(
-              item.thumbUrl
-            );
-          } catch (_) {}
-
-          item.thumbUrl =
-            null;
-        }
+    pageItems.forEach(item => {
+      if (!item.thumbUrl) {
+        return;
       }
-    );
+
+      try {
+        URL.revokeObjectURL(
+          item.thumbUrl
+        );
+      } catch (_) {}
+
+      item.thumbUrl = null;
+    });
   }
 
 
@@ -192,16 +197,14 @@
     renderQueue.length = 0;
     queueRunning = false;
 
-    pageItems.forEach(
-      item => {
-        item.rendering = false;
-      }
-    );
+    pageItems.forEach(item => {
+      item.rendering = false;
+    });
   }
 
 
   // ============================================================
-  // PDF DOCUMENT CLEANUP
+  // PDF CLEANUP
   // ============================================================
 
   async function destroyCurrentDoc() {
@@ -209,9 +212,7 @@
       return;
     }
 
-    const doc =
-      currentDoc;
-
+    const doc = currentDoc;
     currentDoc = null;
 
     try {
@@ -226,11 +227,10 @@
 
 
   // ============================================================
-  // LOAD FILE
+  // LOAD PDF
   // ============================================================
 
   async function loadFile(file) {
-
     if (!file) {
       return;
     }
@@ -248,7 +248,6 @@
       alert(
         'กรุณาเลือกไฟล์ PDF เท่านั้น'
       );
-
       return;
     }
 
@@ -269,7 +268,7 @@
 
 
       // --------------------------------------------------------
-      // Cleanup ของเดิมก่อน
+      // cleanup ของเก่า
       // --------------------------------------------------------
 
       if (observer) {
@@ -285,17 +284,16 @@
       await destroyCurrentDoc();
 
 
-      // --------------------------------------------------------
-      // ตรวจ request
-      // --------------------------------------------------------
-
       if (requestId !== loadSeq) {
         return;
       }
 
 
-      currentFile =
-        file;
+      // --------------------------------------------------------
+      // state
+      // --------------------------------------------------------
+
+      currentFile = file;
 
 
       if (nameEl) {
@@ -327,7 +325,7 @@
 
 
       // --------------------------------------------------------
-      // Read PDF
+      // read PDF
       // --------------------------------------------------------
 
       const bytes =
@@ -342,7 +340,7 @@
 
 
       // --------------------------------------------------------
-      // Open PDF.js document
+      // open with PDF.js
       // --------------------------------------------------------
 
       const loadingTask =
@@ -366,12 +364,11 @@
       }
 
 
-      currentDoc =
-        doc;
+      currentDoc = doc;
 
 
       // --------------------------------------------------------
-      // Create page items
+      // build page state
       // --------------------------------------------------------
 
       for (
@@ -390,9 +387,7 @@
 
 
       updateCounts();
-
       renderGrid();
-
 
     } catch (error) {
 
@@ -450,9 +445,7 @@
   // RENDER THUMBNAIL
   // ============================================================
 
-  async function renderThumbnail(
-    origIndex
-  ) {
+  async function renderThumbnail(origIndex) {
     if (!currentDoc) {
       return;
     }
@@ -480,8 +473,7 @@
     }
 
 
-    item.rendering =
-      true;
+    item.rendering = true;
 
 
     let page = null;
@@ -491,7 +483,6 @@
 
 
     try {
-
       page =
         await currentDoc.getPage(
           origIndex + 1
@@ -515,7 +506,7 @@
 
 
       // --------------------------------------------------------
-      // Target size
+      // scale
       // --------------------------------------------------------
 
       let scale =
@@ -526,7 +517,6 @@
       let width =
         baseViewport.width *
         scale;
-
 
       let height =
         baseViewport.height *
@@ -557,7 +547,7 @@
 
 
       // --------------------------------------------------------
-      // Canvas
+      // canvas
       // --------------------------------------------------------
 
       const factory =
@@ -571,10 +561,12 @@
               viewport.height
             )
           : (() => {
+
               const fallbackCanvas =
                 document.createElement(
                   'canvas'
                 );
+
 
               fallbackCanvas.width =
                 Math.ceil(
@@ -586,10 +578,12 @@
                   viewport.height
                 );
 
+
               const fallbackContext =
                 fallbackCanvas.getContext(
                   '2d'
                 );
+
 
               if (!fallbackContext) {
                 throw new Error(
@@ -597,12 +591,14 @@
                 );
               }
 
+
               return {
                 canvas:
                   fallbackCanvas,
                 context:
                   fallbackContext
               };
+
             })();
 
 
@@ -614,7 +610,7 @@
 
 
       // --------------------------------------------------------
-      // White background
+      // white background
       // --------------------------------------------------------
 
       context.save();
@@ -633,7 +629,7 @@
 
 
       // --------------------------------------------------------
-      // Render
+      // render
       // --------------------------------------------------------
 
       renderTask =
@@ -657,10 +653,7 @@
 
       const blob =
         await new Promise(
-          (
-            resolve,
-            reject
-          ) => {
+          (resolve, reject) => {
 
             canvas.toBlob(
               result => {
@@ -687,12 +680,11 @@
 
 
       // --------------------------------------------------------
-      // Stale check
+      // stale / deleted check
       // --------------------------------------------------------
 
       if (
         !currentDoc ||
-        currentDoc === null ||
         item.deleted
       ) {
         return;
@@ -708,7 +700,6 @@
       updateCardThumbnail(
         item
       );
-
 
     } catch (error) {
 
@@ -730,7 +721,6 @@
         );
       }
 
-
     } finally {
 
       item.rendering =
@@ -744,10 +734,7 @@
       }
 
 
-      if (
-        canvas &&
-        canvas !== null
-      ) {
+      if (canvas) {
         try {
           canvas.width = 1;
           canvas.height = 1;
@@ -763,7 +750,7 @@
 
 
   // ============================================================
-  // UPDATE CARD THUMBNAIL
+  // UPDATE THUMBNAIL IN CARD
   // ============================================================
 
   function updateCardThumbnail(item) {
@@ -785,10 +772,15 @@
 
 
     const img =
-      card.querySelector('img');
+      card.querySelector(
+        'img'
+      );
 
 
-    if (img && item.thumbUrl) {
+    if (
+      img &&
+      item.thumbUrl
+    ) {
       img.src =
         item.thumbUrl;
 
@@ -802,9 +794,7 @@
   // QUEUE
   // ============================================================
 
-  function queueRender(
-    origIndex
-  ) {
+  function queueRender(origIndex) {
     if (!currentDoc) {
       return;
     }
@@ -913,7 +903,6 @@
   // ============================================================
 
   function setupObserver() {
-
     if (observer) {
       observer.disconnect();
     }
@@ -991,20 +980,24 @@
               card
             );
           }
+
         }
       );
   }
 
 
   // ============================================================
-  // CARD VISUAL STATE
+  // CARD STATE
   // ============================================================
 
   function updateCardState(
     card,
     item
   ) {
-    if (!card || !item) {
+    if (
+      !card ||
+      !item
+    ) {
       return;
     }
 
@@ -1070,27 +1063,14 @@
           );
 
 
-        // ------------------------------------------------------
-        // State
-        // ------------------------------------------------------
-
         updateCardState(
           card,
           item
         );
 
 
-        if (
-          item.thumbUrl
-        ) {
-          card.classList.remove(
-            'is-pending'
-          );
-        }
-
-
         // ------------------------------------------------------
-        // Thumbnail
+        // thumbnail
         // ------------------------------------------------------
 
         const img =
@@ -1112,7 +1092,7 @@
 
 
         // ------------------------------------------------------
-        // Label
+        // page label
         // ------------------------------------------------------
 
         const label =
@@ -1128,7 +1108,7 @@
 
 
         // ------------------------------------------------------
-        // Checkbox
+        // checkbox
         // ------------------------------------------------------
 
         const checkbox =
@@ -1146,6 +1126,14 @@
 
           checkbox.disabled =
             item.deleted;
+
+
+          checkbox.addEventListener(
+            'pointerdown',
+            event => {
+              event.stopPropagation();
+            }
+          );
 
 
           checkbox.addEventListener(
@@ -1187,7 +1175,7 @@
 
 
         // ------------------------------------------------------
-        // Card click = select
+        // card click = select
         // ------------------------------------------------------
 
         card.addEventListener(
@@ -1240,7 +1228,7 @@
 
 
         // ------------------------------------------------------
-        // Move up
+        // move up
         // ------------------------------------------------------
 
         const upBtn =
@@ -1258,19 +1246,21 @@
           upBtn.addEventListener(
             'click',
             event => {
+
               event.stopPropagation();
 
               moveItem(
                 position,
                 -1
               );
+
             }
           );
         }
 
 
         // ------------------------------------------------------
-        // Move down
+        // move down
         // ------------------------------------------------------
 
         const downBtn =
@@ -1289,19 +1279,21 @@
           downBtn.addEventListener(
             'click',
             event => {
+
               event.stopPropagation();
 
               moveItem(
                 position,
                 1
               );
+
             }
           );
         }
 
 
         // ------------------------------------------------------
-        // Delete / Restore
+        // delete / restore
         // ------------------------------------------------------
 
         const deleteBtn =
@@ -1340,13 +1332,8 @@
 
 
                 if (
-                  item.thumbUrl
+                  !item.thumbUrl
                 ) {
-                  updateCardThumbnail(
-                    item
-                  );
-
-                } else {
                   queueRender(
                     item.origIndex
                   );
@@ -1370,7 +1357,7 @@
 
 
         // ------------------------------------------------------
-        // Pointer drag reorder
+        // drag reorder
         // ------------------------------------------------------
 
         setupCardDrag(
@@ -1378,10 +1365,6 @@
           item
         );
 
-
-        // ------------------------------------------------------
-        // Add
-        // ------------------------------------------------------
 
         grid.appendChild(
           card
@@ -1397,7 +1380,7 @@
 
 
     // --------------------------------------------------------
-    // Preload first visible pages
+    // preload 2 หน้าแรก
     // --------------------------------------------------------
 
     let queued =
@@ -1419,6 +1402,7 @@
         !item.deleted &&
         !item.thumbUrl
       ) {
+
         queueRender(
           item.origIndex
         );
@@ -1427,10 +1411,6 @@
       }
     }
 
-
-    // --------------------------------------------------------
-    // Process queue
-    // --------------------------------------------------------
 
     processQueue();
   }
@@ -1444,7 +1424,10 @@
     card,
     item
   ) {
-    if (!card || !item) {
+    if (
+      !card ||
+      !item
+    ) {
       return;
     }
 
@@ -1490,7 +1473,6 @@
         startX =
           event.clientX;
 
-
         startY =
           event.clientY;
 
@@ -1504,6 +1486,11 @@
           item,
           moved: false
         };
+
+
+        card.classList.add(
+          'is-drag-ready'
+        );
 
 
         try {
@@ -1551,46 +1538,53 @@
         }
 
 
-        moved =
-          true;
+        if (!moved) {
 
-
-        if (dragState) {
-          dragState.moved =
+          moved =
             true;
+
+
+          if (dragState) {
+            dragState.moved =
+              true;
+          }
+
+
+          card.classList.remove(
+            'is-drag-ready'
+          );
+
+
+          card.classList.add(
+            'is-dragging'
+          );
         }
 
 
-        card.classList.add(
-          'is-dragging'
-        );
-
-
         const target =
-          getDragTargetCard(
+          findDropTarget(
             event.clientX,
             event.clientY,
             card
           );
 
 
-        if (
-          !target
-        ) {
+        if (!target) {
           return;
         }
 
 
-        moveCardDomPreview(
-          card,
+        moveItemRelativeToTarget(
+          item,
           target,
           event.clientY
         );
+
       }
     );
 
 
-    const endDrag =
+    const finishDrag =
       () => {
 
         if (
@@ -1612,44 +1606,18 @@
 
 
         card.classList.remove(
+          'is-drag-ready',
           'is-dragging'
         );
 
 
-        if (
-          !moved
-        ) {
-          dragState =
-            null;
-
+        if (!moved) {
+          dragState = null;
           return;
         }
 
 
-        const domCards =
-          Array.from(
-            grid.querySelectorAll(
-              '.page-card-manage'
-            )
-          );
-
-
-        const visualOrder =
-          domCards.map(
-            domCard =>
-              Number(
-                domCard.dataset.idx
-              )
-          );
-
-
-        applyVisualOrder(
-          visualOrder
-        );
-
-
-        dragState =
-          null;
+        dragState = null;
 
 
         renderGrid();
@@ -1659,20 +1627,24 @@
 
     card.addEventListener(
       'pointerup',
-      endDrag
+      finishDrag
     );
 
 
     card.addEventListener(
       'pointercancel',
-      endDrag
+      finishDrag
     );
   }
 
 
-  function getDragTargetCard(
-    x,
-    y,
+  // ============================================================
+  // FIND DROP TARGET
+  // ============================================================
+
+  function findDropTarget(
+    clientX,
+    clientY,
     draggedCard
   ) {
     const cards =
@@ -1680,27 +1652,56 @@
         grid.querySelectorAll(
           '.page-card-manage'
         )
-      ).filter(
-        card =>
-          card !== draggedCard &&
-          !card.classList.contains(
-            'is-deleted'
-          )
       );
 
 
-    let closest =
+    let target =
       null;
 
-    let closestDistance =
+
+    let bestDistance =
       Infinity;
 
 
     cards.forEach(
       card => {
 
+        if (
+          card === draggedCard ||
+          card.classList.contains(
+            'is-deleted'
+          )
+        ) {
+          return;
+        }
+
+
         const rect =
           card.getBoundingClientRect();
+
+
+        /*
+         * ใช้ระยะขยายเล็กน้อย
+         * ให้ลากง่ายขึ้น
+         */
+        const padding =
+          16;
+
+
+        const inside =
+          clientX >=
+            rect.left - padding &&
+          clientX <=
+            rect.right + padding &&
+          clientY >=
+            rect.top - padding &&
+          clientY <=
+            rect.bottom + padding;
+
+
+        if (!inside) {
+          return;
+        }
 
 
         const centerX =
@@ -1715,113 +1716,257 @@
 
         const distance =
           Math.hypot(
-            x - centerX,
-            y - centerY
+            clientX -
+              centerX,
+            clientY -
+              centerY
           );
 
 
         if (
           distance <
-          closestDistance
+          bestDistance
         ) {
-          closestDistance =
+          bestDistance =
             distance;
 
-          closest =
+          target =
             card;
         }
+
       }
     );
 
 
-    return closest;
-  }
-
-
-  function moveCardDomPreview(
-    draggedCard,
-    targetCard,
-    pointerY
-  ) {
-    const targetRect =
-      targetCard.getBoundingClientRect();
-
-
-    if (
-      pointerY <
-      targetRect.top +
-        targetRect.height / 2
-    ) {
-      grid.insertBefore(
-        draggedCard,
-        targetCard
-      );
-
-    } else {
-      grid.insertBefore(
-        draggedCard,
-        targetCard.nextSibling
-      );
-    }
-  }
-
-
-  function applyVisualOrder(
-    origIndices
-  ) {
-    const byIndex =
-      new Map(
-        pageItems.map(
-          item => [
-            item.origIndex,
-            item
-          ]
-        )
-      );
-
-
-    const reordered =
-      [];
-
-
-    origIndices.forEach(
-      index => {
-        const item =
-          byIndex.get(index);
-
-
-        if (item) {
-          reordered.push(
-            item
-          );
-        }
-      }
-    );
-
-
-    // กันรายการที่อาจหลุด
-    pageItems.forEach(
-      item => {
-        if (
-          !reordered.includes(
-            item
-          )
-        ) {
-          reordered.push(
-            item
-          );
-        }
-      }
-    );
-
-
-    pageItems =
-      reordered;
+    return target;
   }
 
 
   // ============================================================
-  // SIMPLE MOVE BUTTONS
+  // MOVE ITEM RELATIVE TO TARGET
+  // ============================================================
+
+  function moveItemRelativeToTarget(
+    draggedItem,
+    targetCard,
+    clientY
+  ) {
+    const targetOrigIndex =
+      Number(
+        targetCard.dataset.idx
+      );
+
+
+    const fromIndex =
+      pageItems.indexOf(
+        draggedItem
+      );
+
+
+    const targetIndex =
+      pageItems.findIndex(
+        item =>
+          item.origIndex ===
+          targetOrigIndex
+      );
+
+
+    if (
+      fromIndex < 0 ||
+      targetIndex < 0 ||
+      fromIndex === targetIndex
+    ) {
+      return;
+    }
+
+
+    const targetRect =
+      targetCard.getBoundingClientRect();
+
+
+    const targetCenterY =
+      targetRect.top +
+      targetRect.height / 2;
+
+
+    /*
+     * ถ้า pointer อยู่ครึ่งบน:
+     * วางก่อน target
+     *
+     * ถ้าอยู่ครึ่งล่าง:
+     * วางหลัง target
+     */
+    let insertIndex =
+      clientY <
+      targetCenterY
+        ? targetIndex
+        : targetIndex + 1;
+
+
+    /*
+     * ลบ item ออกจากตำแหน่งเดิมก่อน
+     * แล้วค่อยคำนวณตำแหน่งใหม่
+     */
+    pageItems.splice(
+      fromIndex,
+      1
+    );
+
+
+    if (
+      fromIndex <
+      insertIndex
+    ) {
+      insertIndex--;
+    }
+
+
+    insertIndex =
+      Math.max(
+        0,
+        Math.min(
+          pageItems.length,
+          insertIndex
+        )
+      );
+
+
+    /*
+     * ถ้ายังอยู่ตำแหน่งเดิม
+     * ไม่ต้องทำอะไร
+     */
+    if (
+      pageItems.indexOf(
+        draggedItem
+      ) === insertIndex
+    ) {
+      pageItems.splice(
+        fromIndex,
+        0,
+        draggedItem
+      );
+
+      return;
+    }
+
+
+    pageItems.splice(
+      insertIndex,
+      0,
+      draggedItem
+    );
+
+
+    updateDragPreview();
+  }
+
+
+  // ============================================================
+  // UPDATE DOM PREVIEW
+  // ============================================================
+
+  function updateDragPreview() {
+    const cards =
+      Array.from(
+        grid.querySelectorAll(
+          '.page-card-manage'
+        )
+      );
+
+
+    const cardByIndex =
+      new Map();
+
+
+    cards.forEach(card => {
+      cardByIndex.set(
+        Number(
+          card.dataset.idx
+        ),
+        card
+      );
+    });
+
+
+    /*
+     * เอา card ทั้งหมดออกก่อน
+     */
+    const fragment =
+      document.createDocumentFragment();
+
+
+    pageItems.forEach(item => {
+
+      const card =
+        cardByIndex.get(
+          item.origIndex
+        );
+
+
+      if (card) {
+        fragment.appendChild(
+          card
+        );
+      }
+
+    });
+
+
+    grid.appendChild(
+      fragment
+    );
+
+
+    /*
+     * อัปเดตเลขหน้าตามลำดับใหม่
+     */
+    pageItems.forEach(
+      (item, index) => {
+
+        const card =
+          cardByIndex.get(
+            item.origIndex
+          );
+
+
+        if (!card) {
+          return;
+        }
+
+
+        const label =
+          card.querySelector(
+            '.js-pagelabel'
+          );
+
+
+        if (label) {
+          label.textContent =
+            `หน้า ${index + 1}`;
+        }
+
+
+        const img =
+          card.querySelector(
+            'img'
+          );
+
+
+        if (
+          img &&
+          item.thumbUrl
+        ) {
+          img.alt =
+            `หน้า ${index + 1}`;
+        }
+
+      }
+    );
+  }
+
+
+  // ============================================================
+  // SIMPLE MOVE BUTTON
   // ============================================================
 
   function moveItem(
@@ -1833,6 +1978,8 @@
 
 
     if (
+      index < 0 ||
+      index >= pageItems.length ||
       target < 0 ||
       target >= pageItems.length
     ) {
@@ -1840,13 +1987,15 @@
     }
 
 
-    [
-      pageItems[index],
-      pageItems[target]
-    ] = [
-      pageItems[target],
-      pageItems[index]
-    ];
+    const temp =
+      pageItems[index];
+
+
+    pageItems[index] =
+      pageItems[target];
+
+    pageItems[target] =
+      temp;
 
 
     renderGrid();
@@ -1870,13 +2019,14 @@
         item => {
 
           if (
-            !item.deleted
+            item.deleted
           ) {
             item.selected =
-              checked;
+              false;
+
           } else {
             item.selected =
-              false;
+              checked;
           }
 
         }
@@ -1946,7 +2096,7 @@
 
 
   // ============================================================
-  // DOWNLOAD CURRENT PDF
+  // DOWNLOAD EDITED PDF
   // ============================================================
 
   downloadBtn.addEventListener(
@@ -1961,15 +2111,12 @@
       }
 
 
-      const visible =
-        getVisibleItems();
-
-
       const indices =
-        visible.map(
-          item =>
-            item.origIndex
-        );
+        getVisibleItems()
+          .map(
+            item =>
+              item.origIndex
+          );
 
 
       if (!indices.length) {
@@ -2028,6 +2175,7 @@
           )
         );
 
+
       } finally {
 
         downloadRunning =
@@ -2066,15 +2214,12 @@
       }
 
 
-      const selected =
-        getSelectedItems();
-
-
       const indices =
-        selected.map(
-          item =>
-            item.origIndex
-        );
+        getSelectedItems()
+          .map(
+            item =>
+              item.origIndex
+          );
 
 
       if (!indices.length) {
@@ -2132,6 +2277,7 @@
             'เกิดข้อผิดพลาด'
           )
         );
+
 
       } finally {
 
@@ -2207,10 +2353,6 @@
       pageItems = [];
 
 
-      /*
-       * destroyCurrentDoc เป็น async แต่ cleanup registry
-       * ไม่จำเป็นต้องรอให้เสร็จก่อน reset state
-       */
       destroyCurrentDoc()
         .catch(
           err => {
