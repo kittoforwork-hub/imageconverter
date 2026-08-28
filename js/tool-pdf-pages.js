@@ -29,6 +29,7 @@
 
   let currentFile = null;
   let currentDoc = null;
+  let loadSeq = 0;
 
   let pageItems = [];
 
@@ -68,6 +69,7 @@
   }
 
   async function loadFile(file) {
+    const requestId = ++loadSeq;
     if (
       !U.confirmLargeFile(
         file,
@@ -100,11 +102,17 @@
       countEl.textContent = '…';
 
       const bytes = await U.readAsArrayBuffer(file);
+      if (requestId !== loadSeq) return;
 
       currentDoc = await pdfjsLib.getDocument({
         data: bytes,
         canvasFactory: window.KittoCanvasFactory
       }).promise;
+      if (requestId !== loadSeq) {
+        await currentDoc.destroy();
+        currentDoc = null;
+        return;
+      }
 
       for (let i = 0; i < currentDoc.numPages; i++) {
         pageItems.push({
@@ -121,6 +129,7 @@
       renderGrid();
 
     } catch (error) {
+      if (requestId !== loadSeq) return;
       console.error('PDF load error:', error);
 
       await destroyCurrentDoc();
@@ -851,6 +860,7 @@
    */
   U.onClearCache(
     async () => {
+      ++loadSeq;
       if (observer) {
         observer.disconnect();
         observer = null;
