@@ -2,114 +2,379 @@
 window.PdfWorkerClient = (() => {
   'use strict';
 
-  const supported = typeof Worker !== 'undefined';
+  // ============================================================
+  // CONFIG / STATE
+  // ============================================================
+
+  const supported =
+    typeof Worker !== 'undefined';
 
   let worker = null;
+  let workerPromise = null;
   let seq = 0;
+
   const pending = new Map();
 
-  function getWorkerUrl() {
-    const currentScript = document.currentScript;
-    const base = currentScript && currentScript.src
-      ? currentScript.src
-      : new URL('js/pdf-worker-client.js', document.baseURI).href;
 
-    return new URL('pdf-worker.js', base).href;
+  // ============================================================
+  // GET WORKER URL
+  // ============================================================
+
+  function getWorkerUrl() {
+    /*
+     * พยายามอ้างอิงจาก URL ของไฟล์ client ตัวนี้โดยตรง
+     * เพื่อให้ทำงานได้แม้เว็บอยู่ใน sub-folder / route rewrite
+     */
+    const currentScript =
+      document.currentScript;
+
+    const base =
+      currentScript &&
+      currentScript.src
+        ? currentScript.src
+        : new URL(
+            'js/pdf-worker-client.js',
+            document.baseURI
+          ).href;
+
+    return new URL(
+      'pdf-worker.js',
+      base
+    ).href;
   }
 
-  async function createWorker() {
-    const url = getWorkerUrl();
 
-    const res = await fetch(url, { cache: 'no-store' });
+  // ============================================================
+  // CREATE WORKER
+  // ============================================================
+
+  async function createWorker() {
+    const url =
+      getWorkerUrl();
+
+
+    // ----------------------------------------------------------
+    // Fetch ก่อนสร้าง Worker
+    //
+    // ป้องกัน server rewrite / fallback route
+    // ส่ง HTML หรือไฟล์ผิดมาเป็น worker
+    // ----------------------------------------------------------
+
+    const res =
+      await fetch(
+        url,
+        {
+          cache: 'no-store'
+        }
+      );
+
 
     if (!res.ok) {
       throw new Error(
-        'โหลด PDF worker ไม่สำเร็จ (HTTP ' + res.status + ')'
+        'โหลด PDF worker ไม่สำเร็จ (HTTP ' +
+        res.status +
+        ')'
       );
     }
 
-    const source = await res.text();
+
+    const source =
+      await res.text();
+
+
+    // ----------------------------------------------------------
+    // Basic validation
+    // ----------------------------------------------------------
 
     if (
-      !/\bimportScripts\s*\(/.test(source) ||
-      !/\bself\.onmessage\s*=/.test(source)
+      !/\bimportScripts\s*\(/.test(
+        source
+      ) ||
+      !/\bself\.onmessage\s*=/.test(
+        source
+      )
     ) {
       throw new Error(
         'ไฟล์ PDF worker ไม่ถูกต้องหรือถูกเซิร์ฟเวอร์ rewrite ไปยังไฟล์อื่น'
       );
     }
 
-    const blob = new Blob([source], {
-      type: 'text/javascript'
-    });
 
-    const blobUrl = URL.createObjectURL(blob);
-    const w = new Worker(blobUrl);
+    // ----------------------------------------------------------
+    // Create Blob Worker
+    // ----------------------------------------------------------
 
-    w.__pdfWorkerBlobUrl = blobUrl;
+    const blob =
+      new Blob(
+        [source],
+        {
+          type:
+            'text/javascript'
+        }
+      );
+
+
+    const blobUrl =
+      URL.createObjectURL(
+        blob
+      );
+
+
+    let w;
+
+    try {
+      w =
+        new Worker(
+          blobUrl
+        );
+    } catch (err) {
+      URL.revokeObjectURL(
+        blobUrl
+      );
+
+      throw err;
+    }
+
+
+    /*
+     * เก็บ Blob URL เอาไว้ revoke ตอน worker ถูก destroy
+     */
+    w.__pdfWorkerBlobUrl =
+      blobUrl;
+
 
     return w;
   }
 
-  async function ensureWorker() {
-    if (worker) return worker;
 
-    worker = await createWorker();
+  // ============================================================
+  // TERMINATE WORKER
+  // ============================================================
 
-    worker.onmessage = (e) => {
-      const {
-        reqId,
-        ok,
-        result,
-        error
-      } = e.data;
+  function terminateWorker() {
+    const oldWorker =
+      worker;
 
-      const entry = pending.get(reqId);
-      if (!entry) return;
+    worker = null;
 
-      pending.delete(reqId);
 
-      if (ok) {
-        entry.resolve(result);
-      } else {
-        entry.reject(new Error(error));
-      }
-    };
+    if (!oldWorker) {
+      return;
+    }
 
-    worker.onerror = (e) => {
-      pending.forEach(entry => {
-        entry.reject(
-          new Error(
-            'PDF worker error: ' +
-            (e.message || 'unknown error')
-          )
+
+    try {
+      oldWorker.terminate();
+    } catch (_) {}
+
+
+    try {
+      if (
+        oldWorker.__pdfWorkerBlobUrl
+      ) {
+        URL.revokeObjectURL(
+          oldWorker.__pdfWorkerBlobUrl
         );
-      });
-
-      pending.clear();
-
-      try {
-        worker.terminate();
-      } catch (_) {}
-
-      try {
-        if (
-          worker &&
-          worker.__pdfWorkerBlobUrl
-        ) {
-          URL.revokeObjectURL(
-            worker.__pdfWorkerBlobUrl
-          );
-        }
-      } catch (_) {}
-
-      worker = null;
-    };
-
-    return worker;
+      }
+    } catch (_) {}
   }
 
-  function call(type, payload, transfer) {
+
+  // ============================================================
+  // REJECT ALL PENDING REQUESTS
+  // ============================================================
+
+  function rejectAllPending(
+    error
+  ) {
+    const err =
+      error instanceof Error
+        ? error
+        : new Error(
+            String(
+              error ||
+              'PDF worker stopped'
+            )
+          );
+
+
+    const entries =
+      Array.from(
+        pending.values()
+      );
+
+
+    pending.clear();
+
+
+    entries.forEach(
+      entry => {
+        try {
+          entry.reject(err);
+        } catch (_) {}
+      }
+    );
+  }
+
+
+  // ============================================================
+  // ENSURE WORKER
+  // ============================================================
+
+  async function ensureWorker() {
+
+    // มี worker พร้อมใช้อยู่แล้ว
+    if (worker) {
+      return worker;
+    }
+
+
+    /*
+     * ถ้ากำลังสร้าง worker อยู่
+     * ทุก request ใช้ Promise เดียวกัน
+     *
+     * ป้องกันกรณีมีหลาย tool เรียกพร้อมกัน
+     * แล้วสร้าง Worker ซ้ำหลายตัว
+     */
+    if (workerPromise) {
+      return workerPromise;
+    }
+
+
+    workerPromise =
+      createWorker()
+        .then(
+          w => {
+
+            worker =
+              w;
+
+
+            // --------------------------------------------------
+            // MESSAGE
+            // --------------------------------------------------
+
+            w.onmessage =
+              event => {
+                const data =
+                  event.data ||
+                  {};
+
+                const {
+                  reqId,
+                  ok,
+                  result,
+                  error
+                } = data;
+
+
+                const entry =
+                  pending.get(
+                    reqId
+                  );
+
+
+                if (!entry) {
+                  return;
+                }
+
+
+                pending.delete(
+                  reqId
+                );
+
+
+                if (ok) {
+                  entry.resolve(
+                    result
+                  );
+                } else {
+                  entry.reject(
+                    new Error(
+                      error ||
+                      'PDF worker request failed'
+                    )
+                  );
+                }
+              };
+
+
+            // --------------------------------------------------
+            // WORKER ERROR
+            // --------------------------------------------------
+
+            w.onerror =
+              event => {
+
+                const message =
+                  event &&
+                  event.message
+                    ? event.message
+                    : 'unknown error';
+
+
+                rejectAllPending(
+                  new Error(
+                    'PDF worker error: ' +
+                    message
+                  )
+                );
+
+
+                terminateWorker();
+              };
+
+
+            // --------------------------------------------------
+            // MESSAGE ERROR
+            // --------------------------------------------------
+
+            w.onmessageerror =
+              () => {
+
+                rejectAllPending(
+                  new Error(
+                    'PDF worker message error'
+                  )
+                );
+
+
+                terminateWorker();
+              };
+
+
+            return w;
+          }
+        )
+        .catch(
+          error => {
+
+            terminateWorker();
+
+            throw error;
+          }
+        )
+        .finally(
+          () => {
+            workerPromise =
+              null;
+          }
+        );
+
+
+    return workerPromise;
+  }
+
+
+  // ============================================================
+  // GENERIC RPC CALL
+  // ============================================================
+
+  function call(
+    type,
+    payload,
+    transfer
+  ) {
     if (!supported) {
       return Promise.reject(
         new Error(
@@ -118,44 +383,149 @@ window.PdfWorkerClient = (() => {
       );
     }
 
-    const reqId = 'req-' + (++seq);
 
-    return ensureWorker().then(
-      w =>
-        new Promise((resolve, reject) => {
-          pending.set(reqId, {
-            resolve,
-            reject
-          });
+    const reqId =
+      'req-' +
+      (++seq);
 
-          try {
-            w.postMessage(
-              {
+
+    const transferList =
+      Array.isArray(
+        transfer
+      )
+        ? transfer
+        : [];
+
+
+    return ensureWorker()
+      .then(
+        w => {
+
+          return new Promise(
+            (
+              resolve,
+              reject
+            ) => {
+
+              pending.set(
                 reqId,
-                type,
-                payload
-              },
-              transfer || []
-            );
-          } catch (err) {
-            pending.delete(reqId);
-            reject(err);
-          }
-        })
+                {
+                  resolve,
+                  reject
+                }
+              );
+
+
+              try {
+
+                w.postMessage(
+                  {
+                    reqId,
+                    type,
+                    payload
+                  },
+                  transferList
+                );
+
+
+              } catch (err) {
+
+                pending.delete(
+                  reqId
+                );
+
+                reject(err);
+              }
+            }
+          );
+        }
+      );
+  }
+
+
+  // ============================================================
+  // MERGE PDF
+  // ============================================================
+
+  function mergePdfs(
+    buffers
+  ) {
+    if (
+      !Array.isArray(
+        buffers
+      )
+    ) {
+      return Promise.reject(
+        new Error(
+          'ข้อมูล PDF สำหรับรวมไม่ถูกต้อง'
+        )
+      );
+    }
+
+
+    /*
+     * buffers ถูก transfer เข้า Worker
+     * จึงไม่ควรใช้งาน ArrayBuffer เดิมต่อหลังจากเรียก
+     */
+    return call(
+      'mergePdfs',
+      {
+        buffers
+      },
+      buffers.slice()
     );
   }
 
-  function applyWatermark(buffer, opts = {}) {
-    const transfer = [buffer];
 
-    // PNG watermark สามารถส่งแบบ Transferable ได้
-    // เพื่อลดการ copy ArrayBuffer
+  // ============================================================
+  // BUILD PAGES PDF
+  // ============================================================
+
+  function buildPagesPdf(
+    buffer,
+    indices
+  ) {
+    return call(
+      'buildPagesPdf',
+      {
+        buffer,
+        indices
+      },
+      [buffer]
+    );
+  }
+
+
+  // ============================================================
+  // WATERMARK
+  // ============================================================
+
+  function applyWatermark(
+    buffer,
+    opts = {}
+  ) {
+    const transfer = [
+      buffer
+    ];
+
+
+    /*
+     * PNG watermark เป็น ArrayBuffer
+     * สามารถ transfer ตรงเข้า Worker ได้
+     *
+     * ข้อดี:
+     * ไม่ต้อง copy memory ก้อนเดิมซ้ำ
+     */
     if (
       opts.watermarkImage &&
-      opts.watermarkImage instanceof ArrayBuffer
+      opts.watermarkImage instanceof
+        ArrayBuffer
     ) {
-      transfer.push(opts.watermarkImage);
+      transfer.push(
+        opts.watermarkImage
+      );
     }
+
 
     return call(
       'applyWatermark',
@@ -169,66 +539,68 @@ window.PdfWorkerClient = (() => {
     );
   }
 
-  function dispose() {
-    pending.forEach(entry => {
-      entry.reject(
-        new Error('PDF worker stopped')
-      );
-    });
 
-    pending.clear();
+  // ============================================================
+  // PAGE NUMBERS
+  // ============================================================
 
-    if (worker) {
-      try {
-        worker.terminate();
-      } catch (_) {}
-
-      try {
-        if (worker.__pdfWorkerBlobUrl) {
-          URL.revokeObjectURL(
-            worker.__pdfWorkerBlobUrl
-          );
-        }
-      } catch (_) {}
-
-      worker = null;
-    }
+  function applyPageNumbers(
+    buffer,
+    opts
+  ) {
+    return call(
+      'applyPageNumbers',
+      Object.assign(
+        {
+          buffer
+        },
+        opts || {}
+      ),
+      [buffer]
+    );
   }
 
+
+  // ============================================================
+  // DISPOSE
+  // ============================================================
+
+  function dispose() {
+
+    rejectAllPending(
+      new Error(
+        'PDF worker stopped'
+      )
+    );
+
+
+    terminateWorker();
+  }
+
+
+  // ============================================================
+  // PUBLIC API
+  // ============================================================
+
   return {
+
     supported,
 
-    mergePdfs: (buffers) =>
-      call(
-        'mergePdfs',
-        { buffers },
-        buffers.slice()
-      ),
 
-    buildPagesPdf: (buffer, indices) =>
-      call(
-        'buildPagesPdf',
-        {
-          buffer,
-          indices
-        },
-        [buffer]
-      ),
+    mergePdfs,
+
+
+    buildPagesPdf,
+
 
     applyWatermark,
 
-    applyPageNumbers: (buffer, opts) =>
-      call(
-        'applyPageNumbers',
-        Object.assign(
-          {
-            buffer
-          },
-          opts
-        ),
-        [buffer]
-      ),
+
+    applyPageNumbers,
+
 
     dispose
+
   };
+
 })();
