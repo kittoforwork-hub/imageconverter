@@ -869,3 +869,138 @@ input[type="text"]:focus, input[type="number"]:focus, .mono-select:focus, .dim-i
   .tool-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; scrollbar-width: thin; }
   .tool-chip { flex: 0 0 auto; }
 }
+
+/* ============================================================
+   Cute micro-animation / empty-state / progress layer
+   ============================================================ */
+:root {
+  --cute-ink: #34415e;
+  --cute-soft: #f7f8fc;
+  --cute-line: #e6eaf2;
+  --cute-shadow: 0 16px 40px rgba(52,65,94,.08);
+}
+
+.tool-panel {
+  --tool-accent: #9aa7ff;
+  --tool-accent-2: #dfe3ff;
+  position: relative;
+}
+.tool-panel[data-tool-kind="image"] { --tool-accent:#9ca8ff; --tool-accent-2:#e8ebff; }
+.tool-panel[data-tool-kind="pdf"] { --tool-accent:#ffb779; --tool-accent-2:#fff0df; }
+.tool-panel[data-tool="img-bgremove"] { --tool-accent:#77cdb8; --tool-accent-2:#def6ef; }
+.tool-panel[data-tool="img-crop"] { --tool-accent:#88a8e8; --tool-accent-2:#e6efff; }
+.tool-panel[data-tool="pdf-merge"] { --tool-accent:#ff9eb5; --tool-accent-2:#ffe4eb; }
+.tool-panel[data-tool="pdf-pages"] { --tool-accent:#c49ae8; --tool-accent-2:#f1e4fb; }
+.tool-panel[data-tool="pdf-watermark"] { --tool-accent:#efb66f; --tool-accent-2:#fff0d9; }
+.tool-panel[data-tool="pdf-pagenumbers"] { --tool-accent:#8db8d9; --tool-accent-2:#e3f1fa; }
+.tool-panel[data-tool="pdf-to-images"] { --tool-accent:#8cc8b1; --tool-accent-2:#e0f4eb; }
+.tool-panel[data-tool="pdf-from-images"] { --tool-accent:#f0ad7a; --tool-accent-2:#ffecd9; }
+
+.cute-tool-intro {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin: 0 0 14px;
+  color:#7f899c;
+  font-size:12px;
+}
+.cute-tool-orb {
+  width:30px;height:30px;border-radius:50%;
+  flex:0 0 30px;
+  background: linear-gradient(135deg, var(--tool-accent-2), #fff);
+  border:1px solid rgba(52,65,94,.06);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--tool-accent) 18%, transparent);
+  position:relative;
+  animation: cute-float 3.2s ease-in-out infinite;
+}
+.cute-tool-orb::after {
+  content:""; position:absolute; inset:8px;
+  border-radius:50%; background:var(--tool-accent);
+  opacity:.65;
+  animation:cute-pulse 2.2s ease-in-out infinite;
+}
+.cute-tool-copy strong { color:var(--cute-ink); font-weight:700; }
+
+.dropzone {
+  position:relative;
+  overflow:hidden;
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease, background .22s ease;
+}
+.dropzone::before {
+  content:"";
+  position:absolute;
+  width:180px;height:180px;border-radius:50%;
+  right:-80px; top:-90px;
+  background:radial-gradient(circle, var(--tool-accent-2) 0%, transparent 68%);
+  opacity:.55;
+  pointer-events:none;
+  transition: transform .35s ease, opacity .25s ease;
+}
+.dropzone:hover { transform: translateY(-2px); box-shadow: var(--cute-shadow); }
+.dropzone:hover::before { transform: scale(1.16); opacity:.8; }
+.dropzone.is-dragover { transform: translateY(-3px) scale(1.01); border-color:var(--tool-accent) !important; box-shadow:0 18px 42px color-mix(in srgb, var(--tool-accent) 18%, transparent); }
+.dropzone.is-dragover .dz-icon { animation: cute-drop .5s ease both; }
+.dropzone.is-busy .dz-icon { animation: cute-spin 1.25s linear infinite; }
+
+.cute-empty-state {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  margin:10px auto 0;
+  max-width:430px;
+  padding:9px 13px;
+  border-radius:14px;
+  background:rgba(255,255,255,.72);
+  border:1px solid var(--cute-line);
+  color:#98a1b2;
+  font-size:11px;
+  backdrop-filter: blur(7px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.cute-empty-state.is-hidden { opacity:0; transform:translateY(4px); pointer-events:none; }
+.cute-empty-state .cute-dot { width:7px;height:7px;border-radius:50%;background:var(--tool-accent); box-shadow:0 0 0 5px var(--tool-accent-2); flex:none; }
+
+.cute-progress {
+  margin-top:12px;
+  padding:11px 13px;
+  border:1px solid var(--cute-line);
+  border-radius:14px;
+  background:rgba(255,255,255,.78);
+  box-shadow:0 8px 24px rgba(52,65,94,.045);
+  display:none;
+}
+.cute-progress.is-visible { display:block; animation: cute-rise .22s ease both; }
+.cute-progress-head { display:flex; justify-content:space-between; gap:12px; font-size:11px; color:#8c95a7; margin-bottom:7px; }
+.cute-progress-head strong { color:var(--cute-ink); font-weight:700; }
+.cute-progress-track { height:7px; border-radius:999px; overflow:hidden; background:#eef1f6; }
+.cute-progress-bar { height:100%; width:35%; border-radius:inherit; background:linear-gradient(90deg, var(--tool-accent-2), var(--tool-accent), var(--tool-accent-2)); background-size:220% 100%; animation:cute-progress 1.25s linear infinite; }
+.cute-progress.is-done .cute-progress-bar { width:100%; animation:none; }
+.cute-progress.is-error .cute-progress-bar { width:100%; animation:none; opacity:.38; }
+
+.ticket.is-processing, .file-row.is-processing, .page-card.is-processing { animation:cute-card 1.8s ease-in-out infinite; }
+.ticket.is-done, .file-row.is-done, .page-card.is-done { animation:cute-success .38s ease both; }
+
+.cute-character {
+  position:absolute;
+  top:13px; right:14px;
+  width:9px;height:9px;border-radius:50%;
+  background:var(--tool-accent);
+  box-shadow:0 0 0 7px var(--tool-accent-2);
+  opacity:.75;
+  animation:cute-pulse 2.6s ease-in-out infinite;
+  pointer-events:none;
+}
+
+@keyframes cute-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+@keyframes cute-pulse { 0%,100%{transform:scale(.92);opacity:.52} 50%{transform:scale(1.1);opacity:.82} }
+@keyframes cute-drop { 0%{transform:translateY(0) rotate(0)} 35%{transform:translateY(-7px) rotate(-3deg)} 70%{transform:translateY(2px) rotate(2deg)} 100%{transform:translateY(0)} }
+@keyframes cute-spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+@keyframes cute-rise { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+@keyframes cute-progress { from{background-position:0 0} to{background-position:220% 0} }
+@keyframes cute-card { 0%,100%{transform:translateX(0)} 50%{transform:translateX(2px)} }
+@keyframes cute-success { 0%{transform:scale(.985)} 65%{transform:scale(1.012)} 100%{transform:scale(1)} }
+
+@media (prefers-reduced-motion: reduce) {
+  .dropzone, .ticket, .file-row, .page-card, .cute-tool-orb, .cute-tool-orb::after, .cute-character, .cute-progress-bar { animation:none !important; transition:none !important; }
+}
