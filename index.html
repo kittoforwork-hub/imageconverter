@@ -39,7 +39,7 @@
 
 
   <!-- ============================================================ -->
-  <!-- CATEGORY SWITCHER                                              -->
+  <!-- CATEGORY SWITCHER                                             -->
   <!-- ============================================================ -->
 
   <nav class="cat-bar" id="catBar">
@@ -87,7 +87,7 @@
 
 
   <!-- ============================================================ -->
-  <!-- IMAGE TOOL CHIPS                                               -->
+  <!-- IMAGE TOOL CHIPS                                              -->
   <!-- ============================================================ -->
 
   <nav class="tool-chips" data-cat-group="image">
@@ -120,7 +120,7 @@
 
 
   <!-- ============================================================ -->
-  <!-- PDF TOOL CHIPS                                                 -->
+  <!-- PDF TOOL CHIPS                                                -->
   <!-- ============================================================ -->
 
   <nav class="tool-chips hidden" data-cat-group="pdf">
@@ -177,14 +177,14 @@
 
 
   <!-- ============================================================ -->
-  <!-- MAIN PANELS                                                    -->
+  <!-- MAIN PANELS                                                   -->
   <!-- ============================================================ -->
 
   <main class="panels">
 
 
     <!-- ========================================================== -->
-    <!-- IMAGE: CONVERT                                               -->
+    <!-- IMAGE: CONVERT                                              -->
     <!-- ========================================================== -->
 
     <section
@@ -197,7 +197,6 @@
         แปลงนามสกุลไฟล์ (PNG / JPG / WEBP)
         ปรับขนาด คุณภาพ หมุน และพลิกรูปภาพ — ทำได้หลายไฟล์พร้อมกัน
       </p>
-
 
       <section
         class="dropzone"
@@ -263,7 +262,6 @@
           >0</span>
           <span class="count-label">รายการ</span>
         </div>
-
 
         <div class="bulk-right">
 
@@ -895,12 +893,16 @@
       >
 
         <div class="bulk-left">
+
           <span class="count-label">งาน:</span>
+
           <span
             class="count"
             id="count-img-bgremove"
           >0</span>
+
           <span class="count-label">รายการ</span>
+
         </div>
 
         <div class="bulk-right">
@@ -1489,7 +1491,7 @@
 
 
     <!-- ========================================================== -->
-    <!-- PDF: PAGE MANAGER                                            -->
+    <!-- PDF: PAGE MANAGER                                           -->
     <!-- ========================================================== -->
 
     <section
@@ -1845,7 +1847,7 @@
 
 
     <!-- ========================================================== -->
-    <!-- PDF: WATERMARK                                              -->
+    <!-- PDF: WATERMARK                                               -->
     <!-- ========================================================== -->
 
     <section
@@ -1855,8 +1857,8 @@
     >
 
       <p class="panel-hint">
-        ใส่ลายน้ำข้อความทับทุกหน้าของ PDF
-        รองรับข้อความภาษาไทย
+        ใส่ลายน้ำข้อความหรือรูป PNG ทับทุกหน้าของ PDF
+        รองรับข้อความภาษาไทยและ PNG พื้นหลังโปร่งใส
       </p>
 
 
@@ -1925,6 +1927,8 @@
 
         <div class="form-grid">
 
+          <!-- TEXT WATERMARK -->
+
           <label class="form-field">
 
             <span>
@@ -1935,10 +1939,37 @@
               type="text"
               id="text-pdf-watermark"
               value="ตัวอย่างเอกสาร"
+              placeholder="เว้นว่างได้ หากใช้รูปอย่างเดียว"
             >
 
           </label>
 
+
+          <!-- PNG WATERMARK -->
+
+          <label class="form-field">
+
+            <span>
+              รูปลายน้ำ PNG
+            </span>
+
+            <input
+              type="file"
+              id="image-pdf-watermark"
+              accept="image/png"
+            >
+
+            <span
+              class="mono js-watermark-image-name"
+              style="font-size:12px; opacity:.65;"
+            >
+              ยังไม่ได้เลือกรูป
+            </span>
+
+          </label>
+
+
+          <!-- TEXT SIZE -->
 
           <label class="form-field">
 
@@ -1956,6 +1987,38 @@
 
           </label>
 
+
+          <!-- IMAGE SIZE -->
+
+          <label class="form-field">
+
+            <span>
+              ขนาดรูปลายน้ำ
+            </span>
+
+            <span class="quality-group">
+
+              <input
+                type="range"
+                id="image-size-pdf-watermark"
+                min="40"
+                max="600"
+                step="10"
+                value="180"
+              >
+
+              <span
+                class="mono js-image-size-val"
+              >
+                180
+              </span>
+
+            </span>
+
+          </label>
+
+
+          <!-- OPACITY -->
 
           <label class="form-field">
 
@@ -1983,6 +2046,8 @@
           </label>
 
 
+          <!-- ANGLE -->
+
           <label class="form-field">
 
             <span>
@@ -2000,6 +2065,13 @@
           </label>
 
         </div>
+
+
+        <p class="panel-note">
+          สามารถใช้ข้อความอย่างเดียว,
+          ใช้ PNG อย่างเดียว
+          หรือใช้ข้อความและ PNG พร้อมกันได้
+        </p>
 
 
         <div class="ticket-footer">
@@ -2036,7 +2108,7 @@
 
 
     <!-- ========================================================== -->
-    <!-- PDF: PAGE NUMBERS                                           -->
+    <!-- PDF: PAGE NUMBERS                                            -->
     <!-- ========================================================== -->
 
     <section
