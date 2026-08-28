@@ -24,8 +24,10 @@
   let currentDoc = null;
   let rendered = [];
   let cancelRequested = false;
+  let loadSeq = 0;
 
   async function loadFile(file) {
+    const requestId = ++loadSeq;
     if (
       !U.confirmLargeFile(
         file,
@@ -53,11 +55,18 @@
       }
 
       const bytes = await U.readAsArrayBuffer(file);
+      if (requestId !== loadSeq) return;
 
       currentDoc = await pdfjsLib.getDocument({
         data: bytes
       }).promise;
+      if (requestId !== loadSeq) {
+        await currentDoc.destroy();
+        currentDoc = null;
+        return;
+      }
     } catch (error) {
+      if (requestId !== loadSeq) return;
       console.error('PDF loading error:', error);
 
       currentDoc = null;
@@ -314,6 +323,7 @@
   );
 
   U.onClearCache(() => {
+    ++loadSeq;
     cancelRequested = true;
 
     rendered.forEach((r) => {
