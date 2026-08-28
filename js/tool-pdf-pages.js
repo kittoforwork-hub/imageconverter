@@ -466,8 +466,286 @@
       );
     }
   }
+// ============================================================
+// LOAD FILE
+// ============================================================
 
+async function loadFile(file) {
+  if (!file) {
+    return;
+  }
 
+  const requestId =
+    ++loadSeq;
+
+  const validPdf =
+    file.type === 'application/pdf' ||
+    /\.pdf$/i.test(file.name);
+
+  if (!validPdf) {
+    alert(
+      'กรุณาเลือกไฟล์ PDF เท่านั้น'
+    );
+    return;
+  }
+
+  if (
+    !U.confirmLargeFile(
+      file,
+      LARGE_FILE_WARN_MB,
+      'ไฟล์ PDF นี้มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) จึงอาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก'
+    )
+  ) {
+    return;
+  }
+
+  try {
+    setToolProcessing(true);
+
+    // ----------------------------------------
+    // Stop observer
+    // ----------------------------------------
+
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
+
+    // ----------------------------------------
+    // Stop thumbnail queue
+    // ----------------------------------------
+
+    resetQueue();
+
+    // ----------------------------------------
+    // Cleanup old thumbnails
+    // ----------------------------------------
+
+    revokeThumbs();
+
+    pageItems = [];
+
+    // ----------------------------------------
+    // Cancel / cleanup current drag
+    // ----------------------------------------
+
+    if (dragState) {
+
+      try {
+        if (
+          dragState.card &&
+          dragState.card.isConnected &&
+          dragState.card.parentNode !== grid
+        ) {
+          dragState.card.remove();
+        }
+      } catch (_) {}
+
+      try {
+        if (
+          dragState.placeholder &&
+          dragState.placeholder.isConnected
+        ) {
+          dragState.placeholder.remove();
+        }
+      } catch (_) {}
+
+      try {
+        resetDragStyles(
+          dragState.card
+        );
+      } catch (_) {}
+
+      dragState = null;
+    }
+
+    clearDropIndicators();
+
+    // ----------------------------------------
+    // Destroy previous PDF
+    // ----------------------------------------
+
+    await destroyCurrentDoc();
+
+    if (
+      requestId !== loadSeq
+    ) {
+      return;
+    }
+
+    // ----------------------------------------
+    // Set current file
+    // ----------------------------------------
+
+    currentFile =
+      file;
+
+    if (nameEl) {
+      nameEl.textContent =
+        `${file.name} · ${U.formatBytes(
+          file.size
+        )}`;
+    }
+
+    grid.innerHTML = '';
+
+    bulkbar.classList.remove(
+      'hidden'
+    );
+
+    if (noteEl) {
+      noteEl.classList.remove(
+        'hidden'
+      );
+    }
+
+    if (countEl) {
+      countEl.textContent =
+        '…';
+    }
+
+    // ----------------------------------------
+    // Read PDF
+    // ----------------------------------------
+
+    const bytes =
+      await U.readAsArrayBuffer(
+        file
+      );
+
+    if (
+      requestId !== loadSeq
+    ) {
+      return;
+    }
+
+    // ----------------------------------------
+    // Open with PDF.js
+    // ----------------------------------------
+
+    const loadingTask =
+      pdfjsLib.getDocument({
+        data: bytes,
+        canvasFactory:
+          window.KittoCanvasFactory
+      });
+
+    const doc =
+      await loadingTask.promise;
+
+    // ----------------------------------------
+    // Request became stale
+    // ----------------------------------------
+
+    if (
+      requestId !== loadSeq
+    ) {
+
+      try {
+        await doc.destroy();
+      } catch (_) {}
+
+      return;
+    }
+
+    currentDoc =
+      doc;
+
+    // ----------------------------------------
+    // Create page state
+    // ----------------------------------------
+
+    for (
+      let i = 0;
+      i < doc.numPages;
+      i++
+    ) {
+
+      pageItems.push({
+        origIndex: i,
+        thumbUrl: null,
+        rendering: false,
+        deleted: false,
+        selected: false
+      });
+
+    }
+
+    // ----------------------------------------
+    // Render
+    // ----------------------------------------
+
+    updateCounts();
+
+    renderGrid();
+
+  } catch (error) {
+
+    if (
+      requestId !== loadSeq
+    ) {
+      return;
+    }
+
+    console.error(
+      'PDF load error:',
+      error
+    );
+
+    await destroyCurrentDoc();
+
+    currentFile =
+      null;
+
+    pageItems =
+      [];
+
+    grid.innerHTML =
+      '';
+
+    bulkbar.classList.add(
+      'hidden'
+    );
+
+    if (noteEl) {
+      noteEl.classList.add(
+        'hidden'
+      );
+    }
+
+    if (countEl) {
+      countEl.textContent =
+        '0';
+    }
+
+    if (selectAllEl) {
+      selectAllEl.checked =
+        false;
+
+      selectAllEl.indeterminate =
+        false;
+    }
+
+    alert(
+      'ไม่สามารถเปิดไฟล์ PDF ได้\n\n' +
+      (
+        error?.message ||
+        'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
+      )
+    );
+
+  } finally {
+
+    if (
+      requestId === loadSeq
+    ) {
+      setToolProcessing(
+        false
+      );
+    }
+
+  }
+}
   // ============================================================
   // THUMBNAIL UPDATE
   // ============================================================
