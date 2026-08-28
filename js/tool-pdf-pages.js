@@ -1327,367 +1327,679 @@
         }
 
 
-        // ------------------------------------------------------
-        // NEW DRAG SYSTEM
-        // ------------------------------------------------------
+        // ============================================================
+// DRAG SYSTEM — FULL CARD
+//
+// ลากได้จากทุกพื้นที่ของการ์ด
+// การ์ดจะลอยตามเมาส์ตรงตำแหน่งที่กด
+// และมี placeholder แสดงตำแหน่งที่จะวาง
+// ============================================================
 
-        setupCardDrag(
+function setupCardDrag(card, item) {
+  if (!card || !item) {
+    return;
+  }
+
+  let pointerId = null;
+
+  // จุดที่ผู้ใช้กดบนการ์ด
+  let grabOffsetX = 0;
+  let grabOffsetY = 0;
+
+  let startX = 0;
+  let startY = 0;
+
+  let moved = false;
+
+
+  // ----------------------------------------------------------
+  // POINTER DOWN
+  // ----------------------------------------------------------
+
+  card.addEventListener(
+    'pointerdown',
+    event => {
+      // รองรับเฉพาะ primary pointer
+      if (
+        event.isPrimary === false
+      ) {
+        return;
+      }
+
+      // หน้าที่ถูกลบไม่ให้ลาก
+      if (
+        item.deleted
+      ) {
+        return;
+      }
+
+      /*
+       * ปุ่ม / checkbox ไม่ควรเริ่ม drag
+       * เพราะผู้ใช้ต้องการกดควบคุมมันโดยตรง
+       */
+      if (
+        event.target.closest(
+          'button, input, select, textarea, a'
+        )
+      ) {
+        return;
+      }
+
+      pointerId =
+        event.pointerId;
+
+      startX =
+        event.clientX;
+
+      startY =
+        event.clientY;
+
+      moved =
+        false;
+
+
+      // --------------------------------------------------------
+      // จำจุดที่กดบนการ์ด
+      // --------------------------------------------------------
+
+      const rect =
+        card.getBoundingClientRect();
+
+      grabOffsetX =
+        event.clientX -
+        rect.left;
+
+      grabOffsetY =
+        event.clientY -
+        rect.top;
+
+
+      dragState = {
+        card,
+        item,
+        pointerId,
+        moved: false,
+        started: false,
+        placeholder: null,
+        grabOffsetX,
+        grabOffsetY
+      };
+
+
+      /*
+       * สำคัญ:
+       * setPointerCapture ทำให้แม้เมาส์ออกนอกการ์ด
+       * เราก็ยังได้รับ pointermove / pointerup ต่อ
+       */
+      try {
+        card.setPointerCapture(
+          pointerId
+        );
+      } catch (_) {}
+
+    },
+    {
+      passive: false
+    }
+  );
+
+
+  // ----------------------------------------------------------
+  // POINTER MOVE
+  // ----------------------------------------------------------
+
+  card.addEventListener(
+    'pointermove',
+    event => {
+      if (
+        pointerId === null ||
+        event.pointerId !== pointerId
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+
+
+      const dx =
+        event.clientX -
+        startX;
+
+      const dy =
+        event.clientY -
+        startY;
+
+
+      // --------------------------------------------------------
+      // ยังไม่เริ่มลาก
+      // --------------------------------------------------------
+
+      if (
+        !moved &&
+        Math.hypot(
+          dx,
+          dy
+        ) <
+        DRAG_START_DISTANCE
+      ) {
+        return;
+      }
+
+
+      // --------------------------------------------------------
+      // START DRAG
+      // --------------------------------------------------------
+
+      if (!moved) {
+        moved =
+          true;
+
+        if (dragState) {
+          dragState.moved =
+            true;
+        }
+
+
+        startRealDrag(
           card,
           item
         );
-
-
-        grid.appendChild(
-          card
-        );
       }
-    );
 
 
-    updateCounts();
-
-
-    setupObserver();
-
-
-    // --------------------------------------------------------
-    // preload first 2 pages
-    // --------------------------------------------------------
-
-    let queued =
-      0;
-
-
-    for (
-      let i = 0;
-      i < pageItems.length &&
-      queued < 2;
-      i++
-    ) {
-
-      const item =
-        pageItems[i];
-
+      // --------------------------------------------------------
+      // MOVE CARD
+      // --------------------------------------------------------
 
       if (
-        !item.deleted &&
-        !item.thumbUrl
+        dragState &&
+        dragState.started
       ) {
 
-        queueRender(
-          item.origIndex
-        );
-
-        queued++;
-      }
-    }
-
-
-    processQueue();
-  }
-
-
-  // ============================================================
-  // MOVE BUTTON
-  // ============================================================
-
-  function moveItem(
-    index,
-    direction
-  ) {
-    const target =
-      index + direction;
-
-
-    if (
-      index < 0 ||
-      target < 0 ||
-      target >= pageItems.length
-    ) {
-      return;
-    }
-
-
-    [
-      pageItems[index],
-      pageItems[target]
-    ] = [
-      pageItems[target],
-      pageItems[index]
-    ];
-
-
-    renderGrid();
-    updateCounts();
-  }
-
-
-  // ============================================================
-  // DRAG SYSTEM
-  //
-  // ใช้ placeholder จริงใน grid
-  // เพื่อให้เห็นตำแหน่งที่จะวางชัดเจน
-  // ============================================================
-
-  function setupCardDrag(
-    card,
-    item
-  ) {
-    let pointerId = null;
-
-    let startX = 0;
-    let startY = 0;
-
-    let moved = false;
-
-    let offsetX = 0;
-    let offsetY = 0;
-
-
-    // ----------------------------------------------------------
-    // POINTER DOWN
-    // ----------------------------------------------------------
-
-    card.addEventListener(
-      'pointerdown',
-      event => {
-
-        if (
-          event.button !== 0 ||
-          item.deleted
-        ) {
-          return;
-        }
-
-
-        if (
-          event.target.closest(
-            'button, input, a'
-          )
-        ) {
-          return;
-        }
-
-
-        pointerId =
-          event.pointerId;
-
-
-        startX =
-          event.clientX;
-
-        startY =
-          event.clientY;
-
-
-        moved =
-          false;
-
-
-        dragState = {
-          card,
-          item,
-          moved: false
-        };
-
-
-        try {
-          card.setPointerCapture(
-            pointerId
-          );
-        } catch (_) {}
-
-      }
-    );
-
-
-    // ----------------------------------------------------------
-    // POINTER MOVE
-    // ----------------------------------------------------------
-
-    card.addEventListener(
-      'pointermove',
-      event => {
-
-        if (
-          pointerId === null ||
-          event.pointerId !==
-            pointerId
-        ) {
-          return;
-        }
-
-
-        const dx =
-          event.clientX -
-          startX;
-
-
-        const dy =
-          event.clientY -
-          startY;
-
-
-        // ยังไม่เริ่มลาก
-        if (
-          !moved &&
-          Math.hypot(
-            dx,
-            dy
-          ) <
-          DRAG_START_DISTANCE
-        ) {
-          return;
-        }
-
-
-        // ------------------------------------------------------
-        // START DRAG
-        // ------------------------------------------------------
-
-        if (!moved) {
-
-          moved =
-            true;
-
-
-          if (dragState) {
-            dragState.moved =
-              true;
-          }
-
-
-          const rect =
-            card.getBoundingClientRect();
-
-
-          offsetX =
-            event.clientX -
-            rect.left;
-
-
-          offsetY =
-            event.clientY -
-            rect.top;
-
-
-          startRealDrag(
-            card,
-            item,
-            rect
-          );
-        }
-
-
-        // ------------------------------------------------------
-        // MOVE FLOATING CARD
-        // ------------------------------------------------------
-
-        if (
-          dragState &&
-          dragState.card === card
-        ) {
-
-          card.style.left =
-            (
-              event.clientX -
-              offsetX
-            ) + 'px';
-
-
-          card.style.top =
-            (
-              event.clientY -
-              offsetY
-            ) + 'px';
-        }
-
-
-        // ------------------------------------------------------
-        // FIND DROP POSITION
-        // ------------------------------------------------------
-
-        updateDropPosition(
+        moveFloatingCard(
           event.clientX,
           event.clientY
         );
 
       }
-    );
 
 
-    // ----------------------------------------------------------
-    // POINTER UP
-    // ----------------------------------------------------------
+      // --------------------------------------------------------
+      // UPDATE PLACEHOLDER
+      // --------------------------------------------------------
 
-    card.addEventListener(
-      'pointerup',
-      () => {
+      updateDropPosition(
+        event.clientX,
+        event.clientY
+      );
+
+    },
+    {
+      passive: false
+    }
+  );
+
+
+  // ----------------------------------------------------------
+  // POINTER UP
+  // ----------------------------------------------------------
+
+  card.addEventListener(
+    'pointerup',
+    event => {
+      if (
+        pointerId !== null &&
+        event.pointerId === pointerId
+      ) {
         finishDrag();
       }
-    );
+    },
+    {
+      passive: false
+    }
+  );
 
 
-    // ----------------------------------------------------------
-    // POINTER CANCEL
-    // ----------------------------------------------------------
+  // ----------------------------------------------------------
+  // POINTER CANCEL
+  // ----------------------------------------------------------
 
-    card.addEventListener(
-      'pointercancel',
-      () => {
+  card.addEventListener(
+    'pointercancel',
+    event => {
+      if (
+        pointerId !== null &&
+        event.pointerId === pointerId
+      ) {
         cancelDrag();
       }
-    );
+    }
+  );
+
+
+  // ----------------------------------------------------------
+  // LOST POINTER CAPTURE
+  // ----------------------------------------------------------
+
+  card.addEventListener(
+    'lostpointercapture',
+    () => {
+      /*
+       * อย่า finishDrag ตรงนี้ทันที
+       * เพราะ browser บางตัวสามารถปล่อย capture
+       * ระหว่าง interaction แล้วสร้าง pointerup ตามมาได้
+       */
+    }
+  );
+}
+
+
+// ============================================================
+// START REAL DRAG
+// ============================================================
+
+function startRealDrag(
+  card,
+  item
+) {
+  if (
+    !dragState ||
+    dragState.started
+  ) {
+    return;
   }
 
 
-  // ============================================================
-  // START REAL DRAG
-  // ============================================================
+  const rect =
+    card.getBoundingClientRect();
 
-  function startRealDrag(
-    card,
-    item,
-    rect
+
+  // ----------------------------------------------------------
+  // CREATE PLACEHOLDER
+  // ----------------------------------------------------------
+
+  const placeholder =
+    document.createElement(
+      'div'
+    );
+
+
+  placeholder.className =
+    'page-drag-placeholder';
+
+
+  placeholder.dataset.idx =
+    String(
+      item.origIndex
+    );
+
+
+  /*
+   * Placeholder มีขนาดเท่าการ์ดจริง
+   */
+  placeholder.style.width =
+    rect.width + 'px';
+
+
+  placeholder.style.height =
+    rect.height + 'px';
+
+
+  placeholder.innerHTML = `
+    <div class="page-drag-placeholder-inner">
+      <span>วางหน้าที่นี่</span>
+    </div>
+  `;
+
+
+  // ----------------------------------------------------------
+  // PLACEHOLDER อยู่ตำแหน่งเดิม
+  // ----------------------------------------------------------
+
+  grid.insertBefore(
+    placeholder,
+    card
+  );
+
+
+  // ----------------------------------------------------------
+  // CARD -> FLOATING
+  // ----------------------------------------------------------
+
+  card.classList.add(
+    'is-dragging'
+  );
+
+
+  card.style.position =
+    'fixed';
+
+
+  card.style.width =
+    rect.width + 'px';
+
+
+  card.style.height =
+    rect.height + 'px';
+
+
+  card.style.left =
+    rect.left + 'px';
+
+
+  card.style.top =
+    rect.top + 'px';
+
+
+  card.style.zIndex =
+    '1000';
+
+
+  card.style.pointerEvents =
+    'none';
+
+
+  /*
+   * สำคัญ:
+   * ไม่กำหนด transform ที่นี่
+   * เพราะเราจะควบคุม transform เอง
+   */
+
+
+  dragState.placeholder =
+    placeholder;
+
+  dragState.started =
+    true;
+
+  dragState.originalIndex =
+    pageItems.indexOf(
+      item
+    );
+
+
+  // ----------------------------------------------------------
+  // เริ่มต้น visual
+  // ----------------------------------------------------------
+
+  clearDropIndicators();
+}
+
+
+// ============================================================
+// MOVE FLOATING CARD
+//
+// card จะอยู่ตรงเมาส์โดยรักษาจุดที่ผู้ใช้กดไว้
+// ============================================================
+
+function moveFloatingCard(
+  clientX,
+  clientY
+) {
+  if (
+    !dragState ||
+    !dragState.card
   ) {
-    // ----------------------------------------------------------
-    // Create placeholder
-    // ----------------------------------------------------------
-
-    const placeholder =
-      document.createElement(
-        'div'
-      );
+    return;
+  }
 
 
-    placeholder.className =
-      'page-drag-placeholder';
+  const card =
+    dragState.card;
 
 
-    placeholder.dataset.idx =
-      String(
-        item.origIndex
-      );
+  const left =
+    clientX -
+    dragState.grabOffsetX;
 
 
-    placeholder.style.width =
-      rect.width + 'px';
+  const top =
+    clientY -
+    dragState.grabOffsetY;
 
 
-    placeholder.style.height =
-      rect.height + 'px';
+  card.style.left =
+    `${left}px`;
 
 
-    placeholder.innerHTML = `
-      <div class="page-drag-placeholder-inner">
-        <span>วางหน้าที่นี่</span>
-      </div>
-    `;
+  card.style.top =
+    `${top}px`;
+}
 
 
-    // ----------------------------------------------------------
-    // Put placeholder at original position
-    // ----------------------------------------------------------
+// ============================================================
+// FIND DROP TARGET
+// ============================================================
+
+function getDropTarget(
+  clientX,
+  clientY
+) {
+  if (!dragState) {
+    return null;
+  }
+
+
+  const draggedCard =
+    dragState.card;
+
+
+  const cards =
+    Array.from(
+      grid.querySelectorAll(
+        '.page-card-manage'
+      )
+    ).filter(
+      card => {
+
+        if (
+          card ===
+          draggedCard
+        ) {
+          return false;
+        }
+
+
+        if (
+          card.classList.contains(
+            'is-deleted'
+          )
+        ) {
+          return false;
+        }
+
+
+        return true;
+      }
+    );
+
+
+  /*
+   * หา card ที่เมาส์อยู่ข้างในก่อน
+   */
+  for (
+    const card of cards
+  ) {
+    const rect =
+      card.getBoundingClientRect();
+
+
+    if (
+      clientX >= rect.left &&
+      clientX <= rect.right &&
+      clientY >= rect.top &&
+      clientY <= rect.bottom
+    ) {
+      return {
+        card,
+        rect
+      };
+    }
+  }
+
+
+  /*
+   * ถ้าไม่ได้อยู่ตรง card พอดี
+   * ให้หา card ที่ใกล้ที่สุด
+   *
+   * ทำให้ลากไปยังช่องว่างระหว่าง card
+   * ได้ง่ายขึ้น
+   */
+
+  let nearest = null;
+  let nearestDistance = Infinity;
+
+
+  cards.forEach(
+    card => {
+
+      const rect =
+        card.getBoundingClientRect();
+
+
+      const centerX =
+        rect.left +
+        rect.width / 2;
+
+
+      const centerY =
+        rect.top +
+        rect.height / 2;
+
+
+      const distance =
+        Math.hypot(
+          clientX -
+            centerX,
+          clientY -
+            centerY
+        );
+
+
+      if (
+        distance <
+        nearestDistance
+      ) {
+        nearestDistance =
+          distance;
+
+        nearest = {
+          card,
+          rect
+        };
+      }
+
+    }
+  );
+
+
+  return nearest;
+}
+
+
+// ============================================================
+// UPDATE DROP POSITION
+// ============================================================
+
+function updateDropPosition(
+  clientX,
+  clientY
+) {
+  if (
+    !dragState ||
+    !dragState.placeholder
+  ) {
+    return;
+  }
+
+
+  const target =
+    getDropTarget(
+      clientX,
+      clientY
+    );
+
+
+  if (!target) {
+    return;
+  }
+
+
+  const {
+    card,
+    rect
+  } = target;
+
+
+  const placeholder =
+    dragState.placeholder;
+
+
+  clearDropIndicators();
+
+
+  // ----------------------------------------------------------
+  // คำนวณตำแหน่ง
+  // ----------------------------------------------------------
+
+  const centerX =
+    rect.left +
+    rect.width / 2;
+
+
+  const centerY =
+    rect.top +
+    rect.height / 2;
+
+
+  /*
+   * ใช้แกนที่ pointer อยู่ใกล้ศูนย์กลางมากกว่า
+   *
+   * สำหรับ grid หลายคอลัมน์:
+   * ถ้าเมาส์อยู่ในครึ่งซ้าย/ขวาชัดเจน
+   * ให้ใช้ X
+   *
+   * ถ้าอยู่ใกล้แนวกลางมาก
+   * ใช้ Y ประกอบ
+   */
+
+  const dx =
+    Math.abs(
+      clientX -
+      centerX
+    );
+
+
+  const dy =
+    Math.abs(
+      clientY -
+      centerY
+    );
+
+
+  let insertBefore;
+
+
+  if (
+    dx > dy
+  ) {
+    insertBefore =
+      clientX <
+      centerX;
+  } else {
+    insertBefore =
+      clientY <
+      centerY;
+  }
+
+
+  // ----------------------------------------------------------
+  // PLACEHOLDER POSITION
+  // ----------------------------------------------------------
+
+  if (
+    insertBefore
+  ) {
 
     grid.insertBefore(
       placeholder,
@@ -1695,651 +2007,467 @@
     );
 
 
-    // ----------------------------------------------------------
-    // Make card floating
-    // ----------------------------------------------------------
-
     card.classList.add(
-      'is-dragging'
+      'is-drop-before-target'
     );
 
 
-    card.style.position =
-      'fixed';
+    placeholder.dataset.position =
+      'before';
 
 
-    card.style.width =
-      rect.width + 'px';
+  } else {
+
+    grid.insertBefore(
+      placeholder,
+      card.nextSibling
+    );
 
 
-    card.style.height =
-      rect.height + 'px';
+    card.classList.add(
+      'is-drop-after-target'
+    );
 
 
-    card.style.left =
-      rect.left + 'px';
+    placeholder.dataset.position =
+      'after';
+  }
+}
 
 
-    card.style.top =
-      rect.top + 'px';
+// ============================================================
+// CLEAR DROP INDICATORS
+// ============================================================
 
+function clearDropIndicators() {
 
-    card.style.zIndex =
-      '1000';
+  grid
+    .querySelectorAll(
+      '.is-drop-before-target, .is-drop-after-target'
+    )
+    .forEach(
+      card => {
 
-
-    card.style.pointerEvents =
-      'none';
-
-
-    /*
-     * เก็บ state การลาก
-     */
-    if (dragState) {
-      dragState.placeholder =
-        placeholder;
-
-      dragState.originalIndex =
-        pageItems.indexOf(
-          item
+        card.classList.remove(
+          'is-drop-before-target',
+          'is-drop-after-target'
         );
 
-      dragState.started =
-        true;
-    }
+      }
+    );
+}
 
 
-    /*
-     * ให้ MutationObserver / app state
-     * ไม่คิดว่าการ์ด floating เป็นงานใหม่
-     */
-    card.dataset.processing =
-      'false';
+// ============================================================
+// FINISH DRAG
+// ============================================================
 
+function finishDrag() {
 
-    clearDropIndicators();
+  if (!dragState) {
+    return;
   }
 
 
-  // ============================================================
-  // FIND DROP TARGET
-  // ============================================================
+  const {
+    card,
+    placeholder,
+    item
+  } = dragState;
 
-  function getDropTarget(
-    clientX,
-    clientY
+
+  /*
+   * ปล่อยตอนยังไม่ถึง threshold
+   * ถือเป็น click ปกติ
+   */
+  if (
+    !dragState.started ||
+    !dragState.moved
   ) {
-    if (!dragState) {
-      return null;
+
+    resetDragStyles(
+      card
+    );
+
+
+    if (
+      placeholder &&
+      placeholder.isConnected
+    ) {
+      placeholder.remove();
     }
 
 
-    const draggedCard =
-      dragState.card;
-
-    const placeholder =
-      dragState.placeholder;
-
-
-    const cards =
-      Array.from(
-        grid.querySelectorAll(
-          '.page-card-manage'
-        )
-      ).filter(
-        card =>
-          card !== draggedCard &&
-          card !== placeholder
-      );
+    try {
+      if (
+        pointerIdOf(
+          card
+        ) !== null
+      ) {
+        card.releasePointerCapture(
+          pointerIdOf(
+            card
+          )
+        );
+      }
+    } catch (_) {}
 
 
-    let best =
+    dragState =
       null;
 
-    let bestDistance =
-      Infinity;
+
+    return;
+  }
 
 
-    cards.forEach(
-      card => {
+  // ----------------------------------------------------------
+  // อ่านตำแหน่ง placeholder
+  // ----------------------------------------------------------
 
-        const rect =
-          card.getBoundingClientRect();
-
-
-        // ------------------------------------------------------
-        // Grid-aware hit test
-        // ------------------------------------------------------
-
-        const inside =
-          clientX >= rect.left &&
-          clientX <= rect.right &&
-          clientY >= rect.top &&
-          clientY <= rect.bottom;
+  const children =
+    Array.from(
+      grid.children
+    );
 
 
-        if (!inside) {
+  const finalOrder =
+    [];
+
+
+  children.forEach(
+    child => {
+
+      if (
+        child ===
+        placeholder
+      ) {
+
+        finalOrder.push(
+          item.origIndex
+        );
+
+        return;
+      }
+
+
+      if (
+        child.matches(
+          '.page-card-manage'
+        )
+      ) {
+
+        const index =
+          Number(
+            child.dataset.idx
+          );
+
+
+        /*
+         * floating card ยังอาจอยู่ใน grid
+         * แต่ position:fixed แล้ว
+         *
+         * จึงไม่ควรนับซ้ำ
+         */
+        if (
+          child === card
+        ) {
           return;
         }
 
 
-        const centerX =
-          rect.left +
-          rect.width / 2;
-
-
-        const centerY =
-          rect.top +
-          rect.height / 2;
-
-
-        const distance =
-          Math.hypot(
-            clientX -
-              centerX,
-            clientY -
-              centerY
-          );
-
-
-        if (
-          distance <
-          bestDistance
-        ) {
-
-          bestDistance =
-            distance;
-
-          best =
-            {
-              card,
-              rect,
-              centerX,
-              centerY
-            };
-        }
-
+        finalOrder.push(
+          index
+        );
       }
+
+    }
+  );
+
+
+  // ----------------------------------------------------------
+  // Safety
+  // ----------------------------------------------------------
+
+  if (
+    !finalOrder.includes(
+      item.origIndex
+    )
+  ) {
+
+    finalOrder.push(
+      item.origIndex
+    );
+  }
+
+
+  // ----------------------------------------------------------
+  // Apply order
+  // ----------------------------------------------------------
+
+  applyFinalOrder(
+    finalOrder
+  );
+
+
+  // ----------------------------------------------------------
+  // Release pointer
+  // ----------------------------------------------------------
+
+  try {
+
+    if (
+      pointerId !== null
+    ) {
+      card.releasePointerCapture(
+        pointerId
+      );
+    }
+
+  } catch (_) {}
+
+
+  // ----------------------------------------------------------
+  // Remove placeholder
+  // ----------------------------------------------------------
+
+  if (
+    placeholder &&
+    placeholder.isConnected
+  ) {
+    placeholder.remove();
+  }
+
+
+  // ----------------------------------------------------------
+  // Reset card
+  // ----------------------------------------------------------
+
+  resetDragStyles(
+    card
+  );
+
+
+  clearDropIndicators();
+
+
+  dragState =
+    null;
+
+
+  // ----------------------------------------------------------
+  // Re-render
+  // ----------------------------------------------------------
+
+  renderGrid();
+  updateCounts();
+}
+
+
+// ============================================================
+// CANCEL DRAG
+// ============================================================
+
+function cancelDrag() {
+
+  if (!dragState) {
+    return;
+  }
+
+
+  const {
+    card,
+    placeholder
+  } =
+    dragState;
+
+
+  try {
+
+    if (
+      pointerId !== null
+    ) {
+      card.releasePointerCapture(
+        pointerId
+      );
+    }
+
+  } catch (_) {}
+
+
+  if (
+    placeholder &&
+    placeholder.isConnected
+  ) {
+    placeholder.remove();
+  }
+
+
+  resetDragStyles(
+    card
+  );
+
+
+  clearDropIndicators();
+
+
+  dragState =
+    null;
+
+
+  renderGrid();
+}
+
+
+// ============================================================
+// RESET DRAG STYLES
+// ============================================================
+
+function resetDragStyles(
+  card
+) {
+  if (!card) {
+    return;
+  }
+
+
+  card.classList.remove(
+    'is-dragging',
+    'is-drag-ready'
+  );
+
+
+  card.style.position =
+    '';
+
+  card.style.width =
+    '';
+
+  card.style.height =
+    '';
+
+  card.style.left =
+    '';
+
+  card.style.top =
+    '';
+
+  card.style.zIndex =
+    '';
+
+  card.style.pointerEvents =
+    '';
+
+  card.style.transform =
+    '';
+}
+
+
+// ============================================================
+// POINTER ID HELPER
+// ============================================================
+
+function pointerIdOf(
+  card
+) {
+  if (
+    dragState &&
+    dragState.card === card &&
+    dragState.pointerId != null
+  ) {
+    return dragState.pointerId;
+  }
+
+  return null;
+}
+
+
+// ============================================================
+// APPLY FINAL ORDER
+// ============================================================
+
+function applyFinalOrder(
+  order
+) {
+  if (
+    !Array.isArray(order) ||
+    !order.length
+  ) {
+    return;
+  }
+
+
+  const byIndex =
+    new Map(
+      pageItems.map(
+        item => [
+          item.origIndex,
+          item
+        ]
+      )
     );
 
 
-    return best;
-  }
+  const used =
+    new Set();
 
 
-  // ============================================================
-  // UPDATE DROP POSITION
-  // ============================================================
-
-  function updateDropPosition(
-    clientX,
-    clientY
-  ) {
-    if (
-      !dragState ||
-      !dragState.placeholder
-    ) {
-      return;
-    }
+  const reordered =
+    [];
 
 
-    const target =
-      getDropTarget(
-        clientX,
-        clientY
-      );
+  order.forEach(
+    index => {
 
-
-    if (!target) {
-      return;
-    }
-
-
-    const {
-      card,
-      rect
-    } = target;
-
-
-    clearDropIndicators();
-
-
-    /*
-     * Grid อาจเป็นหลายคอลัมน์
-     * ดังนั้นใช้ทั้งแกน X/Y
-     *
-     * ถ้าอยู่ครึ่งซ้ายของ target
-     * = ก่อน target
-     *
-     * ถ้าอยู่ครึ่งขวา
-     * = หลัง target
-     *
-     * ในกรณีที่ pointer อยู่ใกล้แนวตั้งมาก
-     * ใช้ตำแหน่ง Y ช่วยตัดสิน
-     */
-    const relativeX =
-      clientX -
-      rect.left;
-
-
-    const relativeY =
-      clientY -
-      rect.top;
-
-
-    let insertBefore;
-
-
-    if (
-      rect.width >= rect.height
-    ) {
-      insertBefore =
-        relativeX <
-        rect.width / 2;
-
-    } else {
-
-      insertBefore =
-        relativeY <
-        rect.height / 2;
-    }
-
-
-    const placeholder =
-      dragState.placeholder;
-
-
-    // ----------------------------------------------------------
-    // Move placeholder
-    // ----------------------------------------------------------
-
-    if (insertBefore) {
-
-      grid.insertBefore(
-        placeholder,
-        card
-      );
-
-      card.classList.add(
-        'is-drop-after-target'
-      );
-
-      placeholder.dataset.position =
-        'before';
-
-
-    } else {
-
-      grid.insertBefore(
-        placeholder,
-        card.nextSibling
-      );
-
-      card.classList.add(
-        'is-drop-before-target'
-      );
-
-      placeholder.dataset.position =
-        'after';
-    }
-
-
-    /*
-     * ถ้า placeholder ถูกวางอยู่ตำแหน่งเดิม
-     * browser จะไม่เปลี่ยนอะไร
-     * แต่ยังคงแสดงช่องว่าง
-     */
-  }
-
-
-  // ============================================================
-  // CLEAR INDICATORS
-  // ============================================================
-
-  function clearDropIndicators() {
-
-    grid
-      .querySelectorAll(
-        '.is-drop-before-target, .is-drop-after-target'
-      )
-      .forEach(
-        card => {
-          card.classList.remove(
-            'is-drop-before-target',
-            'is-drop-after-target'
-          );
-        }
-      );
-
-  }
-
-
-  // ============================================================
-  // FINISH DRAG
-  // ============================================================
-
-  function finishDrag() {
-
-    if (
-      !dragState
-    ) {
-      return;
-    }
-
-
-    const {
-      card,
-      placeholder,
-      item
-    } =
-      dragState;
-
-
-    // ----------------------------------------------------------
-    // Not actually moved
-    // ----------------------------------------------------------
-
-    if (
-      !dragState.started ||
-      !dragState.moved
-    ) {
-
-      resetDragStyles(
-        card
-      );
+      const item =
+        byIndex.get(
+          index
+        );
 
 
       if (
-        placeholder &&
-        placeholder.isConnected
+        item &&
+        !used.has(
+          index
+        )
       ) {
-        placeholder.remove();
+
+        used.add(
+          index
+        );
+
+        reordered.push(
+          item
+        );
       }
 
-
-      dragState =
-        null;
-
-
-      return;
     }
+  );
 
 
-    // ----------------------------------------------------------
-    // Get final DOM order
-    // ----------------------------------------------------------
+  /*
+   * เติมรายการที่อาจไม่อยู่ใน DOM
+   */
+  pageItems.forEach(
+    item => {
 
-    const finalOrder =
-      Array.from(
-        grid.children
-      )
-        .map(
-          child => {
-
-            if (
-              child ===
-              placeholder
-            ) {
-              return {
-                type:
-                  'placeholder'
-              };
-            }
-
-
-            if (
-              child.matches(
-                '.page-card-manage'
-              )
-            ) {
-              return {
-                type:
-                  'page',
-                index:
-                  Number(
-                    child.dataset.idx
-                  )
-              };
-            }
-
-
-            return null;
-          }
+      if (
+        !used.has(
+          item.origIndex
         )
-        .filter(Boolean);
-
-
-    // ----------------------------------------------------------
-    // Convert DOM order -> pageItems
-    // ----------------------------------------------------------
-
-    const order =
-      finalOrder.map(
-        entry => {
-
-          if (
-            entry.type ===
-            'placeholder'
-          ) {
-            return item.origIndex;
-          }
-
-          return entry.index;
-        }
-      );
-
-
-    applyFinalOrder(
-      order
-    );
-
-
-    // ----------------------------------------------------------
-    // Cleanup
-    // ----------------------------------------------------------
-
-    if (
-      placeholder &&
-      placeholder.isConnected
-    ) {
-      placeholder.remove();
-    }
-
-
-    resetDragStyles(
-      card
-    );
-
-
-    clearDropIndicators();
-
-
-    dragState =
-      null;
-
-
-    // ----------------------------------------------------------
-    // Re-render from real state
-    // ----------------------------------------------------------
-
-    renderGrid();
-    updateCounts();
-  }
-
-
-  // ============================================================
-  // CANCEL DRAG
-  // ============================================================
-
-  function cancelDrag() {
-
-    if (
-      !dragState
-    ) {
-      return;
-    }
-
-
-    const {
-      card,
-      placeholder
-    } =
-      dragState;
-
-
-    if (
-      placeholder &&
-      placeholder.isConnected
-    ) {
-      placeholder.remove();
-    }
-
-
-    resetDragStyles(
-      card
-    );
-
-
-    clearDropIndicators();
-
-
-    dragState =
-      null;
-
-
-    renderGrid();
-  }
-
-
-  // ============================================================
-  // RESET CARD DRAG STYLE
-  // ============================================================
-
-  function resetDragStyles(
-    card
-  ) {
-    if (!card) {
-      return;
-    }
-
-
-    card.classList.remove(
-      'is-dragging'
-    );
-
-
-    card.style.position =
-      '';
-
-    card.style.width =
-      '';
-
-    card.style.height =
-      '';
-
-    card.style.left =
-      '';
-
-    card.style.top =
-      '';
-
-    card.style.zIndex =
-      '';
-
-    card.style.pointerEvents =
-      '';
-
-    card.style.transform =
-      '';
-  }
-
-
-  // ============================================================
-  // APPLY FINAL ORDER
-  // ============================================================
-
-  function applyFinalOrder(
-    order
-  ) {
-    if (
-      !Array.isArray(order) ||
-      !order.length
-    ) {
-      return;
-    }
-
-
-    const byIndex =
-      new Map(
-        pageItems.map(
-          item => [
-            item.origIndex,
-            item
-          ]
-        )
-      );
-
-
-    const used =
-      new Set();
-
-
-    const reordered =
-      [];
-
-
-    order.forEach(
-      index => {
-
-        const item =
-          byIndex.get(
-            index
-          );
-
-
-        if (
-          item &&
-          !used.has(
-            index
-          )
-        ) {
-
-          used.add(
-            index
-          );
-
-          reordered.push(
-            item
-          );
-        }
+      ) {
+        reordered.push(
+          item
+        );
       }
-    );
+
+    }
+  );
 
 
-    /*
-     * กันกรณีมีบาง element หายจาก DOM
-     */
-    pageItems.forEach(
-      item => {
-
-        if (
-          !used.has(
-            item.origIndex
-          )
-        ) {
-          reordered.push(
-            item
-          );
-        }
-
-      }
-    );
-
-
-    pageItems =
-      reordered;
-  }
-
+  pageItems =
+    reordered;
+}
 
   // ============================================================
   // SELECT ALL
