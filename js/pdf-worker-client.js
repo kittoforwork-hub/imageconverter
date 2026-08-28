@@ -2,251 +2,98 @@
 window.PdfWorkerClient = (() => {
   'use strict';
 
-  const supported =
-    typeof window !== 'undefined' &&
-    typeof Worker !== 'undefined';
+  // This worker only does pdf-lib work now (merge / watermark / page
+  // numbers / page extraction) — see js/pdf-worker.js for why page
+  // rendering (pdf.js) stays on the main thread instead.
+  const supported = typeof Worker !== 'undefined';
 
   let worker = null;
-  let workerUrl = null;
   let seq = 0;
-
   const pending = new Map();
 
-  /**
-   * หา URL ของ pdf-worker.js
-   * โดยอ้างอิงจากตำแหน่งของ pdf-worker-client.js
-   */
   function getWorkerUrl() {
-    const scripts = Array.from(
-      document.querySelectorAll('script[src]')
-    );
-
-    const clientScript = scripts.find((script) => {
-      try {
-        const src = new URL(script.src, document.baseURI).href;
-        return src.endsWith('/pdf-worker-client.js');
-      } catch {
-        return false;
-      }
-    });
-
-    if (clientScript) {
-      return new URL('pdf-worker.js', clientScript.src).href;
-    }
-
-    return new URL('js/pdf-worker.js', document.baseURI).href;
+    // Resolve from this script's actual URL instead of document.baseURI.
+    // This prevents the worker path from breaking when the app is hosted
+    // in a sub-folder, behind a reverse proxy, or on a rewritten route.
+    const currentScript = document.currentScript;
+    const base = currentScript && currentScript.src
+      ? currentScript.src
+      : new URL('js/pdf-worker-client.js', document.baseURI).href;
+    return new URL('pdf-worker.js', base).href;
   }
 
-  /**
-   * โหลด worker source แล้วสร้าง Blob Worker
-   * วิธีนี้ช่วยป้องกัน path/rewrite problem
-   */
   async function createWorker() {
-    const sourceUrl = getWorkerUrl();
-
-    const response = await fetch(sourceUrl, {
-      cache: 'no-store',
-      credentials: 'same-origin'
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `โหลด PDF worker ไม่สำเร็จ (HTTP ${response.status})`
-      );
+    const url = getWorkerUrl();
+    // Fetch first so a bad rewrite/server fallback cannot accidentally load
+    // pdf-worker-client.js as the Worker and produce:
+    // `importScripts is not defined`.
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('โหลด PDF worker ไม่สำเร็จ (HTTP ' + res.status + ')');
+    const source = await res.text();
+    if (!/\bimportScripts\s*\(/.test(source) || !/\bself\.onmessage\s*=/.test(source)) {
+      throw new Error('ไฟล์ PDF worker ไม่ถูกต้องหรือถูกเซิร์ฟเวอร์ rewrite ไปยังไฟล์อื่น');
     }
-
-    const source = await response.text();
-
-    // กันกรณี server rewrite URL ไปหน้า HTML หรือไฟล์ผิด
-    if (!source.includes('self.onmessage')) {
-      throw new Error(
-        'ไม่พบ self.onmessage ใน pdf-worker.js'
-      );
-    }
-
-    if (!source.includes('importScripts')) {
-      throw new Error(
-        'pdf-worker.js ไม่พบ importScripts()'
-      );
-    }
-
-    const blob = new Blob(
-      [source],
-      { type: 'application/javascript' }
-    );
-
-    workerUrl = URL.createObjectURL(blob);
-
-    const instance = new Worker(workerUrl);
-
-    instance.onmessage = (event) => {
-      const data = event.data || {};
-      const reqId = data.reqId;
-
-      if (!reqId) return;
-
-      const entry = pending.get(reqId);
-      if (!entry) return;
-
-      pending.delete(reqId);
-
-      if (data.ok) {
-        entry.resolve(data.result);
-      } else {
-        entry.reject(
-          new Error(
-            data.error || 'PDF worker ทำงานไม่สำเร็จ'
-          )
-        );
-      }
-    };
-
-    instance.onerror = (event) => {
-      const message =
-        event?.message ||
-        'เกิดข้อผิดพลาดใน PDF worker';
-
-      pending.forEach(({ reject }) => {
-        reject(new Error(`PDF worker error: ${message}`));
-      });
-
-      pending.clear();
-
-      try {
-        instance.terminate();
-      } catch (_) {}
-
-      if (workerUrl) {
-        try {
-          URL.revokeObjectURL(workerUrl);
-        } catch (_) {}
-        workerUrl = null;
-      }
-
-      worker = null;
-    };
-
-    return instance;
+    const blob = new Blob([source], { type: 'text/javascript' });
+    const blobUrl = URL.createObjectURL(blob);
+    const w = new Worker(blobUrl);
+    w.__pdfWorkerBlobUrl = blobUrl;
+    return w;
   }
 
   async function ensureWorker() {
-    if (worker) {
-      return worker;
-    }
-
+    if (worker) return worker;
     worker = await createWorker();
-
+    worker.onmessage = (e) => {
+      const { reqId, ok, result, error } = e.data;
+      const entry = pending.get(reqId);
+      if (!entry) return;
+      pending.delete(reqId);
+      if (ok) entry.resolve(result);
+      else entry.reject(new Error(error));
+    };
+    worker.onerror = (e) => {
+      // A worker-level error has no reqId to route to a specific caller.
+      pending.forEach(entry => entry.reject(new Error('PDF worker error: ' + (e.message || 'unknown error'))));
+      pending.clear();
+      try { worker.terminate(); } catch (_) {}
+      try { if (worker && worker.__pdfWorkerBlobUrl) URL.revokeObjectURL(worker.__pdfWorkerBlobUrl); } catch (_) {}
+      worker = null;
+    };
     return worker;
   }
 
-  function call(type, payload, transfer = []) {
+  function call(type, payload, transfer) {
     if (!supported) {
-      return Promise.reject(
-        new Error(
-          'เบราว์เซอร์นี้ไม่รองรับ Web Worker'
-        )
-      );
+      return Promise.reject(new Error('เบราว์เซอร์นี้ไม่รองรับการประมวลผล PDF แบบพื้นหลัง กรุณาอัปเดตเบราว์เซอร์'));
     }
-
-    const reqId = `req-${++seq}`;
-
-    return ensureWorker().then((instance) => {
-      return new Promise((resolve, reject) => {
-        pending.set(reqId, {
-          resolve,
-          reject
-        });
-
-        try {
-          instance.postMessage(
-            {
-              reqId,
-              type,
-              payload
-            },
-            transfer
-          );
-        } catch (error) {
-          pending.delete(reqId);
-          reject(error);
-        }
-      });
-    });
+    const reqId = 'req-' + (++seq);
+    return ensureWorker().then(w => new Promise((resolve, reject) => {
+      pending.set(reqId, { resolve, reject });
+      try {
+        w.postMessage({ reqId, type, payload }, transfer || []);
+      } catch (err) {
+        pending.delete(reqId);
+        reject(err);
+      }
+    }));
   }
 
   function dispose() {
-    pending.forEach(({ reject }) => {
-      reject(
-        new Error('PDF worker ถูกหยุดการทำงาน')
-      );
-    });
-
+    pending.forEach(entry => entry.reject(new Error('PDF worker stopped')));
     pending.clear();
-
     if (worker) {
-      try {
-        worker.terminate();
-      } catch (_) {}
-
+      try { worker.terminate(); } catch (_) {}
+      try { if (worker && worker.__pdfWorkerBlobUrl) URL.revokeObjectURL(worker.__pdfWorkerBlobUrl); } catch (_) {}
       worker = null;
-    }
-
-    if (workerUrl) {
-      try {
-        URL.revokeObjectURL(workerUrl);
-      } catch (_) {}
-
-      workerUrl = null;
     }
   }
 
-  /**
-   * API
-   */
   return {
     supported,
-
-    mergePdfs(buffers) {
-      return call(
-        'mergePdfs',
-        { buffers },
-        buffers.map((buffer) => buffer)
-      );
-    },
-
-    buildPagesPdf(buffer, indices) {
-      return call(
-        'buildPagesPdf',
-        {
-          buffer,
-          indices
-        },
-        [buffer]
-      );
-    },
-
-    applyWatermark(buffer, opts = {}) {
-      return call(
-        'applyWatermark',
-        {
-          buffer,
-          ...opts
-        },
-        [buffer]
-      );
-    },
-
-    applyPageNumbers(buffer, opts = {}) {
-      return call(
-        'applyPageNumbers',
-        {
-          buffer,
-          ...opts
-        },
-        [buffer]
-      );
-    },
-
+    mergePdfs: (buffers) => call('mergePdfs', { buffers }, buffers.slice()),
+    buildPagesPdf: (buffer, indices) => call('buildPagesPdf', { buffer, indices }, [buffer]),
+    applyWatermark: (buffer, opts) => call('applyWatermark', Object.assign({ buffer }, opts), [buffer]),
+    applyPageNumbers: (buffer, opts) => call('applyPageNumbers', Object.assign({ buffer }, opts), [buffer]),
     dispose
   };
 })();
