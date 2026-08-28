@@ -54,6 +54,9 @@
   // think about it," per how this is meant to be used.
   function runAutoClearCache() {
     window.Utils.clearCache();
+    if (window.PdfWorkerClient && typeof window.PdfWorkerClient.dispose === 'function') {
+      window.PdfWorkerClient.dispose();
+    }
   }
 
   const IDLE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes of no activity
@@ -72,5 +75,10 @@
 
   // Safety net: release everything when the tab is closed, refreshed, or
   // navigated away from.
-  window.addEventListener('pagehide', () => window.Utils.clearCache());
+  window.addEventListener('pagehide', () => {
+    window.Utils.clearCache();
+    if (window.PdfWorkerClient && typeof window.PdfWorkerClient.dispose === 'function') {
+      window.PdfWorkerClient.dispose();
+    }
+  });
 })();
