@@ -1,4 +1,5 @@
 /* global window, Worker */
+
 window.PdfWorkerClient = (() => {
   'use strict';
 
@@ -15,32 +16,33 @@ window.PdfWorkerClient = (() => {
 
   const pending = new Map();
 
+  /*
+   * เก็บ URL ของ client ตั้งแต่ตอน script โหลด
+   *
+   * ไม่ใช้ document.currentScript ตอนผู้ใช้กดปุ่มทีหลัง
+   * เพราะตอนนั้น document.currentScript มักเป็น null
+   */
+  const clientScriptUrl =
+    document.currentScript &&
+    document.currentScript.src
+      ? document.currentScript.src
+      : new URL(
+          'js/pdf-worker-client.js',
+          document.baseURI
+        ).href;
+
 
   // ============================================================
   // GET WORKER URL
   // ============================================================
 
   function getWorkerUrl() {
-    /*
-     * พยายามอ้างอิงจาก URL ของไฟล์ client ตัวนี้โดยตรง
-     * เพื่อให้ทำงานได้แม้เว็บอยู่ใน sub-folder / route rewrite
-     */
-    const currentScript =
-      document.currentScript;
-
-    const base =
-      currentScript &&
-      currentScript.src
-        ? currentScript.src
-        : new URL(
-            'js/pdf-worker-client.js',
-            document.baseURI
-          ).href;
 
     return new URL(
       'pdf-worker.js',
-      base
+      clientScriptUrl
     ).href;
+
   }
 
 
@@ -49,32 +51,58 @@ window.PdfWorkerClient = (() => {
   // ============================================================
 
   async function createWorker() {
+
+    if (!supported) {
+      throw new Error(
+        'เบราว์เซอร์นี้ไม่รองรับ Web Worker'
+      );
+    }
+
+
     const url =
       getWorkerUrl();
 
 
     // ----------------------------------------------------------
-    // Fetch ก่อนสร้าง Worker
+    // Fetch worker source ก่อน
     //
-    // ป้องกัน server rewrite / fallback route
-    // ส่ง HTML หรือไฟล์ผิดมาเป็น worker
+    // ช่วยตรวจว่า URL ไม่ได้ถูก rewrite ไปเป็น HTML
+    // หรือหน้าอื่น
     // ----------------------------------------------------------
 
-    const res =
-      await fetch(
-        url,
-        {
-          cache: 'no-store'
-        }
+    let res;
+
+    try {
+
+      res =
+        await fetch(
+          url,
+          {
+            cache: 'no-store'
+          }
+        );
+
+    } catch (error) {
+
+      throw new Error(
+        'ไม่สามารถโหลด PDF worker ได้: ' +
+        (
+          error?.message ||
+          String(error)
+        )
       );
+
+    }
 
 
     if (!res.ok) {
+
       throw new Error(
         'โหลด PDF worker ไม่สำเร็จ (HTTP ' +
         res.status +
         ')'
       );
+
     }
 
 
@@ -94,9 +122,11 @@ window.PdfWorkerClient = (() => {
         source
       )
     ) {
+
       throw new Error(
-        'ไฟล์ PDF worker ไม่ถูกต้องหรือถูกเซิร์ฟเวอร์ rewrite ไปยังไฟล์อื่น'
+        'ไฟล์ PDF worker ไม่ถูกต้อง หรือถูกเซิร์ฟเวอร์ rewrite ไปยังไฟล์อื่น'
       );
+
     }
 
 
@@ -120,30 +150,41 @@ window.PdfWorkerClient = (() => {
       );
 
 
-    let w;
+    let w = null;
+
 
     try {
+
       w =
         new Worker(
           blobUrl
         );
-    } catch (err) {
-      URL.revokeObjectURL(
-        blobUrl
-      );
 
-      throw err;
+
+    } catch (error) {
+
+      try {
+        URL.revokeObjectURL(
+          blobUrl
+        );
+      } catch (_) {}
+
+
+      throw error;
+
     }
 
 
     /*
-     * เก็บ Blob URL เอาไว้ revoke ตอน worker ถูก destroy
+     * เก็บ Blob URL ไว้กับ Worker
+     * เพื่อ revoke เมื่อ Worker ถูกทำลาย
      */
     w.__pdfWorkerBlobUrl =
       blobUrl;
 
 
     return w;
+
   }
 
 
@@ -151,32 +192,49 @@ window.PdfWorkerClient = (() => {
   // TERMINATE WORKER
   // ============================================================
 
-  function terminateWorker() {
-    const oldWorker =
-      worker;
+  function terminateWorker(
+    targetWorker = worker
+  ) {
 
-    worker = null;
+    /*
+     * ถ้า target เป็น Worker ตัวปัจจุบัน
+     * ให้ล้าง reference
+     */
+    if (
+      targetWorker === worker
+    ) {
+      worker = null;
+    }
 
 
-    if (!oldWorker) {
+    if (!targetWorker) {
       return;
     }
 
 
     try {
-      oldWorker.terminate();
+
+      targetWorker.terminate();
+
     } catch (_) {}
 
 
     try {
+
       if (
-        oldWorker.__pdfWorkerBlobUrl
+        targetWorker.__pdfWorkerBlobUrl
       ) {
+
         URL.revokeObjectURL(
-          oldWorker.__pdfWorkerBlobUrl
+          targetWorker.__pdfWorkerBlobUrl
         );
+
+        targetWorker.__pdfWorkerBlobUrl =
+          null;
       }
+
     } catch (_) {}
+
   }
 
 
@@ -187,6 +245,7 @@ window.PdfWorkerClient = (() => {
   function rejectAllPending(
     error
   ) {
+
     const err =
       error instanceof Error
         ? error
@@ -209,11 +268,18 @@ window.PdfWorkerClient = (() => {
 
     entries.forEach(
       entry => {
+
         try {
-          entry.reject(err);
+
+          entry.reject(
+            err
+          );
+
         } catch (_) {}
+
       }
     );
+
   }
 
 
@@ -223,23 +289,27 @@ window.PdfWorkerClient = (() => {
 
   async function ensureWorker() {
 
-    // มี worker พร้อมใช้อยู่แล้ว
+    // ----------------------------------------------------------
+    // Worker พร้อมใช้
+    // ----------------------------------------------------------
+
     if (worker) {
       return worker;
     }
 
 
-    /*
-     * ถ้ากำลังสร้าง worker อยู่
-     * ทุก request ใช้ Promise เดียวกัน
-     *
-     * ป้องกันกรณีมีหลาย tool เรียกพร้อมกัน
-     * แล้วสร้าง Worker ซ้ำหลายตัว
-     */
+    // ----------------------------------------------------------
+    // กำลังสร้าง Worker อยู่
+    // ----------------------------------------------------------
+
     if (workerPromise) {
       return workerPromise;
     }
 
+
+    // ----------------------------------------------------------
+    // สร้าง Worker
+    // ----------------------------------------------------------
 
     workerPromise =
       createWorker()
@@ -256,9 +326,22 @@ window.PdfWorkerClient = (() => {
 
             w.onmessage =
               event => {
+
+                /*
+                 * ถ้า Worker นี้ไม่ใช่ Worker ปัจจุบัน
+                 * message นี้ถือเป็น stale message
+                 */
+                if (
+                  worker !== w
+                ) {
+                  return;
+                }
+
+
                 const data =
                   event.data ||
                   {};
+
 
                 const {
                   reqId,
@@ -285,17 +368,22 @@ window.PdfWorkerClient = (() => {
 
 
                 if (ok) {
+
                   entry.resolve(
                     result
                   );
+
                 } else {
+
                   entry.reject(
                     new Error(
                       error ||
                       'PDF worker request failed'
                     )
                   );
+
                 }
+
               };
 
 
@@ -305,6 +393,17 @@ window.PdfWorkerClient = (() => {
 
             w.onerror =
               event => {
+
+                /*
+                 * ถ้าเป็น Worker เก่า
+                 * อย่าไปทำลาย Worker ตัวใหม่
+                 */
+                if (
+                  worker !== w
+                ) {
+                  return;
+                }
+
 
                 const message =
                   event &&
@@ -321,7 +420,10 @@ window.PdfWorkerClient = (() => {
                 );
 
 
-                terminateWorker();
+                terminateWorker(
+                  w
+                );
+
               };
 
 
@@ -332,6 +434,13 @@ window.PdfWorkerClient = (() => {
             w.onmessageerror =
               () => {
 
+                if (
+                  worker !== w
+                ) {
+                  return;
+                }
+
+
                 rejectAllPending(
                   new Error(
                     'PDF worker message error'
@@ -339,30 +448,49 @@ window.PdfWorkerClient = (() => {
                 );
 
 
-                terminateWorker();
+                terminateWorker(
+                  w
+                );
+
               };
 
 
             return w;
+
           }
         )
         .catch(
           error => {
 
-            terminateWorker();
+            /*
+             * createWorker() อาจสร้าง Worker ได้แล้ว
+             * แต่เกิด error ระหว่าง setup
+             */
+            if (
+              worker
+            ) {
+              terminateWorker(
+                worker
+              );
+            }
+
 
             throw error;
+
           }
         )
         .finally(
           () => {
+
             workerPromise =
               null;
+
           }
         );
 
 
     return workerPromise;
+
   }
 
 
@@ -375,12 +503,15 @@ window.PdfWorkerClient = (() => {
     payload,
     transfer
   ) {
+
     if (!supported) {
+
       return Promise.reject(
         new Error(
           'เบราว์เซอร์นี้ไม่รองรับการประมวลผล PDF แบบพื้นหลัง กรุณาอัปเดตเบราว์เซอร์'
         )
       );
+
     }
 
 
@@ -401,6 +532,21 @@ window.PdfWorkerClient = (() => {
       .then(
         w => {
 
+          /*
+           * Worker อาจถูก dispose ระหว่างที่
+           * ensureWorker() กำลัง resolve
+           */
+          if (
+            worker !== w
+          ) {
+
+            throw new Error(
+              'PDF worker ไม่พร้อมใช้งานแล้ว กรุณาลองใหม่'
+            );
+
+          }
+
+
           return new Promise(
             (
               resolve,
@@ -411,12 +557,37 @@ window.PdfWorkerClient = (() => {
                 reqId,
                 {
                   resolve,
-                  reject
+                  reject,
+                  worker: w
                 }
               );
 
 
               try {
+
+                /*
+                 * ตรวจอีกครั้งก่อน postMessage
+                 *
+                 * ป้องกัน race ตอน clear/dispose
+                 */
+                if (
+                  worker !== w
+                ) {
+
+                  pending.delete(
+                    reqId
+                  );
+
+                  reject(
+                    new Error(
+                      'PDF worker ถูกหยุดก่อนส่งคำสั่ง'
+                    )
+                  );
+
+                  return;
+
+                }
+
 
                 w.postMessage(
                   {
@@ -428,18 +599,24 @@ window.PdfWorkerClient = (() => {
                 );
 
 
-              } catch (err) {
+              } catch (error) {
 
                 pending.delete(
                   reqId
                 );
 
-                reject(err);
+                reject(
+                  error
+                );
+
               }
+
             }
           );
+
         }
       );
+
   }
 
 
@@ -450,22 +627,27 @@ window.PdfWorkerClient = (() => {
   function mergePdfs(
     buffers
   ) {
+
     if (
       !Array.isArray(
         buffers
       )
     ) {
+
       return Promise.reject(
         new Error(
           'ข้อมูล PDF สำหรับรวมไม่ถูกต้อง'
         )
       );
+
     }
 
 
     /*
-     * buffers ถูก transfer เข้า Worker
-     * จึงไม่ควรใช้งาน ArrayBuffer เดิมต่อหลังจากเรียก
+     * ArrayBuffer ทุกตัวจะถูก transfer เข้า Worker
+     *
+     * หลังเรียกฟังก์ชันนี้ buffer ต้นฉบับจะถูก detach
+     * ดังนั้น caller ไม่ควรใช้ buffer เดิมต่อ
      */
     return call(
       'mergePdfs',
@@ -474,6 +656,7 @@ window.PdfWorkerClient = (() => {
       },
       buffers.slice()
     );
+
   }
 
 
@@ -485,14 +668,46 @@ window.PdfWorkerClient = (() => {
     buffer,
     indices
   ) {
+
+    if (
+      !(buffer instanceof ArrayBuffer)
+    ) {
+
+      return Promise.reject(
+        new Error(
+          'ข้อมูล PDF ไม่ถูกต้อง'
+        )
+      );
+
+    }
+
+
+    if (
+      !Array.isArray(
+        indices
+      )
+    ) {
+
+      return Promise.reject(
+        new Error(
+          'รายการหน้า PDF ไม่ถูกต้อง'
+        )
+      );
+
+    }
+
+
     return call(
       'buildPagesPdf',
       {
         buffer,
         indices
       },
-      [buffer]
+      [
+        buffer
+      ]
     );
+
   }
 
 
@@ -504,26 +719,52 @@ window.PdfWorkerClient = (() => {
     buffer,
     opts = {}
   ) {
+
+    if (
+      !(buffer instanceof ArrayBuffer)
+    ) {
+
+      return Promise.reject(
+        new Error(
+          'ข้อมูล PDF ไม่ถูกต้อง'
+        )
+      );
+
+    }
+
+
     const transfer = [
       buffer
     ];
 
 
     /*
-     * PNG watermark เป็น ArrayBuffer
-     * สามารถ transfer ตรงเข้า Worker ได้
+     * PNG watermark
      *
-     * ข้อดี:
-     * ไม่ต้อง copy memory ก้อนเดิมซ้ำ
+     * transfer ได้เฉพาะ ArrayBuffer
+     * ไม่ใช่ Blob / Uint8Array โดยตรง
      */
     if (
       opts.watermarkImage &&
       opts.watermarkImage instanceof
         ArrayBuffer
     ) {
-      transfer.push(
-        opts.watermarkImage
-      );
+
+      /*
+       * ป้องกันกรณีส่ง buffer เดิมซ้ำ
+       * ซึ่งจะทำให้ transfer list มีตัวเดียวกัน 2 ครั้ง
+       */
+      if (
+        opts.watermarkImage !==
+        buffer
+      ) {
+
+        transfer.push(
+          opts.watermarkImage
+        );
+
+      }
+
     }
 
 
@@ -537,6 +778,7 @@ window.PdfWorkerClient = (() => {
       ),
       transfer
     );
+
   }
 
 
@@ -548,6 +790,20 @@ window.PdfWorkerClient = (() => {
     buffer,
     opts
   ) {
+
+    if (
+      !(buffer instanceof ArrayBuffer)
+    ) {
+
+      return Promise.reject(
+        new Error(
+          'ข้อมูล PDF ไม่ถูกต้อง'
+        )
+      );
+
+    }
+
+
     return call(
       'applyPageNumbers',
       Object.assign(
@@ -556,8 +812,11 @@ window.PdfWorkerClient = (() => {
         },
         opts || {}
       ),
-      [buffer]
+      [
+        buffer
+      ]
     );
+
   }
 
 
@@ -567,6 +826,10 @@ window.PdfWorkerClient = (() => {
 
   function dispose() {
 
+    /*
+     * ยกเลิกทุก request ที่ยังรออยู่ก่อน
+     * เพื่อไม่ให้ Promise ค้าง
+     */
     rejectAllPending(
       new Error(
         'PDF worker stopped'
@@ -574,7 +837,20 @@ window.PdfWorkerClient = (() => {
     );
 
 
-    terminateWorker();
+    /*
+     * ถ้ากำลังสร้าง Worker อยู่
+     * workerPromise จะถูกปล่อยให้จบตาม lifecycle
+     */
+    if (
+      worker
+    ) {
+
+      terminateWorker(
+        worker
+      );
+
+    }
+
   }
 
 
@@ -586,18 +862,13 @@ window.PdfWorkerClient = (() => {
 
     supported,
 
-
     mergePdfs,
-
 
     buildPagesPdf,
 
-
     applyWatermark,
 
-
     applyPageNumbers,
-
 
     dispose
 
