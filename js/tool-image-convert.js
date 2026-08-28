@@ -129,12 +129,15 @@
     }
 
     markStale() {
-      if (this.resultBlob) {
-        this.resultBlob = null;
-        this.downloadBtn.classList.add('hidden');
-        this.statusEl.textContent = 'รอแปลง';
-        this.statusEl.classList.remove('is-ready', 'is-error');
+      if (this.resultUrl) {
+        URL.revokeObjectURL(this.resultUrl);
+        this.resultUrl = null;
       }
+      this.resultBlob = null;
+      this.downloadBtn.removeAttribute('href');
+      this.downloadBtn.classList.add('hidden');
+      this.statusEl.textContent = 'รอแปลง';
+      this.statusEl.classList.remove('is-ready', 'is-error');
     }
 
     async convert() {
