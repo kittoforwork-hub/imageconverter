@@ -82,6 +82,15 @@
 
   buildBtn.addEventListener('click', async () => {
     if (!items.length) return;
+    const totalBytes = items.reduce((sum, item) => sum + item.file.size, 0);
+    if (items.length >= 30 || totalBytes >= 80 * 1024 * 1024) {
+      const ok = window.confirm(
+        `งานนี้มี ${items.length} รูป รวมประมาณ ${U.formatBytes(totalBytes)}\n\n` +
+        'การสร้าง PDF จะใช้หน่วยความจำค่อนข้างมาก ต้องการดำเนินการต่อหรือไม่?'
+      );
+      if (!ok) return;
+    }
+
     buildBtn.disabled = true;
     buildBtn.textContent = 'กำลังสร้าง…';
     resultStrip.classList.add('hidden');
@@ -120,6 +129,7 @@
 
         const page = pdfDoc.addPage([pageW, pageH]);
         page.drawImage(embedded, { x, y, width: drawW, height: drawH });
+        await U.yieldToUI();
       }
 
       const pdfBytes = await pdfDoc.save();
