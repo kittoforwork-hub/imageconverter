@@ -95,6 +95,10 @@
 
   let dragState = null;
 
+  // Prevent the click event that follows a completed drag
+  // from toggling selection on the old card.
+  let suppressClickUntil = 0;
+
 
   // ============================================================
   // TOOL STATE
@@ -183,495 +187,309 @@
 
 
   // ============================================================
-  // RENDER QUEUE
+  // QUEUE
   // ============================================================
 
   function resetQueue() {
-    renderQueue.length = 0;
+    renderQueue = [];
     queueRunning = false;
+  }
 
-    pageItems.forEach(
-      item => {
-        item.rendering = false;
+
+  function queueRender(index) {
+    if (
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index >= pageItems.length
+    ) {
+      return;
+    }
+
+    if (
+      !renderQueue.includes(index)
+    ) {
+      renderQueue.push(index);
+    }
+
+    processQueue();
+  }
+
+
+  async function processQueue() {
+    if (
+      queueRunning ||
+      !currentDoc
+    ) {
+      return;
+    }
+
+    queueRunning = true;
+
+    try {
+
+      while (
+        renderQueue.length
+      ) {
+
+        const index =
+          renderQueue.shift();
+
+        if (
+          index == null ||
+          index < 0 ||
+          index >= pageItems.length
+        ) {
+          continue;
+        }
+
+        const item =
+          pageItems[index];
+
+        if (
+          !item ||
+          item.deleted ||
+          item.thumbUrl
+        ) {
+          continue;
+        }
+
+        const expectedLoadSeq =
+          loadSeq;
+
+        try {
+
+          const page =
+            await currentDoc.getPage(
+              index + 1
+            );
+
+          if (
+            expectedLoadSeq !==
+            loadSeq
+          ) {
+            continue;
+          }
+
+          const viewport =
+            page.getViewport({
+              scale:
+                THUMB_TARGET_WIDTH /
+                page.getViewport({
+                  scale: 1
+                }).width
+            });
+
+          const width =
+            Math.max(
+              1,
+              Math.round(
+                viewport.width
+              )
+            );
+
+          const height =
+            Math.max(
+              1,
+              Math.round(
+                viewport.height
+              )
+            );
+
+          const scale =
+            Math.min(
+              1,
+              THUMB_MAX_DIMENSION /
+                Math.max(
+                  width,
+                  height
+                )
+            );
+
+          const renderViewport =
+            page.getViewport({
+              scale:
+                (
+                  THUMB_TARGET_WIDTH /
+                  page.getViewport({
+                    scale: 1
+                  }).width
+                ) * scale
+            });
+
+          const canvas =
+            document.createElement(
+              'canvas'
+            );
+
+          const context =
+            canvas.getContext(
+              '2d',
+              {
+                alpha: false
+              }
+            );
+
+          canvas.width =
+            Math.max(
+              1,
+              Math.round(
+                renderViewport.width
+              )
+            );
+
+          canvas.height =
+            Math.max(
+              1,
+              Math.round(
+                renderViewport.height
+              )
+            );
+
+          await page.render({
+            canvasContext:
+              context,
+            viewport:
+              renderViewport
+          }).promise;
+
+          if (
+            expectedLoadSeq !==
+            loadSeq
+          ) {
+            continue;
+          }
+
+          const blob =
+            await new Promise(
+              resolve =>
+                canvas.toBlob(
+                  resolve,
+                  'image/jpeg',
+                  0.82
+                )
+            );
+
+          if (
+            !blob
+          ) {
+            throw new Error(
+              'ไม่สามารถสร้างภาพตัวอย่างหน้า PDF ได้'
+            );
+          }
+
+          if (
+            expectedLoadSeq !==
+            loadSeq
+          ) {
+            continue;
+          }
+
+          if (
+            item.thumbUrl
+          ) {
+            try {
+              URL.revokeObjectURL(
+                item.thumbUrl
+              );
+            } catch (_) {}
+          }
+
+          item.thumbUrl =
+            URL.createObjectURL(
+              blob
+            );
+
+          updateCardThumbnail(
+            index
+          );
+
+        } catch (error) {
+
+          console.warn(
+            'PDF thumbnail error:',
+            index,
+            error
+          );
+
+          const currentItem =
+            pageItems[index];
+
+          if (
+            currentItem &&
+            expectedLoadSeq ===
+              loadSeq
+          ) {
+            currentItem.thumbError =
+              true;
+
+            updateCardThumbnail(
+              index
+            );
+          }
+        }
       }
-    );
+
+    } finally {
+      queueRunning = false;
+
+      if (
+        renderQueue.length &&
+        currentDoc
+      ) {
+        processQueue();
+      }
+    }
   }
 
 
   // ============================================================
-  // PDF DOCUMENT CLEANUP
+  // DESTROY PDF DOCUMENT
   // ============================================================
 
   async function destroyCurrentDoc() {
-    if (!currentDoc) {
-      return;
-    }
-
     const doc =
       currentDoc;
 
-    currentDoc = null;
+    currentDoc =
+      null;
+
+    if (!doc) {
+      return;
+    }
 
     try {
       await doc.destroy();
-    } catch (err) {
+    } catch (error) {
       console.warn(
-        'PDF destroy warning:',
-        err
-      );
-    }
-  }
-
-
-  // ============================================================
-  // LOAD FILE
-  // ============================================================
-
-  async function loadFile(file) {
-    if (!file) {
-      return;
-    }
-
-    const requestId =
-      ++loadSeq;
-
-    const validPdf =
-      file.type === 'application/pdf' ||
-      /\.pdf$/i.test(file.name);
-
-    if (!validPdf) {
-      alert(
-        'กรุณาเลือกไฟล์ PDF เท่านั้น'
-      );
-      return;
-    }
-
-    if (
-      !U.confirmLargeFile(
-        file,
-        LARGE_FILE_WARN_MB,
-        'ไฟล์ PDF นี้มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) จึงอาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก'
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setToolProcessing(true);
-
-      if (observer) {
-        observer.disconnect();
-        observer = null;
-      }
-
-      resetQueue();
-      revokeThumbs();
-
-      pageItems = [];
-
-      await destroyCurrentDoc();
-
-      if (requestId !== loadSeq) {
-        return;
-      }
-
-      currentFile =
-        file;
-
-      if (nameEl) {
-        nameEl.textContent =
-          `${file.name} · ${U.formatBytes(
-            file.size
-          )}`;
-      }
-
-      grid.innerHTML = '';
-
-      bulkbar.classList.remove(
-        'hidden'
-      );
-
-      if (noteEl) {
-        noteEl.classList.remove(
-          'hidden'
-        );
-      }
-
-      if (countEl) {
-        countEl.textContent =
-          '…';
-      }
-
-      const bytes =
-        await U.readAsArrayBuffer(
-          file
-        );
-
-      if (requestId !== loadSeq) {
-        return;
-      }
-
-      const loadingTask =
-        pdfjsLib.getDocument({
-          data: bytes,
-          canvasFactory:
-            window.KittoCanvasFactory
-        });
-
-      const doc =
-        await loadingTask.promise;
-
-      if (requestId !== loadSeq) {
-        try {
-          await doc.destroy();
-        } catch (_) {}
-
-        return;
-      }
-
-      currentDoc =
-        doc;
-
-      for (
-        let i = 0;
-        i < doc.numPages;
-        i++
-      ) {
-        pageItems.push({
-          origIndex: i,
-          thumbUrl: null,
-          rendering: false,
-          deleted: false,
-          selected: false
-        });
-      }
-
-      updateCounts();
-      renderGrid();
-
-    } catch (error) {
-      if (requestId !== loadSeq) {
-        return;
-      }
-
-      console.error(
-        'PDF load error:',
+        'PDF document destroy warning:',
         error
       );
-
-      await destroyCurrentDoc();
-
-      currentFile = null;
-      pageItems = [];
-
-      grid.innerHTML = '';
-
-      bulkbar.classList.add(
-        'hidden'
-      );
-
-      if (noteEl) {
-        noteEl.classList.add(
-          'hidden'
-        );
-      }
-
-      alert(
-        'ไม่สามารถเปิดไฟล์ PDF ได้\n\n' +
-        (
-          error?.message ||
-          'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
-        )
-      );
-
-    } finally {
-      if (
-        requestId === loadSeq
-      ) {
-        setToolProcessing(false);
-      }
     }
   }
 
 
   // ============================================================
-  // RENDER THUMBNAIL
+  // THUMBNAIL UPDATE
   // ============================================================
 
-  async function renderThumbnail(
-    origIndex
+  function updateCardThumbnail(
+    index
   ) {
-    if (!currentDoc) {
-      return;
-    }
-
-    const item =
-      pageItems.find(
-        entry =>
-          entry.origIndex ===
-          origIndex
-      );
-
-    if (!item) {
-      return;
-    }
-
-    if (
-      item.deleted ||
-      item.thumbUrl ||
-      item.rendering
-    ) {
-      return;
-    }
-
-    item.rendering =
-      true;
-
-    let page = null;
-    let canvas = null;
-    let context = null;
-    let renderTask = null;
-
-    try {
-      page =
-        await currentDoc.getPage(
-          origIndex + 1
-        );
-
-      const baseViewport =
-        page.getViewport({
-          scale: 1
-        });
-
-      if (
-        !baseViewport.width ||
-        !baseViewport.height
-      ) {
-        throw new Error(
-          'Invalid PDF page dimensions'
-        );
-      }
-
-      let scale =
-        THUMB_TARGET_WIDTH /
-        baseViewport.width;
-
-      let width =
-        baseViewport.width *
-        scale;
-
-      let height =
-        baseViewport.height *
-        scale;
-
-      const maxDimension =
-        Math.max(
-          width,
-          height
-        );
-
-      if (
-        maxDimension >
-        THUMB_MAX_DIMENSION
-      ) {
-        scale *=
-          THUMB_MAX_DIMENSION /
-          maxDimension;
-      }
-
-      const viewport =
-        page.getViewport({
-          scale
-        });
-
-      const factory =
-        window.KittoCanvasFactory;
-
-      const canvasInfo =
-        factory
-          ? factory.create(
-              viewport.width,
-              viewport.height
-            )
-          : (() => {
-
-              const fallbackCanvas =
-                document.createElement(
-                  'canvas'
-                );
-
-              fallbackCanvas.width =
-                Math.ceil(
-                  viewport.width
-                );
-
-              fallbackCanvas.height =
-                Math.ceil(
-                  viewport.height
-                );
-
-              const fallbackContext =
-                fallbackCanvas.getContext(
-                  '2d'
-                );
-
-              if (!fallbackContext) {
-                throw new Error(
-                  'ไม่สามารถสร้าง canvas ได้'
-                );
-              }
-
-              return {
-                canvas:
-                  fallbackCanvas,
-
-                context:
-                  fallbackContext
-              };
-
-            })();
-
-      canvas =
-        canvasInfo.canvas;
-
-      context =
-        canvasInfo.context;
-
-      context.save();
-
-      context.fillStyle =
-        '#FFFFFF';
-
-      context.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-
-      context.restore();
-
-      renderTask =
-        page.render({
-          canvasContext:
-            context,
-
-          viewport,
-
-          canvasFactory:
-            window.KittoCanvasFactory,
-
-          intent:
-            'display'
-        });
-
-      await renderTask.promise;
-
-      const blob =
-        await new Promise(
-          (
-            resolve,
-            reject
-          ) => {
-
-            canvas.toBlob(
-              result => {
-
-                if (result) {
-                  resolve(
-                    result
-                  );
-                } else {
-                  reject(
-                    new Error(
-                      'ไม่สามารถสร้าง thumbnail ได้'
-                    )
-                  );
-                }
-
-              },
-              'image/jpeg',
-              0.78
-            );
-
-          }
-        );
-
-      if (
-        !currentDoc ||
-        item.deleted
-      ) {
-        return;
-      }
-
-      item.thumbUrl =
-        URL.createObjectURL(
-          blob
-        );
-
-      updateCardThumbnail(
-        item
-      );
-
-    } catch (error) {
-      console.error(
-        `Thumbnail render failed: page ${origIndex + 1}`,
-        error
-      );
-
-      const card =
-        grid.querySelector(
-          `.page-card-manage[data-idx="${origIndex}"]`
-        );
-
-      if (card) {
-        card.classList.add(
-          'is-thumb-error'
-        );
-      }
-
-    } finally {
-      item.rendering =
-        false;
-
-      if (page) {
-        try {
-          page.cleanup();
-        } catch (_) {}
-      }
-
-      if (canvas) {
-        try {
-          canvas.width = 1;
-          canvas.height = 1;
-        } catch (_) {}
-      }
-
-      canvas = null;
-      context = null;
-      renderTask = null;
-    }
-  }
-
-
-  // ============================================================
-  // UPDATE THUMBNAIL
-  // ============================================================
-
-  function updateCardThumbnail(item) {
     const card =
       grid.querySelector(
-        `.page-card-manage[data-idx="${item.origIndex}"]`
+        `.page-card-manage[data-idx="${index}"]`
       );
 
     if (!card) {
       return;
     }
 
-    card.classList.remove(
-      'is-pending',
-      'is-thumb-error'
-    );
+    const item =
+      pageItems[index];
+
+    if (!item) {
+      return;
+    }
 
     const img =
       card.querySelector(
@@ -684,112 +502,37 @@
     ) {
       img.src =
         item.thumbUrl;
-    }
-  }
 
+      img.alt =
+        `หน้า ${index + 1}`;
 
-  // ============================================================
-  // RENDER QUEUE
-  // ============================================================
-
-  function queueRender(
-    origIndex
-  ) {
-    if (!currentDoc) {
-      return;
-    }
-
-    const item =
-      pageItems.find(
-        entry =>
-          entry.origIndex ===
-          origIndex
+      card.classList.remove(
+        'is-pending',
+        'is-thumb-error'
       );
 
-    if (!item) {
       return;
     }
 
     if (
-      item.deleted ||
-      item.thumbUrl ||
-      item.rendering
+      item.thumbError
     ) {
-      return;
-    }
+      card.classList.remove(
+        'is-pending'
+      );
 
-    if (
-      renderQueue.includes(
-        origIndex
-      )
-    ) {
-      return;
-    }
-
-    if (
-      renderQueue.length > 100
-    ) {
-      return;
-    }
-
-    renderQueue.push(
-      origIndex
-    );
-
-    processQueue();
-  }
-
-
-  async function processQueue() {
-    if (queueRunning) {
-      return;
-    }
-
-    queueRunning =
-      true;
-
-    try {
-
-      while (
-        renderQueue.length
-      ) {
-
-        const origIndex =
-          renderQueue.shift();
-
-        if (
-          origIndex == null
-        ) {
-          continue;
-        }
-
-        await renderThumbnail(
-          origIndex
-        );
-
-        await U.yieldToUI();
-      }
-
-    } finally {
-
-      queueRunning =
-        false;
-
-      if (
-        renderQueue.length
-      ) {
-        processQueue();
-      }
+      card.classList.add(
+        'is-thumb-error'
+      );
     }
   }
 
 
   // ============================================================
-  // INTERSECTION OBSERVER
+  // OBSERVER
   // ============================================================
 
   function setupObserver() {
-
     if (observer) {
       observer.disconnect();
     }
@@ -807,13 +550,47 @@
                 return;
               }
 
+              const card =
+                entry.target;
+
               const idx =
                 Number(
-                  entry.target.dataset.idx
+                  card.dataset.idx
                 );
+
+              if (
+                !Number.isInteger(
+                  idx
+                )
+              ) {
+                return;
+              }
+
+              const item =
+                pageItems.find(
+                  page =>
+                    page.origIndex ===
+                    idx
+                );
+
+              if (
+                !item ||
+                item.deleted ||
+                item.thumbUrl
+              ) {
+                observer.unobserve(
+                  card
+                );
+
+                return;
+              }
 
               queueRender(
                 idx
+              );
+
+              observer.unobserve(
+                card
               );
 
             }
@@ -1044,6 +821,13 @@
           event => {
 
             if (
+              Date.now() <
+              suppressClickUntil
+            ) {
+              return;
+            }
+
+            if (
               dragState &&
               dragState.moved
             ) {
@@ -1071,11 +855,6 @@
               card,
               item
             );
-
-            if (checkbox) {
-              checkbox.checked =
-                item.selected;
-            }
 
             updateCounts();
           }
@@ -2037,6 +1816,14 @@
 
 
     // ----------------------------------------------------------
+    // Suppress the click event generated after pointerup
+    // ----------------------------------------------------------
+
+    suppressClickUntil =
+      Date.now() + 250;
+
+
+    // ----------------------------------------------------------
     // Release pointer
     // ----------------------------------------------------------
 
@@ -2062,6 +1849,24 @@
       placeholder.isConnected
     ) {
       placeholder.remove();
+    }
+
+
+    // ----------------------------------------------------------
+    // Remove the floating card
+    //
+    // startRealDrag() moves the real card to <body>.
+    // renderGrid() creates fresh cards inside the grid, so the
+    // old floating card must be removed first or it becomes
+    // an orphan element left at the bottom of the document.
+    // ----------------------------------------------------------
+
+    if (
+      card &&
+      card.isConnected &&
+      card.parentNode !== grid
+    ) {
+      card.remove();
     }
 
 
@@ -2105,6 +1910,12 @@
       dragState;
 
 
+    // Prevent the click generated after pointercancel
+    // from toggling the page selection.
+    suppressClickUntil =
+      Date.now() + 250;
+
+
     try {
 
       if (
@@ -2123,6 +1934,17 @@
       placeholder.isConnected
     ) {
       placeholder.remove();
+    }
+
+
+    // The card was moved to <body> during a real drag.
+    // Remove it so canceling cannot leave an orphan card.
+    if (
+      card &&
+      card.isConnected &&
+      card.parentNode !== grid
+    ) {
+      card.remove();
     }
 
 
@@ -2596,6 +2418,16 @@
       if (dragState) {
 
         try {
+          if (
+            dragState.card &&
+            dragState.card.isConnected &&
+            dragState.card.parentNode !== grid
+          ) {
+            dragState.card.remove();
+          }
+        } catch (_) {}
+
+        try {
           resetDragStyles(
             dragState.card
           );
@@ -2613,6 +2445,9 @@
         dragState =
           null;
       }
+
+      suppressClickUntil =
+        0;
 
       resetQueue();
       revokeThumbs();
