@@ -4,35 +4,44 @@
   const U = window.Utils;
   const PW = window.PdfWorkerClient;
 
+  // ============================================================
+  // ELEMENTS
+  // ============================================================
+
   const dropzone =
-    document.getElementById(
-      'dz-pdf-watermark'
-    );
+    document.getElementById('dz-pdf-watermark');
 
   const fileInput =
-    document.getElementById(
-      'input-pdf-watermark'
-    );
+    document.getElementById('input-pdf-watermark');
 
   const formCard =
-    document.getElementById(
-      'form-pdf-watermark'
+    document.getElementById('form-pdf-watermark');
+
+
+  // ถ้า HTML ยังไม่มีส่วนนี้ ให้หยุดอย่างปลอดภัย
+  if (
+    !dropzone ||
+    !fileInput ||
+    !formCard ||
+    !U ||
+    !PW
+  ) {
+    console.error(
+      'PDF watermark: required elements are missing'
     );
+
+    return;
+  }
+
 
   const nameEl =
-    formCard.querySelector(
-      '.js-pdfname'
-    );
+    formCard.querySelector('.js-pdfname');
 
   const textEl =
-    document.getElementById(
-      'text-pdf-watermark'
-    );
+    document.getElementById('text-pdf-watermark');
 
   const imageInput =
-    document.getElementById(
-      'image-pdf-watermark'
-    );
+    document.getElementById('image-pdf-watermark');
 
   const imageNameEl =
     formCard.querySelector(
@@ -42,6 +51,11 @@
   const imageSizeEl =
     document.getElementById(
       'image-size-pdf-watermark'
+    );
+
+  const imageSizeVal =
+    formCard.querySelector(
+      '.js-image-size-val'
     );
 
   const sizeEl =
@@ -75,34 +89,153 @@
     );
 
   const statusEl =
-    formCard.querySelector(
-      '.js-status'
-    );
+    formCard.querySelector('.js-status');
+
+
+  // ============================================================
+  // STATE
+  // ============================================================
 
   let currentFile = null;
   let watermarkImageFile = null;
+  let isProcessing = false;
 
+  /*
+   * เก็บ Object URL ของ PDF ผลลัพธ์
+   * เพื่อ revoke ของเก่าก่อนสร้างใหม่
+   */
   const result = {};
 
-  // ----------------------------------------------------------
-  // Opacity UI
-  // ----------------------------------------------------------
 
-  opacityEl.addEventListener(
-    'input',
-    () => {
-      opacityVal.textContent =
-        Math.round(
-          parseFloat(
-            opacityEl.value
-          ) * 100
-        ) + '%';
+  // ============================================================
+  // HELPERS
+  // ============================================================
+
+  function setStatus(text, state) {
+    if (!statusEl) {
+      return;
     }
-  );
 
-  // ----------------------------------------------------------
-  // PNG watermark selector
-  // ----------------------------------------------------------
+    statusEl.textContent = text;
+
+    statusEl.classList.remove(
+      'is-ready',
+      'is-error'
+    );
+
+    if (state) {
+      statusEl.classList.add(state);
+    }
+  }
+
+
+  function resetResult() {
+    if (result.url) {
+      try {
+        URL.revokeObjectURL(result.url);
+      } catch (_) {}
+
+      result.url = null;
+    }
+
+    if (downloadBtn) {
+      downloadBtn.classList.add('hidden');
+      downloadBtn.removeAttribute('href');
+    }
+  }
+
+
+  function setProcessing(on) {
+    isProcessing = !!on;
+
+    if (applyBtn) {
+      applyBtn.disabled = isProcessing;
+
+      applyBtn.textContent = isProcessing
+        ? 'กำลังใส่ลายน้ำ…'
+        : 'ใส่ลายน้ำ';
+    }
+
+    /*
+     * app.js สามารถใช้ state นี้ได้
+     * โดยไม่ต้องเดาจากข้อความใน card
+     */
+    formCard.dataset.processing =
+      isProcessing
+        ? 'true'
+        : 'false';
+  }
+
+
+  // ============================================================
+  // OPACITY
+  // ============================================================
+
+  if (opacityEl) {
+    const updateOpacityLabel = () => {
+      let value = Number(
+        opacityEl.value
+      );
+
+      if (!Number.isFinite(value)) {
+        value = 0.25;
+      }
+
+      value = Math.max(
+        0,
+        Math.min(1, value)
+      );
+
+      if (opacityVal) {
+        opacityVal.textContent =
+          Math.round(value * 100) + '%';
+      }
+    };
+
+
+    opacityEl.addEventListener(
+      'input',
+      updateOpacityLabel
+    );
+
+    updateOpacityLabel();
+  }
+
+
+  // ============================================================
+  // IMAGE SIZE
+  // ============================================================
+
+  if (
+    imageSizeEl &&
+    imageSizeVal
+  ) {
+    const updateImageSizeLabel = () => {
+      let value = Number(
+        imageSizeEl.value
+      );
+
+      if (!Number.isFinite(value)) {
+        value = 180;
+      }
+
+      imageSizeVal.textContent =
+        String(Math.round(value));
+    };
+
+
+    imageSizeEl.addEventListener(
+      'input',
+      updateImageSizeLabel
+    );
+
+    updateImageSizeLabel();
+  }
+
+
+  // ============================================================
+  // PNG WATERMARK SELECTOR
+  // ============================================================
 
   if (imageInput) {
     imageInput.addEventListener(
@@ -112,6 +245,7 @@
           imageInput.files &&
           imageInput.files[0];
 
+
         if (!file) {
           watermarkImageFile = null;
 
@@ -120,15 +254,27 @@
               'ยังไม่ได้เลือกรูป';
           }
 
+          resetResult();
+
+          setStatus(
+            currentFile
+              ? 'พร้อมใส่ลายน้ำ'
+              : 'ยังไม่ได้เลือก PDF',
+            null
+          );
+
           return;
         }
 
+
+        // ------------------------------------------------------
+        // ตรวจ MIME
+        // ------------------------------------------------------
+
         if (
-          file.type !==
-          'image/png'
+          file.type !== 'image/png'
         ) {
           imageInput.value = '';
-
           watermarkImageFile = null;
 
           if (imageNameEl) {
@@ -136,31 +282,70 @@
               'ต้องเป็นไฟล์ PNG เท่านั้น';
           }
 
+          setStatus(
+            'กรุณาเลือกไฟล์ PNG เท่านั้น',
+            'is-error'
+          );
+
           return;
         }
 
-        watermarkImageFile = file;
+
+        // ------------------------------------------------------
+        // Basic size guard
+        // ------------------------------------------------------
+
+        if (file.size <= 0) {
+          imageInput.value = '';
+          watermarkImageFile = null;
+
+          if (imageNameEl) {
+            imageNameEl.textContent =
+              'ไฟล์ PNG ว่างเปล่า';
+          }
+
+          setStatus(
+            'ไฟล์ PNG ไม่ถูกต้อง',
+            'is-error'
+          );
+
+          return;
+        }
+
+
+        watermarkImageFile =
+          file;
+
 
         if (imageNameEl) {
           imageNameEl.textContent =
-            file.name;
+            `${file.name} · ${U.formatBytes(
+              file.size
+            )}`;
         }
 
-        statusEl.textContent =
-          'เลือกรูปลายน้ำแล้ว';
-        statusEl.classList.remove(
-          'is-ready',
-          'is-error'
+
+        resetResult();
+
+        setStatus(
+          'เลือกรูปลายน้ำแล้ว',
+          null
         );
       }
     );
   }
 
-  // ----------------------------------------------------------
-  // Load PDF
-  // ----------------------------------------------------------
+
+  // ============================================================
+  // LOAD PDF
+  // ============================================================
 
   function loadFile(file) {
+    if (!file) {
+      return;
+    }
+
+
     if (!PW.supported) {
       alert(
         'เบราว์เซอร์นี้ไม่รองรับการประมวลผล PDF แบบพื้นหลัง กรุณาอัปเดตเบราว์เซอร์'
@@ -168,6 +353,30 @@
 
       return;
     }
+
+
+    // ----------------------------------------------------------
+    // Validate PDF
+    // ----------------------------------------------------------
+
+    const isPdf =
+      file.type === 'application/pdf' ||
+      /\.pdf$/i.test(file.name);
+
+
+    if (!isPdf) {
+      setStatus(
+        'กรุณาเลือกไฟล์ PDF เท่านั้น',
+        'is-error'
+      );
+
+      return;
+    }
+
+
+    // ----------------------------------------------------------
+    // Large file warning
+    // ----------------------------------------------------------
 
     if (
       !U.confirmLargeFile(
@@ -179,84 +388,237 @@
       return;
     }
 
-    currentFile = file;
+
+    // ----------------------------------------------------------
+    // Set current file
+    // ----------------------------------------------------------
+
+    currentFile =
+      file;
+
 
     nameEl.textContent =
-      file.name;
+      `${file.name} · ${U.formatBytes(
+        file.size
+      )}`;
+
 
     formCard.classList.remove(
       'hidden'
     );
 
-    downloadBtn.classList.add(
-      'hidden'
+
+    resetResult();
+
+
+    setStatus(
+      'พร้อมใส่ลายน้ำ',
+      null
     );
 
-    statusEl.textContent =
-      'พร้อมใส่ลายน้ำ';
 
-    statusEl.classList.remove(
-      'is-ready',
-      'is-error'
-    );
+    formCard.dataset.processing =
+      'false';
   }
 
-  // ----------------------------------------------------------
-  // Apply watermark
-  // ----------------------------------------------------------
+
+  // ============================================================
+  // APPLY WATERMARK
+  // ============================================================
 
   applyBtn.addEventListener(
     'click',
     async () => {
-      if (!currentFile) {
+
+      if (
+        isProcessing ||
+        !currentFile
+      ) {
         return;
       }
 
+
+      // --------------------------------------------------------
+      // Read text
+      // --------------------------------------------------------
+
       const text =
-        textEl.value.trim();
+        (
+          textEl &&
+          textEl.value
+            ? textEl.value
+            : ''
+        ).trim();
+
 
       const hasText =
-        !!text;
+        text.length > 0;
+
 
       const hasImage =
         !!watermarkImageFile;
+
+
+      // --------------------------------------------------------
+      // Require at least one watermark
+      // --------------------------------------------------------
 
       if (
         !hasText &&
         !hasImage
       ) {
-        statusEl.textContent =
-          'กรุณาใส่ข้อความหรือเลือกรูปลายน้ำ PNG';
-
-        statusEl.classList.remove(
-          'is-ready'
-        );
-
-        statusEl.classList.add(
+        setStatus(
+          'กรุณาใส่ข้อความหรือเลือกรูปลายน้ำ PNG',
           'is-error'
         );
 
         return;
       }
 
-      applyBtn.disabled = true;
 
-      applyBtn.textContent =
-        'กำลังใส่ลายน้ำ…';
+      // --------------------------------------------------------
+      // Normalize settings
+      // --------------------------------------------------------
 
-      statusEl.classList.remove(
-        'is-ready',
-        'is-error'
-      );
+      let size =
+        Number(
+          sizeEl &&
+          sizeEl.value
+        );
+
+
+      if (!Number.isFinite(size)) {
+        size = 48;
+      }
+
+
+      size =
+        Math.max(
+          8,
+          Math.min(
+            200,
+            size
+          )
+        );
+
+
+      let imageSize =
+        Number(
+          imageSizeEl &&
+          imageSizeEl.value
+        );
+
+
+      if (!Number.isFinite(imageSize)) {
+        imageSize = 180;
+      }
+
+
+      imageSize =
+        Math.max(
+          40,
+          Math.min(
+            1200,
+            imageSize
+          )
+        );
+
+
+      let opacity =
+        Number(
+          opacityEl &&
+          opacityEl.value
+        );
+
+
+      if (!Number.isFinite(opacity)) {
+        opacity = 0.25;
+      }
+
+
+      opacity =
+        Math.max(
+          0.05,
+          Math.min(
+            1,
+            opacity
+          )
+        );
+
+
+      let angle =
+        Number(
+          angleEl &&
+          angleEl.value
+        );
+
+
+      if (!Number.isFinite(angle)) {
+        angle = 45;
+      }
+
+
+      angle =
+        Math.max(
+          -360,
+          Math.min(
+            360,
+            angle
+          )
+        );
+
+
+      // --------------------------------------------------------
+      // Start
+      // --------------------------------------------------------
+
+      setProcessing(true);
+
+      resetResult();
+
+
+      if (
+        hasText &&
+        hasImage
+      ) {
+        setStatus(
+          'กำลังใส่ข้อความ + PNG…',
+          null
+        );
+
+      } else if (hasImage) {
+        setStatus(
+          'กำลังใส่ PNG…',
+          null
+        );
+
+      } else {
+        setStatus(
+          'กำลังใส่ข้อความ…',
+          null
+        );
+      }
+
 
       try {
-        const bytes =
+
+        // ======================================================
+        // READ PDF
+        // ======================================================
+
+        const pdfBytes =
           await U.readAsArrayBuffer(
             currentFile
           );
 
+
+        // ======================================================
+        // READ PNG
+        // ======================================================
+
         let watermarkImage =
           null;
+
 
         if (hasImage) {
           watermarkImage =
@@ -265,32 +627,14 @@
             );
         }
 
-        const size =
-          parseFloat(
-            sizeEl.value
-          ) || 48;
 
-        const imageSize =
-          parseFloat(
-            imageSizeEl &&
-            imageSizeEl.value
-          ) || 180;
+        // ======================================================
+        // SEND TO WORKER
+        // ======================================================
 
-        const opacity =
-          parseFloat(
-            opacityEl.value
-          );
-
-        const angle =
-          parseFloat(
-            angleEl.value
-          ) || 0;
-
-        const {
-          bytes: outBytes
-        } =
+        const response =
           await PW.applyWatermark(
-            bytes,
+            pdfBytes,
             {
               text,
               size,
@@ -301,14 +645,45 @@
             }
           );
 
+
+        // ======================================================
+        // VALIDATE RESULT
+        // ======================================================
+
+        if (
+          !response ||
+          !response.bytes
+        ) {
+          throw new Error(
+            'Worker ไม่ได้ส่งไฟล์ PDF กลับมา'
+          );
+        }
+
+
+        // ======================================================
+        // CREATE RESULT BLOB
+        // ======================================================
+
         const blob =
           new Blob(
-            [outBytes],
+            [response.bytes],
             {
               type:
                 'application/pdf'
             }
           );
+
+
+        if (blob.size <= 0) {
+          throw new Error(
+            'ไฟล์ PDF ผลลัพธ์ว่างเปล่า'
+          );
+        }
+
+
+        // ======================================================
+        // CREATE DOWNLOAD URL
+        // ======================================================
 
         const url =
           U.replaceObjectUrl(
@@ -317,64 +692,87 @@
             blob
           );
 
+
         downloadBtn.href =
           url;
+
 
         downloadBtn.download =
           `${U.baseName(
             currentFile.name
           )}-watermark.pdf`;
 
+
         downloadBtn.classList.remove(
           'hidden'
         );
 
-        statusEl.textContent =
+
+        // ======================================================
+        // DONE
+        // ======================================================
+
+        setStatus(
           `พร้อมดาวน์โหลด · ${U.formatBytes(
             blob.size
-          )}`;
-
-        statusEl.classList.add(
+          )}`,
           'is-ready'
         );
 
+
       } catch (err) {
-        statusEl.textContent =
-          'ใส่ลายน้ำไม่สำเร็จ: ' +
+
+        console.error(
+          'PDF watermark failed:',
+          err
+        );
+
+
+        const message =
           (
             err &&
             err.message
-              ? err.message
-              : String(err)
-          );
+          ) ||
+          String(err);
 
-        statusEl.classList.add(
+
+        setStatus(
+          'ใส่ลายน้ำไม่สำเร็จ: ' +
+            message,
           'is-error'
         );
 
-      } finally {
-        applyBtn.disabled = false;
 
-        applyBtn.textContent =
-          'ใส่ลายน้ำ';
+      } finally {
+
+        setProcessing(false);
+
       }
     }
   );
 
-  // ----------------------------------------------------------
-  // PDF dropzone
-  // ----------------------------------------------------------
+
+  // ============================================================
+  // PDF DROPZONE
+  // ============================================================
 
   U.setupDropzone(
     dropzone,
     fileInput,
-    (files) => {
+    files => {
+
       const file =
-        Array.from(files).find(
-          f =>
-            f.type ===
-            'application/pdf'
+        Array.from(
+          files || []
+        ).find(
+          item =>
+            item.type ===
+              'application/pdf' ||
+            /\.pdf$/i.test(
+              item.name
+            )
         );
+
 
       if (file) {
         loadFile(file);
@@ -382,37 +780,60 @@
     }
   );
 
-  // ----------------------------------------------------------
-  // Clear
-  // ----------------------------------------------------------
 
-  U.onClearCache(() => {
-    if (result.url) {
-      URL.revokeObjectURL(
-        result.url
+  // ============================================================
+  // CLEANUP
+  // ============================================================
+
+  U.onClearCache(
+    () => {
+
+      currentFile =
+        null;
+
+      watermarkImageFile =
+        null;
+
+      setProcessing(false);
+
+
+      resetResult();
+
+
+      // --------------------------------------------------------
+      // Reset PNG input
+      // --------------------------------------------------------
+
+      if (imageInput) {
+        imageInput.value = '';
+      }
+
+
+      if (imageNameEl) {
+        imageNameEl.textContent =
+          'ยังไม่ได้เลือกรูป';
+      }
+
+
+      // --------------------------------------------------------
+      // Hide form
+      // --------------------------------------------------------
+
+      formCard.classList.add(
+        'hidden'
       );
 
-      result.url = null;
+
+      // --------------------------------------------------------
+      // Reset status
+      // --------------------------------------------------------
+
+      setStatus(
+        'พร้อมใส่ลายน้ำ',
+        null
+      );
+
     }
+  );
 
-    currentFile = null;
-    watermarkImageFile = null;
-
-    if (imageInput) {
-      imageInput.value = '';
-    }
-
-    if (imageNameEl) {
-      imageNameEl.textContent =
-        'ยังไม่ได้เลือกรูป';
-    }
-
-    formCard.classList.add(
-      'hidden'
-    );
-
-    downloadBtn.classList.add(
-      'hidden'
-    );
-  });
 })();
