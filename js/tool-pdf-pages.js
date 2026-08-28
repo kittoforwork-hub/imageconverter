@@ -72,10 +72,6 @@
   const THUMB_MAX_DIMENSION = 1800;
   const LARGE_FILE_WARN_MB = 50;
 
-  // render thumbnail ทีละหน้า
-  const MAX_RENDER_QUEUE = 1;
-
-  // ต้องลากเกินระยะนี้ก่อนจึงเริ่ม reorder
   const DRAG_START_DISTANCE = 6;
 
 
@@ -101,7 +97,7 @@
 
 
   // ============================================================
-  // PANEL STATE
+  // TOOL STATE
   // ============================================================
 
   function setToolProcessing(on) {
@@ -139,11 +135,6 @@
   }
 
 
-  function getPagePosition(item) {
-    return pageItems.indexOf(item);
-  }
-
-
   function updateCounts() {
     const visible =
       getVisibleItems().length;
@@ -173,38 +164,42 @@
   // ============================================================
 
   function revokeThumbs() {
-    pageItems.forEach(item => {
-      if (!item.thumbUrl) {
-        return;
+    pageItems.forEach(
+      item => {
+        if (!item.thumbUrl) {
+          return;
+        }
+
+        try {
+          URL.revokeObjectURL(
+            item.thumbUrl
+          );
+        } catch (_) {}
+
+        item.thumbUrl = null;
       }
-
-      try {
-        URL.revokeObjectURL(
-          item.thumbUrl
-        );
-      } catch (_) {}
-
-      item.thumbUrl = null;
-    });
+    );
   }
 
 
   // ============================================================
-  // QUEUE CLEANUP
+  // RENDER QUEUE
   // ============================================================
 
   function resetQueue() {
     renderQueue.length = 0;
     queueRunning = false;
 
-    pageItems.forEach(item => {
-      item.rendering = false;
-    });
+    pageItems.forEach(
+      item => {
+        item.rendering = false;
+      }
+    );
   }
 
 
   // ============================================================
-  // PDF CLEANUP
+  // PDF DOCUMENT CLEANUP
   // ============================================================
 
   async function destroyCurrentDoc() {
@@ -212,7 +207,9 @@
       return;
     }
 
-    const doc = currentDoc;
+    const doc =
+      currentDoc;
+
     currentDoc = null;
 
     try {
@@ -227,7 +224,7 @@
 
 
   // ============================================================
-  // LOAD PDF
+  // LOAD FILE
   // ============================================================
 
   async function loadFile(file) {
@@ -267,19 +264,17 @@
       setToolProcessing(true);
 
 
-      // --------------------------------------------------------
-      // cleanup ของเก่า
-      // --------------------------------------------------------
-
       if (observer) {
         observer.disconnect();
         observer = null;
       }
 
+
       resetQueue();
       revokeThumbs();
 
       pageItems = [];
+
 
       await destroyCurrentDoc();
 
@@ -289,11 +284,8 @@
       }
 
 
-      // --------------------------------------------------------
-      // state
-      // --------------------------------------------------------
-
-      currentFile = file;
+      currentFile =
+        file;
 
 
       if (nameEl) {
@@ -320,13 +312,10 @@
 
 
       if (countEl) {
-        countEl.textContent = '…';
+        countEl.textContent =
+          '…';
       }
 
-
-      // --------------------------------------------------------
-      // read PDF
-      // --------------------------------------------------------
 
       const bytes =
         await U.readAsArrayBuffer(
@@ -338,10 +327,6 @@
         return;
       }
 
-
-      // --------------------------------------------------------
-      // open with PDF.js
-      // --------------------------------------------------------
 
       const loadingTask =
         pdfjsLib.getDocument({
@@ -364,12 +349,9 @@
       }
 
 
-      currentDoc = doc;
+      currentDoc =
+        doc;
 
-
-      // --------------------------------------------------------
-      // build page state
-      // --------------------------------------------------------
 
       for (
         let i = 0;
@@ -388,6 +370,7 @@
 
       updateCounts();
       renderGrid();
+
 
     } catch (error) {
 
@@ -432,9 +415,12 @@
         )
       );
 
+
     } finally {
 
-      if (requestId === loadSeq) {
+      if (
+        requestId === loadSeq
+      ) {
         setToolProcessing(false);
       }
     }
@@ -445,7 +431,9 @@
   // RENDER THUMBNAIL
   // ============================================================
 
-  async function renderThumbnail(origIndex) {
+  async function renderThumbnail(
+    origIndex
+  ) {
     if (!currentDoc) {
       return;
     }
@@ -473,7 +461,8 @@
     }
 
 
-    item.rendering = true;
+    item.rendering =
+      true;
 
 
     let page = null;
@@ -483,6 +472,7 @@
 
 
     try {
+
       page =
         await currentDoc.getPage(
           origIndex + 1
@@ -504,10 +494,6 @@
         );
       }
 
-
-      // --------------------------------------------------------
-      // scale
-      // --------------------------------------------------------
 
       let scale =
         THUMB_TARGET_WIDTH /
@@ -545,10 +531,6 @@
           scale
         });
 
-
-      // --------------------------------------------------------
-      // canvas
-      // --------------------------------------------------------
 
       const factory =
         window.KittoCanvasFactory;
@@ -595,6 +577,7 @@
               return {
                 canvas:
                   fallbackCanvas,
+
                 context:
                   fallbackContext
               };
@@ -608,10 +591,6 @@
       context =
         canvasInfo.context;
 
-
-      // --------------------------------------------------------
-      // white background
-      // --------------------------------------------------------
 
       context.save();
 
@@ -628,17 +607,16 @@
       context.restore();
 
 
-      // --------------------------------------------------------
-      // render
-      // --------------------------------------------------------
-
       renderTask =
         page.render({
           canvasContext:
             context,
+
           viewport,
+
           canvasFactory:
             window.KittoCanvasFactory,
+
           intent:
             'display'
         });
@@ -647,13 +625,12 @@
       await renderTask.promise;
 
 
-      // --------------------------------------------------------
-      // JPEG thumbnail
-      // --------------------------------------------------------
-
       const blob =
         await new Promise(
-          (resolve, reject) => {
+          (
+            resolve,
+            reject
+          ) => {
 
             canvas.toBlob(
               result => {
@@ -679,10 +656,6 @@
         );
 
 
-      // --------------------------------------------------------
-      // stale / deleted check
-      // --------------------------------------------------------
-
       if (
         !currentDoc ||
         item.deleted
@@ -700,6 +673,7 @@
       updateCardThumbnail(
         item
       );
+
 
     } catch (error) {
 
@@ -750,7 +724,7 @@
 
 
   // ============================================================
-  // UPDATE THUMBNAIL IN CARD
+  // UPDATE THUMBNAIL
   // ============================================================
 
   function updateCardThumbnail(item) {
@@ -783,18 +757,17 @@
     ) {
       img.src =
         item.thumbUrl;
-
-      img.alt =
-        `หน้า ${getPagePosition(item) + 1}`;
     }
   }
 
 
   // ============================================================
-  // QUEUE
+  // RENDER QUEUE
   // ============================================================
 
-  function queueRender(origIndex) {
+  function queueRender(
+    origIndex
+  ) {
     if (!currentDoc) {
       return;
     }
@@ -832,8 +805,7 @@
 
 
     if (
-      renderQueue.length >
-      100
+      renderQueue.length > 100
     ) {
       return;
     }
@@ -861,7 +833,7 @@
     try {
 
       while (
-        renderQueue.length > 0
+        renderQueue.length
       ) {
 
         const origIndex =
@@ -890,7 +862,7 @@
 
 
       if (
-        renderQueue.length > 0
+        renderQueue.length
       ) {
         processQueue();
       }
@@ -903,6 +875,7 @@
   // ============================================================
 
   function setupObserver() {
+
     if (observer) {
       observer.disconnect();
     }
@@ -931,6 +904,7 @@
               queueRender(
                 idx
               );
+
             }
           );
 
@@ -940,10 +914,8 @@
         },
         {
           root: null,
-
           rootMargin:
             '400px 0px',
-
           threshold:
             0.01
         }
@@ -1017,7 +989,8 @@
 
     card.classList.toggle(
       'is-pending',
-      !item.thumbUrl
+      !item.thumbUrl &&
+      !item.deleted
     );
 
 
@@ -1092,7 +1065,7 @@
 
 
         // ------------------------------------------------------
-        // page label
+        // label
         // ------------------------------------------------------
 
         const label =
@@ -1175,7 +1148,7 @@
 
 
         // ------------------------------------------------------
-        // card click = select
+        // click card = select
         // ------------------------------------------------------
 
         card.addEventListener(
@@ -1253,7 +1226,6 @@
                 position,
                 -1
               );
-
             }
           );
         }
@@ -1286,7 +1258,6 @@
                 position,
                 1
               );
-
             }
           );
         }
@@ -1357,7 +1328,7 @@
 
 
         // ------------------------------------------------------
-        // drag reorder
+        // NEW DRAG SYSTEM
         // ------------------------------------------------------
 
         setupCardDrag(
@@ -1380,7 +1351,7 @@
 
 
     // --------------------------------------------------------
-    // preload 2 หน้าแรก
+    // preload first 2 pages
     // --------------------------------------------------------
 
     let queued =
@@ -1417,33 +1388,65 @@
 
 
   // ============================================================
-  // DRAG REORDER
+  // MOVE BUTTON
+  // ============================================================
+
+  function moveItem(
+    index,
+    direction
+  ) {
+    const target =
+      index + direction;
+
+
+    if (
+      index < 0 ||
+      target < 0 ||
+      target >= pageItems.length
+    ) {
+      return;
+    }
+
+
+    [
+      pageItems[index],
+      pageItems[target]
+    ] = [
+      pageItems[target],
+      pageItems[index]
+    ];
+
+
+    renderGrid();
+    updateCounts();
+  }
+
+
+  // ============================================================
+  // DRAG SYSTEM
+  //
+  // ใช้ placeholder จริงใน grid
+  // เพื่อให้เห็นตำแหน่งที่จะวางชัดเจน
   // ============================================================
 
   function setupCardDrag(
     card,
     item
   ) {
-    if (
-      !card ||
-      !item
-    ) {
-      return;
-    }
+    let pointerId = null;
+
+    let startX = 0;
+    let startY = 0;
+
+    let moved = false;
+
+    let offsetX = 0;
+    let offsetY = 0;
 
 
-    let pointerId =
-      null;
-
-    let startX =
-      0;
-
-    let startY =
-      0;
-
-    let moved =
-      false;
-
+    // ----------------------------------------------------------
+    // POINTER DOWN
+    // ----------------------------------------------------------
 
     card.addEventListener(
       'pointerdown',
@@ -1488,11 +1491,6 @@
         };
 
 
-        card.classList.add(
-          'is-drag-ready'
-        );
-
-
         try {
           card.setPointerCapture(
             pointerId
@@ -1502,6 +1500,10 @@
       }
     );
 
+
+    // ----------------------------------------------------------
+    // POINTER MOVE
+    // ----------------------------------------------------------
 
     card.addEventListener(
       'pointermove',
@@ -1526,6 +1528,7 @@
           startY;
 
 
+        // ยังไม่เริ่มลาก
         if (
           !moved &&
           Math.hypot(
@@ -1537,6 +1540,10 @@
           return;
         }
 
+
+        // ------------------------------------------------------
+        // START DRAG
+        // ------------------------------------------------------
 
         if (!moved) {
 
@@ -1550,33 +1557,58 @@
           }
 
 
-          card.classList.remove(
-            'is-drag-ready'
-          );
+          const rect =
+            card.getBoundingClientRect();
 
 
-          card.classList.add(
-            'is-dragging'
+          offsetX =
+            event.clientX -
+            rect.left;
+
+
+          offsetY =
+            event.clientY -
+            rect.top;
+
+
+          startRealDrag(
+            card,
+            item,
+            rect
           );
         }
 
 
-        const target =
-          findDropTarget(
-            event.clientX,
-            event.clientY,
-            card
-          );
+        // ------------------------------------------------------
+        // MOVE FLOATING CARD
+        // ------------------------------------------------------
+
+        if (
+          dragState &&
+          dragState.card === card
+        ) {
+
+          card.style.left =
+            (
+              event.clientX -
+              offsetX
+            ) + 'px';
 
 
-        if (!target) {
-          return;
+          card.style.top =
+            (
+              event.clientY -
+              offsetY
+            ) + 'px';
         }
 
 
-        moveItemRelativeToTarget(
-          item,
-          target,
+        // ------------------------------------------------------
+        // FIND DROP POSITION
+        // ------------------------------------------------------
+
+        updateDropPosition(
+          event.clientX,
           event.clientY
         );
 
@@ -1584,57 +1616,148 @@
     );
 
 
-    const finishDrag =
-      () => {
-
-        if (
-          pointerId === null
-        ) {
-          return;
-        }
-
-
-        try {
-          card.releasePointerCapture(
-            pointerId
-          );
-        } catch (_) {}
-
-
-        pointerId =
-          null;
-
-
-        card.classList.remove(
-          'is-drag-ready',
-          'is-dragging'
-        );
-
-
-        if (!moved) {
-          dragState = null;
-          return;
-        }
-
-
-        dragState = null;
-
-
-        renderGrid();
-        updateCounts();
-      };
-
+    // ----------------------------------------------------------
+    // POINTER UP
+    // ----------------------------------------------------------
 
     card.addEventListener(
       'pointerup',
-      finishDrag
+      () => {
+        finishDrag();
+      }
     );
 
+
+    // ----------------------------------------------------------
+    // POINTER CANCEL
+    // ----------------------------------------------------------
 
     card.addEventListener(
       'pointercancel',
-      finishDrag
+      () => {
+        cancelDrag();
+      }
     );
+  }
+
+
+  // ============================================================
+  // START REAL DRAG
+  // ============================================================
+
+  function startRealDrag(
+    card,
+    item,
+    rect
+  ) {
+    // ----------------------------------------------------------
+    // Create placeholder
+    // ----------------------------------------------------------
+
+    const placeholder =
+      document.createElement(
+        'div'
+      );
+
+
+    placeholder.className =
+      'page-drag-placeholder';
+
+
+    placeholder.dataset.idx =
+      String(
+        item.origIndex
+      );
+
+
+    placeholder.style.width =
+      rect.width + 'px';
+
+
+    placeholder.style.height =
+      rect.height + 'px';
+
+
+    placeholder.innerHTML = `
+      <div class="page-drag-placeholder-inner">
+        <span>วางหน้าที่นี่</span>
+      </div>
+    `;
+
+
+    // ----------------------------------------------------------
+    // Put placeholder at original position
+    // ----------------------------------------------------------
+
+    grid.insertBefore(
+      placeholder,
+      card
+    );
+
+
+    // ----------------------------------------------------------
+    // Make card floating
+    // ----------------------------------------------------------
+
+    card.classList.add(
+      'is-dragging'
+    );
+
+
+    card.style.position =
+      'fixed';
+
+
+    card.style.width =
+      rect.width + 'px';
+
+
+    card.style.height =
+      rect.height + 'px';
+
+
+    card.style.left =
+      rect.left + 'px';
+
+
+    card.style.top =
+      rect.top + 'px';
+
+
+    card.style.zIndex =
+      '1000';
+
+
+    card.style.pointerEvents =
+      'none';
+
+
+    /*
+     * เก็บ state การลาก
+     */
+    if (dragState) {
+      dragState.placeholder =
+        placeholder;
+
+      dragState.originalIndex =
+        pageItems.indexOf(
+          item
+        );
+
+      dragState.started =
+        true;
+    }
+
+
+    /*
+     * ให้ MutationObserver / app state
+     * ไม่คิดว่าการ์ด floating เป็นงานใหม่
+     */
+    card.dataset.processing =
+      'false';
+
+
+    clearDropIndicators();
   }
 
 
@@ -1642,22 +1765,36 @@
   // FIND DROP TARGET
   // ============================================================
 
-  function findDropTarget(
+  function getDropTarget(
     clientX,
-    clientY,
-    draggedCard
+    clientY
   ) {
+    if (!dragState) {
+      return null;
+    }
+
+
+    const draggedCard =
+      dragState.card;
+
+    const placeholder =
+      dragState.placeholder;
+
+
     const cards =
       Array.from(
         grid.querySelectorAll(
           '.page-card-manage'
         )
+      ).filter(
+        card =>
+          card !== draggedCard &&
+          card !== placeholder
       );
 
 
-    let target =
+    let best =
       null;
-
 
     let bestDistance =
       Infinity;
@@ -1666,37 +1803,19 @@
     cards.forEach(
       card => {
 
-        if (
-          card === draggedCard ||
-          card.classList.contains(
-            'is-deleted'
-          )
-        ) {
-          return;
-        }
-
-
         const rect =
           card.getBoundingClientRect();
 
 
-        /*
-         * ใช้ระยะขยายเล็กน้อย
-         * ให้ลากง่ายขึ้น
-         */
-        const padding =
-          16;
-
+        // ------------------------------------------------------
+        // Grid-aware hit test
+        // ------------------------------------------------------
 
         const inside =
-          clientX >=
-            rect.left - padding &&
-          clientX <=
-            rect.right + padding &&
-          clientY >=
-            rect.top - padding &&
-          clientY <=
-            rect.bottom + padding;
+          clientX >= rect.left &&
+          clientX <= rect.right &&
+          clientY >= rect.top &&
+          clientY <= rect.bottom;
 
 
         if (!inside) {
@@ -1727,279 +1846,498 @@
           distance <
           bestDistance
         ) {
+
           bestDistance =
             distance;
 
-          target =
-            card;
+          best =
+            {
+              card,
+              rect,
+              centerX,
+              centerY
+            };
         }
 
       }
     );
 
 
-    return target;
+    return best;
   }
 
 
   // ============================================================
-  // MOVE ITEM RELATIVE TO TARGET
+  // UPDATE DROP POSITION
   // ============================================================
 
-  function moveItemRelativeToTarget(
-    draggedItem,
-    targetCard,
+  function updateDropPosition(
+    clientX,
     clientY
   ) {
-    const targetOrigIndex =
-      Number(
-        targetCard.dataset.idx
-      );
-
-
-    const fromIndex =
-      pageItems.indexOf(
-        draggedItem
-      );
-
-
-    const targetIndex =
-      pageItems.findIndex(
-        item =>
-          item.origIndex ===
-          targetOrigIndex
-      );
-
-
     if (
-      fromIndex < 0 ||
-      targetIndex < 0 ||
-      fromIndex === targetIndex
+      !dragState ||
+      !dragState.placeholder
     ) {
       return;
     }
 
 
-    const targetRect =
-      targetCard.getBoundingClientRect();
+    const target =
+      getDropTarget(
+        clientX,
+        clientY
+      );
 
 
-    const targetCenterY =
-      targetRect.top +
-      targetRect.height / 2;
+    if (!target) {
+      return;
+    }
+
+
+    const {
+      card,
+      rect
+    } = target;
+
+
+    clearDropIndicators();
 
 
     /*
-     * ถ้า pointer อยู่ครึ่งบน:
-     * วางก่อน target
+     * Grid อาจเป็นหลายคอลัมน์
+     * ดังนั้นใช้ทั้งแกน X/Y
      *
-     * ถ้าอยู่ครึ่งล่าง:
-     * วางหลัง target
+     * ถ้าอยู่ครึ่งซ้ายของ target
+     * = ก่อน target
+     *
+     * ถ้าอยู่ครึ่งขวา
+     * = หลัง target
+     *
+     * ในกรณีที่ pointer อยู่ใกล้แนวตั้งมาก
+     * ใช้ตำแหน่ง Y ช่วยตัดสิน
      */
-    let insertIndex =
-      clientY <
-      targetCenterY
-        ? targetIndex
-        : targetIndex + 1;
+    const relativeX =
+      clientX -
+      rect.left;
 
 
-    /*
-     * ลบ item ออกจากตำแหน่งเดิมก่อน
-     * แล้วค่อยคำนวณตำแหน่งใหม่
-     */
-    pageItems.splice(
-      fromIndex,
-      1
-    );
+    const relativeY =
+      clientY -
+      rect.top;
+
+
+    let insertBefore;
 
 
     if (
-      fromIndex <
-      insertIndex
+      rect.width >= rect.height
     ) {
-      insertIndex--;
+      insertBefore =
+        relativeX <
+        rect.width / 2;
+
+    } else {
+
+      insertBefore =
+        relativeY <
+        rect.height / 2;
     }
 
 
-    insertIndex =
-      Math.max(
-        0,
-        Math.min(
-          pageItems.length,
-          insertIndex
-        )
+    const placeholder =
+      dragState.placeholder;
+
+
+    // ----------------------------------------------------------
+    // Move placeholder
+    // ----------------------------------------------------------
+
+    if (insertBefore) {
+
+      grid.insertBefore(
+        placeholder,
+        card
       );
+
+      card.classList.add(
+        'is-drop-after-target'
+      );
+
+      placeholder.dataset.position =
+        'before';
+
+
+    } else {
+
+      grid.insertBefore(
+        placeholder,
+        card.nextSibling
+      );
+
+      card.classList.add(
+        'is-drop-before-target'
+      );
+
+      placeholder.dataset.position =
+        'after';
+    }
 
 
     /*
-     * ถ้ายังอยู่ตำแหน่งเดิม
-     * ไม่ต้องทำอะไร
+     * ถ้า placeholder ถูกวางอยู่ตำแหน่งเดิม
+     * browser จะไม่เปลี่ยนอะไร
+     * แต่ยังคงแสดงช่องว่าง
      */
-    if (
-      pageItems.indexOf(
-        draggedItem
-      ) === insertIndex
-    ) {
-      pageItems.splice(
-        fromIndex,
-        0,
-        draggedItem
-      );
-
-      return;
-    }
-
-
-    pageItems.splice(
-      insertIndex,
-      0,
-      draggedItem
-    );
-
-
-    updateDragPreview();
   }
 
 
   // ============================================================
-  // UPDATE DOM PREVIEW
+  // CLEAR INDICATORS
   // ============================================================
 
-  function updateDragPreview() {
-    const cards =
+  function clearDropIndicators() {
+
+    grid
+      .querySelectorAll(
+        '.is-drop-before-target, .is-drop-after-target'
+      )
+      .forEach(
+        card => {
+          card.classList.remove(
+            'is-drop-before-target',
+            'is-drop-after-target'
+          );
+        }
+      );
+
+  }
+
+
+  // ============================================================
+  // FINISH DRAG
+  // ============================================================
+
+  function finishDrag() {
+
+    if (
+      !dragState
+    ) {
+      return;
+    }
+
+
+    const {
+      card,
+      placeholder,
+      item
+    } =
+      dragState;
+
+
+    // ----------------------------------------------------------
+    // Not actually moved
+    // ----------------------------------------------------------
+
+    if (
+      !dragState.started ||
+      !dragState.moved
+    ) {
+
+      resetDragStyles(
+        card
+      );
+
+
+      if (
+        placeholder &&
+        placeholder.isConnected
+      ) {
+        placeholder.remove();
+      }
+
+
+      dragState =
+        null;
+
+
+      return;
+    }
+
+
+    // ----------------------------------------------------------
+    // Get final DOM order
+    // ----------------------------------------------------------
+
+    const finalOrder =
       Array.from(
-        grid.querySelectorAll(
-          '.page-card-manage'
+        grid.children
+      )
+        .map(
+          child => {
+
+            if (
+              child ===
+              placeholder
+            ) {
+              return {
+                type:
+                  'placeholder'
+              };
+            }
+
+
+            if (
+              child.matches(
+                '.page-card-manage'
+              )
+            ) {
+              return {
+                type:
+                  'page',
+                index:
+                  Number(
+                    child.dataset.idx
+                  )
+              };
+            }
+
+
+            return null;
+          }
+        )
+        .filter(Boolean);
+
+
+    // ----------------------------------------------------------
+    // Convert DOM order -> pageItems
+    // ----------------------------------------------------------
+
+    const order =
+      finalOrder.map(
+        entry => {
+
+          if (
+            entry.type ===
+            'placeholder'
+          ) {
+            return item.origIndex;
+          }
+
+          return entry.index;
+        }
+      );
+
+
+    applyFinalOrder(
+      order
+    );
+
+
+    // ----------------------------------------------------------
+    // Cleanup
+    // ----------------------------------------------------------
+
+    if (
+      placeholder &&
+      placeholder.isConnected
+    ) {
+      placeholder.remove();
+    }
+
+
+    resetDragStyles(
+      card
+    );
+
+
+    clearDropIndicators();
+
+
+    dragState =
+      null;
+
+
+    // ----------------------------------------------------------
+    // Re-render from real state
+    // ----------------------------------------------------------
+
+    renderGrid();
+    updateCounts();
+  }
+
+
+  // ============================================================
+  // CANCEL DRAG
+  // ============================================================
+
+  function cancelDrag() {
+
+    if (
+      !dragState
+    ) {
+      return;
+    }
+
+
+    const {
+      card,
+      placeholder
+    } =
+      dragState;
+
+
+    if (
+      placeholder &&
+      placeholder.isConnected
+    ) {
+      placeholder.remove();
+    }
+
+
+    resetDragStyles(
+      card
+    );
+
+
+    clearDropIndicators();
+
+
+    dragState =
+      null;
+
+
+    renderGrid();
+  }
+
+
+  // ============================================================
+  // RESET CARD DRAG STYLE
+  // ============================================================
+
+  function resetDragStyles(
+    card
+  ) {
+    if (!card) {
+      return;
+    }
+
+
+    card.classList.remove(
+      'is-dragging'
+    );
+
+
+    card.style.position =
+      '';
+
+    card.style.width =
+      '';
+
+    card.style.height =
+      '';
+
+    card.style.left =
+      '';
+
+    card.style.top =
+      '';
+
+    card.style.zIndex =
+      '';
+
+    card.style.pointerEvents =
+      '';
+
+    card.style.transform =
+      '';
+  }
+
+
+  // ============================================================
+  // APPLY FINAL ORDER
+  // ============================================================
+
+  function applyFinalOrder(
+    order
+  ) {
+    if (
+      !Array.isArray(order) ||
+      !order.length
+    ) {
+      return;
+    }
+
+
+    const byIndex =
+      new Map(
+        pageItems.map(
+          item => [
+            item.origIndex,
+            item
+          ]
         )
       );
 
 
-    const cardByIndex =
-      new Map();
+    const used =
+      new Set();
 
 
-    cards.forEach(card => {
-      cardByIndex.set(
-        Number(
-          card.dataset.idx
-        ),
-        card
-      );
-    });
+    const reordered =
+      [];
 
 
-    /*
-     * เอา card ทั้งหมดออกก่อน
-     */
-    const fragment =
-      document.createDocumentFragment();
+    order.forEach(
+      index => {
 
-
-    pageItems.forEach(item => {
-
-      const card =
-        cardByIndex.get(
-          item.origIndex
-        );
-
-
-      if (card) {
-        fragment.appendChild(
-          card
-        );
-      }
-
-    });
-
-
-    grid.appendChild(
-      fragment
-    );
-
-
-    /*
-     * อัปเดตเลขหน้าตามลำดับใหม่
-     */
-    pageItems.forEach(
-      (item, index) => {
-
-        const card =
-          cardByIndex.get(
-            item.origIndex
-          );
-
-
-        if (!card) {
-          return;
-        }
-
-
-        const label =
-          card.querySelector(
-            '.js-pagelabel'
-          );
-
-
-        if (label) {
-          label.textContent =
-            `หน้า ${index + 1}`;
-        }
-
-
-        const img =
-          card.querySelector(
-            'img'
+        const item =
+          byIndex.get(
+            index
           );
 
 
         if (
-          img &&
-          item.thumbUrl
+          item &&
+          !used.has(
+            index
+          )
         ) {
-          img.alt =
-            `หน้า ${index + 1}`;
+
+          used.add(
+            index
+          );
+
+          reordered.push(
+            item
+          );
+        }
+      }
+    );
+
+
+    /*
+     * กันกรณีมีบาง element หายจาก DOM
+     */
+    pageItems.forEach(
+      item => {
+
+        if (
+          !used.has(
+            item.origIndex
+          )
+        ) {
+          reordered.push(
+            item
+          );
         }
 
       }
     );
-  }
 
 
-  // ============================================================
-  // SIMPLE MOVE BUTTON
-  // ============================================================
-
-  function moveItem(
-    index,
-    direction
-  ) {
-    const target =
-      index + direction;
-
-
-    if (
-      index < 0 ||
-      index >= pageItems.length ||
-      target < 0 ||
-      target >= pageItems.length
-    ) {
-      return;
-    }
-
-
-    const temp =
-      pageItems[index];
-
-
-    pageItems[index] =
-      pageItems[target];
-
-    pageItems[target] =
-      temp;
-
-
-    renderGrid();
-    updateCounts();
+    pageItems =
+      reordered;
   }
 
 
@@ -2023,7 +2361,6 @@
           ) {
             item.selected =
               false;
-
           } else {
             item.selected =
               checked;
@@ -2346,6 +2683,27 @@
       }
 
 
+      if (dragState) {
+        try {
+          resetDragStyles(
+            dragState.card
+          );
+        } catch (_) {}
+
+        try {
+          if (
+            dragState.placeholder &&
+            dragState.placeholder.isConnected
+          ) {
+            dragState.placeholder.remove();
+          }
+        } catch (_) {}
+
+        dragState =
+          null;
+      }
+
+
       resetQueue();
       revokeThumbs();
 
@@ -2365,10 +2723,6 @@
 
 
       currentFile =
-        null;
-
-
-      dragState =
         null;
 
 
