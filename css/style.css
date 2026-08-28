@@ -3223,93 +3223,267 @@ input:focus {
 
 
 /* ============================================================
-   PAGE MANAGER — CORE DRAG
+   PDF PAGE MANAGER — DRAG FIX
    ============================================================ */
 
 .page-card-manage {
-  position:
-    relative;
+  position: relative;
+  cursor: grab;
 
-  cursor:
-    grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 
-  user-select:
-    none;
-
-  -webkit-user-select:
-    none;
-
-  -webkit-touch-callout:
-    none;
-
-  touch-action:
-    none;
-
-  will-change:
-    transform;
-
-  /*
-   * ต้องไม่ใช้ animation ตอนลาก
-   * เพื่อไม่ให้ transform ชนกัน
-   */
-  transition:
-    transform .18s ease,
-    opacity .18s ease,
-    box-shadow .18s ease,
-    border-color .18s ease;
+  touch-action: none;
 }
-
-
-.page-card-manage:hover {
-  transform:
-    translateY(-2px);
-}
-
 
 .page-card-manage.is-drag-ready {
-  cursor:
-    grabbing;
-
-  box-shadow:
-    0 12px 30px
-    rgba(36,48,74,.12);
+  cursor: grabbing;
 }
 
-
 .page-card-manage.is-dragging {
-  position:
-    fixed !important;
+  position: fixed !important;
 
-  z-index:
-    1000 !important;
+  cursor: grabbing;
 
-  cursor:
-    grabbing;
+  pointer-events: none;
 
-  pointer-events:
-    none;
+  z-index: 1000 !important;
 
-  opacity:
-    .78;
+  opacity: .78;
 
-  animation:
-    none !important;
+  animation: none !important;
 
   transform:
-    rotate(.8deg)
-    scale(1.035);
+    rotate(.5deg)
+    scale(1.025) !important;
+
+  box-shadow:
+    0 24px 55px
+    rgba(36, 48, 74, .22);
 
   border-color:
     var(--tool-accent, #c49ae8);
 
-  box-shadow:
-    0 22px 50px
-    rgba(36,48,74,.20);
-
   transition:
     transform .08s ease,
-    opacity .08s ease,
-    box-shadow .08s ease;
+    opacity .08s ease;
+}
+
+
+/* ============================================================
+   PLACEHOLDER
+   ============================================================ */
+
+.page-drag-placeholder {
+  position: relative;
+
+  min-width: 0;
+
+  box-sizing: border-box;
+
+  border:
+    2px dashed
+    var(--tool-accent, #c49ae8);
+
+  border-radius: 18px;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--tool-accent, #c49ae8) 9%,
+      transparent
+    );
+
+  box-shadow:
+    inset
+    0 0 0 1px
+    rgba(255, 255, 255, .65);
+
+  animation:
+    page-placeholder-in
+    .16s
+    ease
+    both;
+}
+
+
+.page-drag-placeholder-inner {
+  position: absolute;
+
+  inset: 9px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border:
+    1px dashed
+    color-mix(
+      in srgb,
+      var(--tool-accent, #c49ae8) 50%,
+      transparent
+    );
+
+  border-radius: 13px;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--tool-accent, #c49ae8) 7%,
+      transparent
+    );
+
+  color:
+    var(--tool-accent, #c49ae8);
+
+  font-family:
+    var(--font-mono);
+
+  font-size:
+    10px;
+
+  pointer-events: none;
+
+  text-align: center;
+}
+
+
+.page-drag-placeholder-inner::before {
+  content: '↕';
+
+  position:
+    absolute;
+
+  top:
+    50%;
+
+  left:
+    50%;
+
+  transform:
+    translate(-50%, -25px);
+
+  font-size:
+    22px;
+
+  opacity:
+    .5;
+}
+
+
+.page-drag-placeholder-inner span {
+  transform:
+    translateY(12px);
+
+  opacity:
+    .8;
+}
+
+
+/* ============================================================
+   DROP INDICATOR
+   ============================================================ */
+
+.page-card-manage.is-drop-before-target::before,
+.page-card-manage.is-drop-after-target::after {
+  content: '';
+
+  position: absolute;
+
+  left: -7px;
+  right: -7px;
+
+  height: 5px;
+
+  z-index: 100;
+
+  border-radius: 999px;
+
+  background:
+    var(--tool-accent, #c49ae8);
+
+  box-shadow:
+    0 0 0 4px
+    color-mix(
+      in srgb,
+      var(--tool-accent, #c49ae8) 14%,
+      transparent
+    );
+
+  pointer-events: none;
+
+  animation:
+    drop-line-pulse
+    .75s
+    ease-in-out
+    infinite;
+}
+
+
+.page-card-manage.is-drop-before-target::before {
+  top: -4px;
+}
+
+
+.page-card-manage.is-drop-after-target::after {
+  bottom: -4px;
+}
+
+
+/* ============================================================
+   DELETED
+   ============================================================ */
+
+.page-card-manage.is-deleted {
+  cursor: default;
+}
+
+
+.page-card-manage.is-deleted:hover {
+  transform: none;
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 560px) {
+
+  .page-card-manage {
+    touch-action: none;
+  }
+
+  .page-card-manage.is-dragging {
+    transform:
+      rotate(.25deg)
+      scale(1.015) !important;
+  }
+
+  .page-drag-placeholder {
+    border-radius: 15px;
+  }
+
+}
+
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .page-card-manage,
+  .page-card-manage.is-dragging,
+  .page-drag-placeholder,
+  .page-card-manage.is-drop-before-target::before,
+  .page-card-manage.is-drop-after-target::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
 }
 
 
