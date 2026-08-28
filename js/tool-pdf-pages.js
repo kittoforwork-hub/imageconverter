@@ -60,6 +60,7 @@
     console.error(
       'PDF Pages: required elements are missing'
     );
+
     return;
   }
 
@@ -235,19 +236,17 @@
     const requestId =
       ++loadSeq;
 
-
     const validPdf =
       file.type === 'application/pdf' ||
       /\.pdf$/i.test(file.name);
-
 
     if (!validPdf) {
       alert(
         'กรุณาเลือกไฟล์ PDF เท่านั้น'
       );
+
       return;
     }
-
 
     if (
       !U.confirmLargeFile(
@@ -259,34 +258,27 @@
       return;
     }
 
-
     try {
       setToolProcessing(true);
-
 
       if (observer) {
         observer.disconnect();
         observer = null;
       }
 
-
       resetQueue();
       revokeThumbs();
 
       pageItems = [];
 
-
       await destroyCurrentDoc();
-
 
       if (requestId !== loadSeq) {
         return;
       }
 
-
       currentFile =
         file;
-
 
       if (nameEl) {
         nameEl.textContent =
@@ -295,14 +287,11 @@
           )}`;
       }
 
-
       grid.innerHTML = '';
-
 
       bulkbar.classList.remove(
         'hidden'
       );
-
 
       if (noteEl) {
         noteEl.classList.remove(
@@ -310,23 +299,19 @@
         );
       }
 
-
       if (countEl) {
         countEl.textContent =
           '…';
       }
-
 
       const bytes =
         await U.readAsArrayBuffer(
           file
         );
 
-
       if (requestId !== loadSeq) {
         return;
       }
-
 
       const loadingTask =
         pdfjsLib.getDocument({
@@ -335,10 +320,8 @@
             window.KittoCanvasFactory
         });
 
-
       const doc =
         await loadingTask.promise;
-
 
       if (requestId !== loadSeq) {
         try {
@@ -348,10 +331,8 @@
         return;
       }
 
-
       currentDoc =
         doc;
-
 
       for (
         let i = 0;
@@ -367,45 +348,35 @@
         });
       }
 
-
       updateCounts();
       renderGrid();
 
-
     } catch (error) {
-
       if (requestId !== loadSeq) {
         return;
       }
-
 
       console.error(
         'PDF load error:',
         error
       );
 
-
       await destroyCurrentDoc();
-
 
       currentFile = null;
       pageItems = [];
 
-
       grid.innerHTML = '';
-
 
       bulkbar.classList.add(
         'hidden'
       );
-
 
       if (noteEl) {
         noteEl.classList.add(
           'hidden'
         );
       }
-
 
       alert(
         'ไม่สามารถเปิดไฟล์ PDF ได้\n\n' +
@@ -415,9 +386,7 @@
         )
       );
 
-
     } finally {
-
       if (
         requestId === loadSeq
       ) {
@@ -438,7 +407,6 @@
       return;
     }
 
-
     const item =
       pageItems.find(
         entry =>
@@ -446,11 +414,9 @@
           origIndex
       );
 
-
     if (!item) {
       return;
     }
-
 
     if (
       item.deleted ||
@@ -460,30 +426,24 @@
       return;
     }
 
-
     item.rendering =
       true;
-
 
     let page = null;
     let canvas = null;
     let context = null;
     let renderTask = null;
 
-
     try {
-
       page =
         await currentDoc.getPage(
           origIndex + 1
         );
 
-
       const baseViewport =
         page.getViewport({
           scale: 1
         });
-
 
       if (
         !baseViewport.width ||
@@ -494,11 +454,9 @@
         );
       }
 
-
       let scale =
         THUMB_TARGET_WIDTH /
         baseViewport.width;
-
 
       let width =
         baseViewport.width *
@@ -508,13 +466,11 @@
         baseViewport.height *
         scale;
 
-
       const maxDimension =
         Math.max(
           width,
           height
         );
-
 
       if (
         maxDimension >
@@ -525,16 +481,13 @@
           maxDimension;
       }
 
-
       const viewport =
         page.getViewport({
           scale
         });
 
-
       const factory =
         window.KittoCanvasFactory;
-
 
       const canvasInfo =
         factory
@@ -549,7 +502,6 @@
                   'canvas'
                 );
 
-
               fallbackCanvas.width =
                 Math.ceil(
                   viewport.width
@@ -560,19 +512,16 @@
                   viewport.height
                 );
 
-
               const fallbackContext =
                 fallbackCanvas.getContext(
                   '2d'
                 );
-
 
               if (!fallbackContext) {
                 throw new Error(
                   'ไม่สามารถสร้าง canvas ได้'
                 );
               }
-
 
               return {
                 canvas:
@@ -584,13 +533,11 @@
 
             })();
 
-
       canvas =
         canvasInfo.canvas;
 
       context =
         canvasInfo.context;
-
 
       context.save();
 
@@ -606,7 +553,6 @@
 
       context.restore();
 
-
       renderTask =
         page.render({
           canvasContext:
@@ -621,9 +567,7 @@
             'display'
         });
 
-
       await renderTask.promise;
-
 
       const blob =
         await new Promise(
@@ -655,7 +599,6 @@
           }
         );
 
-
       if (
         !currentDoc ||
         item.deleted
@@ -663,31 +606,25 @@
         return;
       }
 
-
       item.thumbUrl =
         URL.createObjectURL(
           blob
         );
 
-
       updateCardThumbnail(
         item
       );
 
-
     } catch (error) {
-
       console.error(
         `Thumbnail render failed: page ${origIndex + 1}`,
         error
       );
 
-
       const card =
         grid.querySelector(
           `.page-card-manage[data-idx="${origIndex}"]`
         );
-
 
       if (card) {
         card.classList.add(
@@ -696,10 +633,8 @@
       }
 
     } finally {
-
       item.rendering =
         false;
-
 
       if (page) {
         try {
@@ -707,14 +642,12 @@
         } catch (_) {}
       }
 
-
       if (canvas) {
         try {
           canvas.width = 1;
           canvas.height = 1;
         } catch (_) {}
       }
-
 
       canvas = null;
       context = null;
@@ -733,23 +666,19 @@
         `.page-card-manage[data-idx="${item.origIndex}"]`
       );
 
-
     if (!card) {
       return;
     }
-
 
     card.classList.remove(
       'is-pending',
       'is-thumb-error'
     );
 
-
     const img =
       card.querySelector(
         'img'
       );
-
 
     if (
       img &&
@@ -772,7 +701,6 @@
       return;
     }
 
-
     const item =
       pageItems.find(
         entry =>
@@ -780,11 +708,9 @@
           origIndex
       );
 
-
     if (!item) {
       return;
     }
-
 
     if (
       item.deleted ||
@@ -794,7 +720,6 @@
       return;
     }
 
-
     if (
       renderQueue.includes(
         origIndex
@@ -803,18 +728,15 @@
       return;
     }
 
-
     if (
       renderQueue.length > 100
     ) {
       return;
     }
 
-
     renderQueue.push(
       origIndex
     );
-
 
     processQueue();
   }
@@ -825,10 +747,8 @@
       return;
     }
 
-
     queueRunning =
       true;
-
 
     try {
 
@@ -839,18 +759,15 @@
         const origIndex =
           renderQueue.shift();
 
-
         if (
           origIndex == null
         ) {
           continue;
         }
 
-
         await renderThumbnail(
           origIndex
         );
-
 
         await U.yieldToUI();
       }
@@ -859,7 +776,6 @@
 
       queueRunning =
         false;
-
 
       if (
         renderQueue.length
@@ -880,7 +796,6 @@
       observer.disconnect();
     }
 
-
     observer =
       new IntersectionObserver(
         entries => {
@@ -894,12 +809,10 @@
                 return;
               }
 
-
               const idx =
                 Number(
                   entry.target.dataset.idx
                 );
-
 
               queueRender(
                 idx
@@ -907,7 +820,6 @@
 
             }
           );
-
 
           processQueue();
 
@@ -921,7 +833,6 @@
         }
       );
 
-
     grid
       .querySelectorAll(
         '.page-card-manage'
@@ -934,14 +845,12 @@
               card.dataset.idx
             );
 
-
           const item =
             pageItems.find(
               entry =>
                 entry.origIndex ===
                 idx
             );
-
 
           if (
             item &&
@@ -973,12 +882,10 @@
       return;
     }
 
-
     card.classList.toggle(
       'is-deleted',
       item.deleted
     );
-
 
     card.classList.toggle(
       'is-selected',
@@ -986,19 +893,16 @@
       !item.deleted
     );
 
-
     card.classList.toggle(
       'is-pending',
       !item.thumbUrl &&
       !item.deleted
     );
 
-
     card.dataset.deleted =
       item.deleted
         ? 'true'
         : 'false';
-
 
     card.dataset.selected =
       item.selected
@@ -1017,9 +921,7 @@
       observer.disconnect();
     }
 
-
     grid.innerHTML = '';
-
 
     pageItems.forEach(
       (item, position) => {
@@ -1029,12 +931,10 @@
             .firstElementChild
             .cloneNode(true);
 
-
         card.dataset.idx =
           String(
             item.origIndex
           );
-
 
         updateCardState(
           card,
@@ -1050,7 +950,6 @@
           card.querySelector(
             'img'
           );
-
 
         if (
           img &&
@@ -1073,7 +972,6 @@
             '.js-pagelabel'
           );
 
-
         if (label) {
           label.textContent =
             `หน้า ${position + 1}`;
@@ -1089,17 +987,14 @@
             '.js-select'
           );
 
-
         if (checkbox) {
 
           checkbox.checked =
             item.selected &&
             !item.deleted;
 
-
           checkbox.disabled =
             item.deleted;
-
 
           checkbox.addEventListener(
             'pointerdown',
@@ -1108,14 +1003,12 @@
             }
           );
 
-
           checkbox.addEventListener(
             'click',
             event => {
               event.stopPropagation();
             }
           );
-
 
           checkbox.addEventListener(
             'change',
@@ -1130,16 +1023,13 @@
                 return;
               }
 
-
               item.selected =
                 checkbox.checked;
-
 
               updateCardState(
                 card,
                 item
               );
-
 
               updateCounts();
             }
@@ -1162,7 +1052,6 @@
               return;
             }
 
-
             if (
               event.target.closest(
                 'button, input, a'
@@ -1171,29 +1060,24 @@
               return;
             }
 
-
             if (
               item.deleted
             ) {
               return;
             }
 
-
             item.selected =
               !item.selected;
-
 
             updateCardState(
               card,
               item
             );
 
-
             if (checkbox) {
               checkbox.checked =
                 item.selected;
             }
-
 
             updateCounts();
           }
@@ -1209,12 +1093,10 @@
             '.js-move-up'
           );
 
-
         if (upBtn) {
 
           upBtn.disabled =
             position === 0;
-
 
           upBtn.addEventListener(
             'click',
@@ -1240,13 +1122,11 @@
             '.js-move-down'
           );
 
-
         if (downBtn) {
 
           downBtn.disabled =
             position ===
             pageItems.length - 1;
-
 
           downBtn.addEventListener(
             'click',
@@ -1272,7 +1152,6 @@
             '.js-delete'
           );
 
-
         if (deleteBtn) {
 
           deleteBtn.title =
@@ -1280,12 +1159,10 @@
               ? 'กู้คืนหน้านี้'
               : 'ลบหน้านี้';
 
-
           deleteBtn.textContent =
             item.deleted
               ? '↺'
               : '✕';
-
 
           deleteBtn.addEventListener(
             'click',
@@ -1293,14 +1170,12 @@
 
               event.stopPropagation();
 
-
               if (
                 item.deleted
               ) {
 
                 item.deleted =
                   false;
-
 
                 if (
                   !item.thumbUrl
@@ -1319,7 +1194,6 @@
                   false;
               }
 
-
               renderGrid();
               updateCounts();
             }
@@ -1328,767 +1202,918 @@
 
 
         // ============================================================
-// DRAG SYSTEM — FULL CARD
-//
-// ลากได้จากทุกพื้นที่ของการ์ด
-// การ์ดจะลอยตามเมาส์ตรงตำแหน่งที่กด
-// และมี placeholder แสดงตำแหน่งที่จะวาง
-// ============================================================
+        // DRAG SYSTEM — FULL CARD
+        //
+        // ลากได้จากทุกพื้นที่ของการ์ด
+        // การ์ดจะลอยตามเมาส์ตรงตำแหน่งที่กด
+        // และมี placeholder แสดงตำแหน่งที่จะวาง
+        // ============================================================
 
-function setupCardDrag(card, item) {
-  if (!card || !item) {
-    return;
-  }
-
-  let pointerId = null;
-
-  // จุดที่ผู้ใช้กดบนการ์ด
-  let grabOffsetX = 0;
-  let grabOffsetY = 0;
-
-  let startX = 0;
-  let startY = 0;
-
-  let moved = false;
-
-
-  // ----------------------------------------------------------
-  // POINTER DOWN
-  // ----------------------------------------------------------
-
-  card.addEventListener(
-    'pointerdown',
-    event => {
-      // รองรับเฉพาะ primary pointer
-      if (
-        event.isPrimary === false
-      ) {
-        return;
-      }
-
-      // หน้าที่ถูกลบไม่ให้ลาก
-      if (
-        item.deleted
-      ) {
-        return;
-      }
-
-      /*
-       * ปุ่ม / checkbox ไม่ควรเริ่ม drag
-       * เพราะผู้ใช้ต้องการกดควบคุมมันโดยตรง
-       */
-      if (
-        event.target.closest(
-          'button, input, select, textarea, a'
-        )
-      ) {
-        return;
-      }
-
-      pointerId =
-        event.pointerId;
-
-      startX =
-        event.clientX;
-
-      startY =
-        event.clientY;
-
-      moved =
-        false;
-
-
-      // --------------------------------------------------------
-      // จำจุดที่กดบนการ์ด
-      // --------------------------------------------------------
-
-      const rect =
-        card.getBoundingClientRect();
-
-      grabOffsetX =
-        event.clientX -
-        rect.left;
-
-      grabOffsetY =
-        event.clientY -
-        rect.top;
-
-
-      dragState = {
-        card,
-        item,
-        pointerId,
-        moved: false,
-        started: false,
-        placeholder: null,
-        grabOffsetX,
-        grabOffsetY
-      };
-
-
-      /*
-       * สำคัญ:
-       * setPointerCapture ทำให้แม้เมาส์ออกนอกการ์ด
-       * เราก็ยังได้รับ pointermove / pointerup ต่อ
-       */
-      try {
-        card.setPointerCapture(
-          pointerId
-        );
-      } catch (_) {}
-
-    },
-    {
-      passive: false
-    }
-  );
-
-
-  // ----------------------------------------------------------
-  // POINTER MOVE
-  // ----------------------------------------------------------
-
-  card.addEventListener(
-    'pointermove',
-    event => {
-      if (
-        pointerId === null ||
-        event.pointerId !== pointerId
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-
-
-      const dx =
-        event.clientX -
-        startX;
-
-      const dy =
-        event.clientY -
-        startY;
-
-
-      // --------------------------------------------------------
-      // ยังไม่เริ่มลาก
-      // --------------------------------------------------------
-
-      if (
-        !moved &&
-        Math.hypot(
-          dx,
-          dy
-        ) <
-        DRAG_START_DISTANCE
-      ) {
-        return;
-      }
-
-
-      // --------------------------------------------------------
-      // START DRAG
-      // --------------------------------------------------------
-
-      if (!moved) {
-        moved =
-          true;
-
-        if (dragState) {
-          dragState.moved =
-            true;
-        }
-
-
-        startRealDrag(
+        setupCardDrag(
           card,
           item
         );
+
+        grid.appendChild(
+          card
+        );
+
       }
+    );
+
+    setupObserver();
+  }
 
 
-      // --------------------------------------------------------
-      // MOVE CARD
-      // --------------------------------------------------------
+  // ============================================================
+  // MOVE ITEM
+  // ============================================================
 
-      if (
-        dragState &&
-        dragState.started
-      ) {
+  function moveItem(
+    position,
+    direction
+  ) {
+    const target =
+      position + direction;
 
-        moveFloatingCard(
+    if (
+      target < 0 ||
+      target >= pageItems.length
+    ) {
+      return;
+    }
+
+    const temp =
+      pageItems[position];
+
+    pageItems[position] =
+      pageItems[target];
+
+    pageItems[target] =
+      temp;
+
+    renderGrid();
+    updateCounts();
+  }
+
+
+  // ============================================================
+  // DRAG SYSTEM
+  // ============================================================
+
+  function setupCardDrag(
+    card,
+    item
+  ) {
+    if (!card || !item) {
+      return;
+    }
+
+    let pointerId = null;
+
+    // จุดที่ผู้ใช้กดบนการ์ด
+    let grabOffsetX = 0;
+    let grabOffsetY = 0;
+
+    let startX = 0;
+    let startY = 0;
+
+    let moved = false;
+
+
+    // ----------------------------------------------------------
+    // POINTER DOWN
+    // ----------------------------------------------------------
+
+    card.addEventListener(
+      'pointerdown',
+      event => {
+
+        // รองรับเฉพาะ primary pointer
+        if (
+          event.isPrimary === false
+        ) {
+          return;
+        }
+
+        // หน้าที่ถูกลบไม่ให้ลาก
+        if (
+          item.deleted
+        ) {
+          return;
+        }
+
+        /*
+         * ปุ่ม / checkbox ไม่ควรเริ่ม drag
+         * เพราะผู้ใช้ต้องการกดควบคุมมันโดยตรง
+         */
+        if (
+          event.target.closest(
+            'button, input, select, textarea, a'
+          )
+        ) {
+          return;
+        }
+
+        pointerId =
+          event.pointerId;
+
+        startX =
+          event.clientX;
+
+        startY =
+          event.clientY;
+
+        moved =
+          false;
+
+
+        // --------------------------------------------------------
+        // จำจุดที่กดบนการ์ด
+        // --------------------------------------------------------
+
+        const rect =
+          card.getBoundingClientRect();
+
+        grabOffsetX =
+          event.clientX -
+          rect.left;
+
+        grabOffsetY =
+          event.clientY -
+          rect.top;
+
+
+        dragState = {
+          card,
+          item,
+          pointerId,
+          moved: false,
+          started: false,
+          placeholder: null,
+          grabOffsetX,
+          grabOffsetY
+        };
+
+
+        /*
+         * สำคัญ:
+         * setPointerCapture ทำให้แม้เมาส์ออกนอกการ์ด
+         * เราก็ยังได้รับ pointermove / pointerup ต่อ
+         */
+        try {
+          card.setPointerCapture(
+            pointerId
+          );
+        } catch (_) {}
+
+      },
+      {
+        passive: false
+      }
+    );
+
+
+    // ----------------------------------------------------------
+    // POINTER MOVE
+    // ----------------------------------------------------------
+
+    card.addEventListener(
+      'pointermove',
+      event => {
+
+        if (
+          pointerId === null ||
+          event.pointerId !== pointerId
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+
+        const dx =
+          event.clientX -
+          startX;
+
+        const dy =
+          event.clientY -
+          startY;
+
+
+        // --------------------------------------------------------
+        // ยังไม่เริ่มลาก
+        // --------------------------------------------------------
+
+        if (
+          !moved &&
+          Math.hypot(
+            dx,
+            dy
+          ) <
+          DRAG_START_DISTANCE
+        ) {
+          return;
+        }
+
+
+        // --------------------------------------------------------
+        // START DRAG
+        // --------------------------------------------------------
+
+        if (!moved) {
+          moved =
+            true;
+
+          if (dragState) {
+            dragState.moved =
+              true;
+          }
+
+          startRealDrag(
+            card,
+            item
+          );
+        }
+
+
+        // --------------------------------------------------------
+        // MOVE CARD
+        // --------------------------------------------------------
+
+        if (
+          dragState &&
+          dragState.started
+        ) {
+
+          moveFloatingCard(
+            event.clientX,
+            event.clientY
+          );
+
+        }
+
+
+        // --------------------------------------------------------
+        // UPDATE PLACEHOLDER
+        // --------------------------------------------------------
+
+        updateDropPosition(
           event.clientX,
           event.clientY
         );
 
+      },
+      {
+        passive: false
       }
-
-
-      // --------------------------------------------------------
-      // UPDATE PLACEHOLDER
-      // --------------------------------------------------------
-
-      updateDropPosition(
-        event.clientX,
-        event.clientY
-      );
-
-    },
-    {
-      passive: false
-    }
-  );
-
-
-  // ----------------------------------------------------------
-  // POINTER UP
-  // ----------------------------------------------------------
-
-  card.addEventListener(
-    'pointerup',
-    event => {
-      if (
-        pointerId !== null &&
-        event.pointerId === pointerId
-      ) {
-        finishDrag();
-      }
-    },
-    {
-      passive: false
-    }
-  );
-
-
-  // ----------------------------------------------------------
-  // POINTER CANCEL
-  // ----------------------------------------------------------
-
-  card.addEventListener(
-    'pointercancel',
-    event => {
-      if (
-        pointerId !== null &&
-        event.pointerId === pointerId
-      ) {
-        cancelDrag();
-      }
-    }
-  );
-
-
-  // ----------------------------------------------------------
-  // LOST POINTER CAPTURE
-  // ----------------------------------------------------------
-
-  card.addEventListener(
-    'lostpointercapture',
-    () => {
-      /*
-       * อย่า finishDrag ตรงนี้ทันที
-       * เพราะ browser บางตัวสามารถปล่อย capture
-       * ระหว่าง interaction แล้วสร้าง pointerup ตามมาได้
-       */
-    }
-  );
-}
-
-
-// ============================================================
-// START REAL DRAG
-// ============================================================
-
-function startRealDrag(
-  card,
-  item
-) {
-  if (
-    !dragState ||
-    dragState.started
-  ) {
-    return;
-  }
-
-
-  const rect =
-    card.getBoundingClientRect();
-
-
-  // ----------------------------------------------------------
-  // CREATE PLACEHOLDER
-  // ----------------------------------------------------------
-
-  const placeholder =
-    document.createElement(
-      'div'
     );
 
 
-  placeholder.className =
-    'page-drag-placeholder';
+    // ----------------------------------------------------------
+    // POINTER UP
+    // ----------------------------------------------------------
 
-
-  placeholder.dataset.idx =
-    String(
-      item.origIndex
-    );
-
-
-  /*
-   * Placeholder มีขนาดเท่าการ์ดจริง
-   */
-  placeholder.style.width =
-    rect.width + 'px';
-
-
-  placeholder.style.height =
-    rect.height + 'px';
-
-
-  placeholder.innerHTML = `
-    <div class="page-drag-placeholder-inner">
-      <span>วางหน้าที่นี่</span>
-    </div>
-  `;
-
-
-  // ----------------------------------------------------------
-  // PLACEHOLDER อยู่ตำแหน่งเดิม
-  // ----------------------------------------------------------
-
-  grid.insertBefore(
-    placeholder,
-    card
-  );
-
-
-  // ----------------------------------------------------------
-  // CARD -> FLOATING
-  // ----------------------------------------------------------
-
-  card.classList.add(
-    'is-dragging'
-  );
-
-
-  card.style.position =
-    'fixed';
-
-
-  card.style.width =
-    rect.width + 'px';
-
-
-  card.style.height =
-    rect.height + 'px';
-
-
-  card.style.left =
-    rect.left + 'px';
-
-
-  card.style.top =
-    rect.top + 'px';
-
-
-  card.style.zIndex =
-    '1000';
-
-
-  card.style.pointerEvents =
-    'none';
-
-
-  /*
-   * สำคัญ:
-   * ไม่กำหนด transform ที่นี่
-   * เพราะเราจะควบคุม transform เอง
-   */
-
-
-  dragState.placeholder =
-    placeholder;
-
-  dragState.started =
-    true;
-
-  dragState.originalIndex =
-    pageItems.indexOf(
-      item
-    );
-
-
-  // ----------------------------------------------------------
-  // เริ่มต้น visual
-  // ----------------------------------------------------------
-
-  clearDropIndicators();
-}
-
-
-// ============================================================
-// MOVE FLOATING CARD
-//
-// card จะอยู่ตรงเมาส์โดยรักษาจุดที่ผู้ใช้กดไว้
-// ============================================================
-
-function moveFloatingCard(
-  clientX,
-  clientY
-) {
-  if (
-    !dragState ||
-    !dragState.card
-  ) {
-    return;
-  }
-
-
-  const card =
-    dragState.card;
-
-
-  const left =
-    clientX -
-    dragState.grabOffsetX;
-
-
-  const top =
-    clientY -
-    dragState.grabOffsetY;
-
-
-  card.style.left =
-    `${left}px`;
-
-
-  card.style.top =
-    `${top}px`;
-}
-
-
-// ============================================================
-// FIND DROP TARGET
-// ============================================================
-
-function getDropTarget(
-  clientX,
-  clientY
-) {
-  if (!dragState) {
-    return null;
-  }
-
-
-  const draggedCard =
-    dragState.card;
-
-
-  const cards =
-    Array.from(
-      grid.querySelectorAll(
-        '.page-card-manage'
-      )
-    ).filter(
-      card => {
+    card.addEventListener(
+      'pointerup',
+      event => {
 
         if (
-          card ===
-          draggedCard
+          pointerId !== null &&
+          event.pointerId === pointerId
         ) {
-          return false;
+          finishDrag();
         }
 
-
-        if (
-          card.classList.contains(
-            'is-deleted'
-          )
-        ) {
-          return false;
-        }
-
-
-        return true;
+      },
+      {
+        passive: false
       }
     );
 
 
-  /*
-   * หา card ที่เมาส์อยู่ข้างในก่อน
-   */
-  for (
-    const card of cards
+    // ----------------------------------------------------------
+    // POINTER CANCEL
+    // ----------------------------------------------------------
+
+    card.addEventListener(
+      'pointercancel',
+      event => {
+
+        if (
+          pointerId !== null &&
+          event.pointerId === pointerId
+        ) {
+          cancelDrag();
+        }
+
+      }
+    );
+
+
+    // ----------------------------------------------------------
+    // LOST POINTER CAPTURE
+    // ----------------------------------------------------------
+
+    card.addEventListener(
+      'lostpointercapture',
+      () => {
+
+        /*
+         * อย่า finishDrag ตรงนี้ทันที
+         * เพราะ browser บางตัวสามารถปล่อย capture
+         * ระหว่าง interaction แล้วสร้าง pointerup ตามมาได้
+         */
+
+      }
+    );
+  }
+
+
+  // ============================================================
+  // START REAL DRAG
+  // ============================================================
+
+  function startRealDrag(
+    card,
+    item
   ) {
+    if (
+      !dragState ||
+      dragState.started
+    ) {
+      return;
+    }
+
     const rect =
       card.getBoundingClientRect();
 
 
-    if (
-      clientX >= rect.left &&
-      clientX <= rect.right &&
-      clientY >= rect.top &&
-      clientY <= rect.bottom
-    ) {
-      return {
-        card,
-        rect
-      };
-    }
+    // ----------------------------------------------------------
+    // CREATE PLACEHOLDER
+    // ----------------------------------------------------------
+
+    const placeholder =
+      document.createElement(
+        'div'
+      );
+
+    placeholder.className =
+      'page-drag-placeholder';
+
+    placeholder.dataset.idx =
+      String(
+        item.origIndex
+      );
+
+    /*
+     * Placeholder มีขนาดเท่าการ์ดจริง
+     */
+
+    placeholder.style.width =
+      rect.width + 'px';
+
+    placeholder.style.height =
+      rect.height + 'px';
+
+    placeholder.innerHTML = `
+      <div class="page-drag-placeholder-inner">
+        <span>วางหน้าที่นี่</span>
+      </div>
+    `;
+
+
+    // ----------------------------------------------------------
+    // PLACEHOLDER อยู่ตำแหน่งเดิม
+    // ----------------------------------------------------------
+
+    grid.insertBefore(
+      placeholder,
+      card
+    );
+
+
+    // ----------------------------------------------------------
+    // CARD -> FLOATING
+    // ----------------------------------------------------------
+
+    card.classList.add(
+      'is-dragging'
+    );
+
+    card.style.position =
+      'fixed';
+
+    card.style.width =
+      rect.width + 'px';
+
+    card.style.height =
+      rect.height + 'px';
+
+    card.style.left =
+      rect.left + 'px';
+
+    card.style.top =
+      rect.top + 'px';
+
+    card.style.zIndex =
+      '1000';
+
+    card.style.pointerEvents =
+      'none';
+
+    /*
+     * สำคัญ:
+     * ไม่กำหนด transform ที่นี่
+     * เพราะเราจะควบคุม transform เอง
+     */
+
+    dragState.placeholder =
+      placeholder;
+
+    dragState.started =
+      true;
+
+    dragState.originalIndex =
+      pageItems.indexOf(
+        item
+      );
+
+
+    // ----------------------------------------------------------
+    // เริ่มต้น visual
+    // ----------------------------------------------------------
+
+    clearDropIndicators();
   }
 
 
-  /*
-   * ถ้าไม่ได้อยู่ตรง card พอดี
-   * ให้หา card ที่ใกล้ที่สุด
-   *
-   * ทำให้ลากไปยังช่องว่างระหว่าง card
-   * ได้ง่ายขึ้น
-   */
+  // ============================================================
+  // MOVE FLOATING CARD
+  //
+  // card จะอยู่ตรงเมาส์โดยรักษาจุดที่ผู้ใช้กดไว้
+  // ============================================================
 
-  let nearest = null;
-  let nearestDistance = Infinity;
+  function moveFloatingCard(
+    clientX,
+    clientY
+  ) {
+    if (
+      !dragState ||
+      !dragState.card
+    ) {
+      return;
+    }
+
+    const card =
+      dragState.card;
+
+    const left =
+      clientX -
+      dragState.grabOffsetX;
+
+    const top =
+      clientY -
+      dragState.grabOffsetY;
+
+    card.style.left =
+      `${left}px`;
+
+    card.style.top =
+      `${top}px`;
+  }
 
 
-  cards.forEach(
-    card => {
+  // ============================================================
+  // FIND DROP TARGET
+  // ============================================================
 
+  function getDropTarget(
+    clientX,
+    clientY
+  ) {
+    if (!dragState) {
+      return null;
+    }
+
+    const draggedCard =
+      dragState.card;
+
+    const cards =
+      Array.from(
+        grid.querySelectorAll(
+          '.page-card-manage'
+        )
+      ).filter(
+        card => {
+
+          if (
+            card ===
+            draggedCard
+          ) {
+            return false;
+          }
+
+          if (
+            card.classList.contains(
+              'is-deleted'
+            )
+          ) {
+            return false;
+          }
+
+          return true;
+        }
+      );
+
+
+    /*
+     * หา card ที่เมาส์อยู่ข้างในก่อน
+     */
+
+    for (
+      const card of cards
+    ) {
       const rect =
         card.getBoundingClientRect();
 
-
-      const centerX =
-        rect.left +
-        rect.width / 2;
-
-
-      const centerY =
-        rect.top +
-        rect.height / 2;
-
-
-      const distance =
-        Math.hypot(
-          clientX -
-            centerX,
-          clientY -
-            centerY
-        );
-
-
       if (
-        distance <
-        nearestDistance
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom
       ) {
-        nearestDistance =
-          distance;
-
-        nearest = {
+        return {
           card,
           rect
         };
       }
-
     }
-  );
 
 
-  return nearest;
-}
+    /*
+     * ถ้าไม่ได้อยู่ตรง card พอดี
+     * ให้หา card ที่ใกล้ที่สุด
+     *
+     * ทำให้ลากไปยังช่องว่างระหว่าง card
+     * ได้ง่ายขึ้น
+     */
 
+    let nearest = null;
+    let nearestDistance = Infinity;
 
-// ============================================================
-// UPDATE DROP POSITION
-// ============================================================
-
-function updateDropPosition(
-  clientX,
-  clientY
-) {
-  if (
-    !dragState ||
-    !dragState.placeholder
-  ) {
-    return;
-  }
-
-
-  const target =
-    getDropTarget(
-      clientX,
-      clientY
-    );
-
-
-  if (!target) {
-    return;
-  }
-
-
-  const {
-    card,
-    rect
-  } = target;
-
-
-  const placeholder =
-    dragState.placeholder;
-
-
-  clearDropIndicators();
-
-
-  // ----------------------------------------------------------
-  // คำนวณตำแหน่ง
-  // ----------------------------------------------------------
-
-  const centerX =
-    rect.left +
-    rect.width / 2;
-
-
-  const centerY =
-    rect.top +
-    rect.height / 2;
-
-
-  /*
-   * ใช้แกนที่ pointer อยู่ใกล้ศูนย์กลางมากกว่า
-   *
-   * สำหรับ grid หลายคอลัมน์:
-   * ถ้าเมาส์อยู่ในครึ่งซ้าย/ขวาชัดเจน
-   * ให้ใช้ X
-   *
-   * ถ้าอยู่ใกล้แนวกลางมาก
-   * ใช้ Y ประกอบ
-   */
-
-  const dx =
-    Math.abs(
-      clientX -
-      centerX
-    );
-
-
-  const dy =
-    Math.abs(
-      clientY -
-      centerY
-    );
-
-
-  let insertBefore;
-
-
-  if (
-    dx > dy
-  ) {
-    insertBefore =
-      clientX <
-      centerX;
-  } else {
-    insertBefore =
-      clientY <
-      centerY;
-  }
-
-
-  // ----------------------------------------------------------
-  // PLACEHOLDER POSITION
-  // ----------------------------------------------------------
-
-  if (
-    insertBefore
-  ) {
-
-    grid.insertBefore(
-      placeholder,
-      card
-    );
-
-
-    card.classList.add(
-      'is-drop-before-target'
-    );
-
-
-    placeholder.dataset.position =
-      'before';
-
-
-  } else {
-
-    grid.insertBefore(
-      placeholder,
-      card.nextSibling
-    );
-
-
-    card.classList.add(
-      'is-drop-after-target'
-    );
-
-
-    placeholder.dataset.position =
-      'after';
-  }
-}
-
-
-// ============================================================
-// CLEAR DROP INDICATORS
-// ============================================================
-
-function clearDropIndicators() {
-
-  grid
-    .querySelectorAll(
-      '.is-drop-before-target, .is-drop-after-target'
-    )
-    .forEach(
+    cards.forEach(
       card => {
 
-        card.classList.remove(
-          'is-drop-before-target',
-          'is-drop-after-target'
-        );
+        const rect =
+          card.getBoundingClientRect();
+
+        const centerX =
+          rect.left +
+          rect.width / 2;
+
+        const centerY =
+          rect.top +
+          rect.height / 2;
+
+        const distance =
+          Math.hypot(
+            clientX -
+              centerX,
+            clientY -
+              centerY
+          );
+
+        if (
+          distance <
+          nearestDistance
+        ) {
+          nearestDistance =
+            distance;
+
+          nearest = {
+            card,
+            rect
+          };
+        }
 
       }
     );
-}
 
-
-// ============================================================
-// FINISH DRAG
-// ============================================================
-
-function finishDrag() {
-
-  if (!dragState) {
-    return;
+    return nearest;
   }
 
 
-  const {
-    card,
-    placeholder,
-    item
-  } = dragState;
+  // ============================================================
+  // UPDATE DROP POSITION
+  // ============================================================
 
-
-  /*
-   * ปล่อยตอนยังไม่ถึง threshold
-   * ถือเป็น click ปกติ
-   */
-  if (
-    !dragState.started ||
-    !dragState.moved
+  function updateDropPosition(
+    clientX,
+    clientY
   ) {
+    if (
+      !dragState ||
+      !dragState.placeholder
+    ) {
+      return;
+    }
 
-    resetDragStyles(
-      card
+    const target =
+      getDropTarget(
+        clientX,
+        clientY
+      );
+
+    if (!target) {
+      return;
+    }
+
+    const {
+      card,
+      rect
+    } = target;
+
+    const placeholder =
+      dragState.placeholder;
+
+    clearDropIndicators();
+
+
+    // ----------------------------------------------------------
+    // คำนวณตำแหน่ง
+    // ----------------------------------------------------------
+
+    const centerX =
+      rect.left +
+      rect.width / 2;
+
+    const centerY =
+      rect.top +
+      rect.height / 2;
+
+    /*
+     * ใช้แกนที่ pointer อยู่ใกล้ศูนย์กลางมากกว่า
+     *
+     * สำหรับ grid หลายคอลัมน์:
+     * ถ้าเมาส์อยู่ในครึ่งซ้าย/ขวาชัดเจน
+     * ให้ใช้ X
+     *
+     * ถ้าอยู่ใกล้แนวกลางมาก
+     * ใช้ Y ประกอบ
+     */
+
+    const dx =
+      Math.abs(
+        clientX -
+        centerX
+      );
+
+    const dy =
+      Math.abs(
+        clientY -
+        centerY
+      );
+
+    let insertBefore;
+
+    if (
+      dx > dy
+    ) {
+      insertBefore =
+        clientX <
+        centerX;
+
+    } else {
+
+      insertBefore =
+        clientY <
+        centerY;
+    }
+
+
+    // ----------------------------------------------------------
+    // PLACEHOLDER POSITION
+    // ----------------------------------------------------------
+
+    if (
+      insertBefore
+    ) {
+
+      grid.insertBefore(
+        placeholder,
+        card
+      );
+
+      card.classList.add(
+        'is-drop-before-target'
+      );
+
+      placeholder.dataset.position =
+        'before';
+
+    } else {
+
+      grid.insertBefore(
+        placeholder,
+        card.nextSibling
+      );
+
+      card.classList.add(
+        'is-drop-after-target'
+      );
+
+      placeholder.dataset.position =
+        'after';
+    }
+  }
+
+
+  // ============================================================
+  // CLEAR DROP INDICATORS
+  // ============================================================
+
+  function clearDropIndicators() {
+
+    grid
+      .querySelectorAll(
+        '.is-drop-before-target, .is-drop-after-target'
+      )
+      .forEach(
+        card => {
+
+          card.classList.remove(
+            'is-drop-before-target',
+            'is-drop-after-target'
+          );
+
+        }
+      );
+  }
+
+
+  // ============================================================
+  // FINISH DRAG
+  // ============================================================
+
+  function finishDrag() {
+
+    if (!dragState) {
+      return;
+    }
+
+    const {
+      card,
+      placeholder,
+      item
+    } = dragState;
+
+    /*
+     * ปล่อยตอนยังไม่ถึง threshold
+     * ถือเป็น click ปกติ
+     */
+
+    if (
+      !dragState.started ||
+      !dragState.moved
+    ) {
+
+      resetDragStyles(
+        card
+      );
+
+      if (
+        placeholder &&
+        placeholder.isConnected
+      ) {
+        placeholder.remove();
+      }
+
+      try {
+        if (
+          pointerIdOf(
+            card
+          ) !== null
+        ) {
+          card.releasePointerCapture(
+            pointerIdOf(
+              card
+            )
+          );
+        }
+      } catch (_) {}
+
+      dragState =
+        null;
+
+      return;
+    }
+
+
+    // ----------------------------------------------------------
+    // อ่านตำแหน่ง placeholder
+    // ----------------------------------------------------------
+
+    const children =
+      Array.from(
+        grid.children
+      );
+
+    const finalOrder =
+      [];
+
+    children.forEach(
+      child => {
+
+        if (
+          child ===
+          placeholder
+        ) {
+
+          finalOrder.push(
+            item.origIndex
+          );
+
+          return;
+        }
+
+        if (
+          child.matches(
+            '.page-card-manage'
+          )
+        ) {
+
+          const index =
+            Number(
+              child.dataset.idx
+            );
+
+          /*
+           * floating card ยังอาจอยู่ใน grid
+           * แต่ position:fixed แล้ว
+           *
+           * จึงไม่ควรนับซ้ำ
+           */
+
+          if (
+            child === card
+          ) {
+            return;
+          }
+
+          finalOrder.push(
+            index
+          );
+        }
+
+      }
     );
 
+
+    // ----------------------------------------------------------
+    // Safety
+    // ----------------------------------------------------------
+
+    if (
+      !finalOrder.includes(
+        item.origIndex
+      )
+    ) {
+
+      finalOrder.push(
+        item.origIndex
+      );
+    }
+
+
+    // ----------------------------------------------------------
+    // Apply order
+    // ----------------------------------------------------------
+
+    applyFinalOrder(
+      finalOrder
+    );
+
+
+    // ----------------------------------------------------------
+    // Release pointer
+    // ----------------------------------------------------------
+
+    try {
+
+      if (
+        pointerId !== null
+      ) {
+        card.releasePointerCapture(
+          pointerId
+        );
+      }
+
+    } catch (_) {}
+
+
+    // ----------------------------------------------------------
+    // Remove placeholder
+    // ----------------------------------------------------------
 
     if (
       placeholder &&
@@ -2098,376 +2123,219 @@ function finishDrag() {
     }
 
 
-    try {
-      if (
-        pointerIdOf(
-          card
-        ) !== null
-      ) {
-        card.releasePointerCapture(
-          pointerIdOf(
-            card
-          )
-        );
-      }
-    } catch (_) {}
+    // ----------------------------------------------------------
+    // Reset card
+    // ----------------------------------------------------------
 
+    resetDragStyles(
+      card
+    );
+
+    clearDropIndicators();
 
     dragState =
       null;
 
 
-    return;
+    // ----------------------------------------------------------
+    // Re-render
+    // ----------------------------------------------------------
+
+    renderGrid();
+    updateCounts();
   }
 
 
-  // ----------------------------------------------------------
-  // อ่านตำแหน่ง placeholder
-  // ----------------------------------------------------------
+  // ============================================================
+  // CANCEL DRAG
+  // ============================================================
 
-  const children =
-    Array.from(
-      grid.children
-    );
+  function cancelDrag() {
 
+    if (!dragState) {
+      return;
+    }
 
-  const finalOrder =
-    [];
+    const {
+      card,
+      placeholder
+    } =
+      dragState;
 
-
-  children.forEach(
-    child => {
+    try {
 
       if (
-        child ===
-        placeholder
+        pointerId !== null
       ) {
-
-        finalOrder.push(
-          item.origIndex
+        card.releasePointerCapture(
+          pointerId
         );
-
-        return;
       }
 
+    } catch (_) {}
 
-      if (
-        child.matches(
-          '.page-card-manage'
+    if (
+      placeholder &&
+      placeholder.isConnected
+    ) {
+      placeholder.remove();
+    }
+
+    resetDragStyles(
+      card
+    );
+
+    clearDropIndicators();
+
+    dragState =
+      null;
+
+    renderGrid();
+  }
+
+
+  // ============================================================
+  // RESET DRAG STYLES
+  // ============================================================
+
+  function resetDragStyles(
+    card
+  ) {
+    if (!card) {
+      return;
+    }
+
+    card.classList.remove(
+      'is-dragging',
+      'is-drag-ready'
+    );
+
+    card.style.position =
+      '';
+
+    card.style.width =
+      '';
+
+    card.style.height =
+      '';
+
+    card.style.left =
+      '';
+
+    card.style.top =
+      '';
+
+    card.style.zIndex =
+      '';
+
+    card.style.pointerEvents =
+      '';
+
+    card.style.transform =
+      '';
+  }
+
+
+  // ============================================================
+  // POINTER ID HELPER
+  // ============================================================
+
+  function pointerIdOf(
+    card
+  ) {
+    if (
+      dragState &&
+      dragState.card === card &&
+      dragState.pointerId != null
+    ) {
+      return dragState.pointerId;
+    }
+
+    return null;
+  }
+
+
+  // ============================================================
+  // APPLY FINAL ORDER
+  // ============================================================
+
+  function applyFinalOrder(
+    order
+  ) {
+    if (
+      !Array.isArray(order) ||
+      !order.length
+    ) {
+      return;
+    }
+
+    const byIndex =
+      new Map(
+        pageItems.map(
+          item => [
+            item.origIndex,
+            item
+          ]
         )
-      ) {
+      );
 
-        const index =
-          Number(
-            child.dataset.idx
+    const used =
+      new Set();
+
+    const reordered =
+      [];
+
+    order.forEach(
+      index => {
+
+        const item =
+          byIndex.get(
+            index
           );
 
-
-        /*
-         * floating card ยังอาจอยู่ใน grid
-         * แต่ position:fixed แล้ว
-         *
-         * จึงไม่ควรนับซ้ำ
-         */
         if (
-          child === card
+          item &&
+          !used.has(
+            index
+          )
         ) {
-          return;
+
+          used.add(
+            index
+          );
+
+          reordered.push(
+            item
+          );
         }
 
-
-        finalOrder.push(
-          index
-        );
       }
-
-    }
-  );
-
-
-  // ----------------------------------------------------------
-  // Safety
-  // ----------------------------------------------------------
-
-  if (
-    !finalOrder.includes(
-      item.origIndex
-    )
-  ) {
-
-    finalOrder.push(
-      item.origIndex
-    );
-  }
-
-
-  // ----------------------------------------------------------
-  // Apply order
-  // ----------------------------------------------------------
-
-  applyFinalOrder(
-    finalOrder
-  );
-
-
-  // ----------------------------------------------------------
-  // Release pointer
-  // ----------------------------------------------------------
-
-  try {
-
-    if (
-      pointerId !== null
-    ) {
-      card.releasePointerCapture(
-        pointerId
-      );
-    }
-
-  } catch (_) {}
-
-
-  // ----------------------------------------------------------
-  // Remove placeholder
-  // ----------------------------------------------------------
-
-  if (
-    placeholder &&
-    placeholder.isConnected
-  ) {
-    placeholder.remove();
-  }
-
-
-  // ----------------------------------------------------------
-  // Reset card
-  // ----------------------------------------------------------
-
-  resetDragStyles(
-    card
-  );
-
-
-  clearDropIndicators();
-
-
-  dragState =
-    null;
-
-
-  // ----------------------------------------------------------
-  // Re-render
-  // ----------------------------------------------------------
-
-  renderGrid();
-  updateCounts();
-}
-
-
-// ============================================================
-// CANCEL DRAG
-// ============================================================
-
-function cancelDrag() {
-
-  if (!dragState) {
-    return;
-  }
-
-
-  const {
-    card,
-    placeholder
-  } =
-    dragState;
-
-
-  try {
-
-    if (
-      pointerId !== null
-    ) {
-      card.releasePointerCapture(
-        pointerId
-      );
-    }
-
-  } catch (_) {}
-
-
-  if (
-    placeholder &&
-    placeholder.isConnected
-  ) {
-    placeholder.remove();
-  }
-
-
-  resetDragStyles(
-    card
-  );
-
-
-  clearDropIndicators();
-
-
-  dragState =
-    null;
-
-
-  renderGrid();
-}
-
-
-// ============================================================
-// RESET DRAG STYLES
-// ============================================================
-
-function resetDragStyles(
-  card
-) {
-  if (!card) {
-    return;
-  }
-
-
-  card.classList.remove(
-    'is-dragging',
-    'is-drag-ready'
-  );
-
-
-  card.style.position =
-    '';
-
-  card.style.width =
-    '';
-
-  card.style.height =
-    '';
-
-  card.style.left =
-    '';
-
-  card.style.top =
-    '';
-
-  card.style.zIndex =
-    '';
-
-  card.style.pointerEvents =
-    '';
-
-  card.style.transform =
-    '';
-}
-
-
-// ============================================================
-// POINTER ID HELPER
-// ============================================================
-
-function pointerIdOf(
-  card
-) {
-  if (
-    dragState &&
-    dragState.card === card &&
-    dragState.pointerId != null
-  ) {
-    return dragState.pointerId;
-  }
-
-  return null;
-}
-
-
-// ============================================================
-// APPLY FINAL ORDER
-// ============================================================
-
-function applyFinalOrder(
-  order
-) {
-  if (
-    !Array.isArray(order) ||
-    !order.length
-  ) {
-    return;
-  }
-
-
-  const byIndex =
-    new Map(
-      pageItems.map(
-        item => [
-          item.origIndex,
-          item
-        ]
-      )
     );
 
+    /*
+     * เติมรายการที่อาจไม่อยู่ใน DOM
+     */
 
-  const used =
-    new Set();
+    pageItems.forEach(
+      item => {
 
+        if (
+          !used.has(
+            item.origIndex
+          )
+        ) {
+          reordered.push(
+            item
+          );
+        }
 
-  const reordered =
-    [];
-
-
-  order.forEach(
-    index => {
-
-      const item =
-        byIndex.get(
-          index
-        );
-
-
-      if (
-        item &&
-        !used.has(
-          index
-        )
-      ) {
-
-        used.add(
-          index
-        );
-
-        reordered.push(
-          item
-        );
       }
+    );
 
-    }
-  );
+    pageItems =
+      reordered;
+  }
 
-
-  /*
-   * เติมรายการที่อาจไม่อยู่ใน DOM
-   */
-  pageItems.forEach(
-    item => {
-
-      if (
-        !used.has(
-          item.origIndex
-        )
-      ) {
-        reordered.push(
-          item
-        );
-      }
-
-    }
-  );
-
-
-  pageItems =
-    reordered;
-}
 
   // ============================================================
   // SELECT ALL
@@ -2480,7 +2348,6 @@ function applyFinalOrder(
       const checked =
         selectAllEl.checked;
 
-
       pageItems.forEach(
         item => {
 
@@ -2489,6 +2356,7 @@ function applyFinalOrder(
           ) {
             item.selected =
               false;
+
           } else {
             item.selected =
               checked;
@@ -2496,7 +2364,6 @@ function applyFinalOrder(
 
         }
       );
-
 
       renderGrid();
       updateCounts();
@@ -2517,7 +2384,6 @@ function applyFinalOrder(
       );
     }
 
-
     if (
       !indices.length
     ) {
@@ -2526,19 +2392,16 @@ function applyFinalOrder(
       );
     }
 
-
     const srcBytes =
       await U.readAsArrayBuffer(
         currentFile
       );
-
 
     const response =
       await PW.buildPagesPdf(
         srcBytes,
         indices
       );
-
 
     if (
       !response ||
@@ -2548,7 +2411,6 @@ function applyFinalOrder(
         'ไม่ได้รับ PDF จาก Worker'
       );
     }
-
 
     return new Blob(
       [response.bytes],
@@ -2575,14 +2437,12 @@ function applyFinalOrder(
         return;
       }
 
-
       const indices =
         getVisibleItems()
           .map(
             item =>
               item.origIndex
           );
-
 
       if (!indices.length) {
         alert(
@@ -2592,21 +2452,16 @@ function applyFinalOrder(
         return;
       }
 
-
       downloadRunning =
         true;
-
 
       downloadBtn.disabled =
         true;
 
-
       downloadBtn.textContent =
         'กำลังสร้าง PDF…';
 
-
       setToolProcessing(true);
-
 
       try {
 
@@ -2615,7 +2470,6 @@ function applyFinalOrder(
             indices
           );
 
-
         U.downloadBlob(
           blob,
           `${U.baseName(
@@ -2623,14 +2477,12 @@ function applyFinalOrder(
           )}-edited.pdf`
         );
 
-
       } catch (error) {
 
         console.error(
           'Build PDF error:',
           error
         );
-
 
         alert(
           'ไม่สามารถสร้าง PDF ได้\n\n' +
@@ -2640,20 +2492,16 @@ function applyFinalOrder(
           )
         );
 
-
       } finally {
 
         downloadRunning =
           false;
 
-
         downloadBtn.disabled =
           false;
 
-
         downloadBtn.textContent =
           'ดาวน์โหลด PDF (ตามลำดับ/ลบแล้ว)';
-
 
         setToolProcessing(
           false
@@ -2678,14 +2526,12 @@ function applyFinalOrder(
         return;
       }
 
-
       const indices =
         getSelectedItems()
           .map(
             item =>
               item.origIndex
           );
-
 
       if (!indices.length) {
         alert(
@@ -2695,21 +2541,16 @@ function applyFinalOrder(
         return;
       }
 
-
       downloadRunning =
         true;
-
 
       downloadSelectedBtn.disabled =
         true;
 
-
       downloadSelectedBtn.textContent =
         'กำลังสร้าง PDF…';
 
-
       setToolProcessing(true);
-
 
       try {
 
@@ -2718,7 +2559,6 @@ function applyFinalOrder(
             indices
           );
 
-
         U.downloadBlob(
           blob,
           `${U.baseName(
@@ -2726,14 +2566,12 @@ function applyFinalOrder(
           )}-selected.pdf`
         );
 
-
       } catch (error) {
 
         console.error(
           'Build selected PDF error:',
           error
         );
-
 
         alert(
           'ไม่สามารถสร้าง PDF ได้\n\n' +
@@ -2743,20 +2581,16 @@ function applyFinalOrder(
           )
         );
 
-
       } finally {
 
         downloadRunning =
           false;
 
-
         downloadSelectedBtn.disabled =
           false;
 
-
         downloadSelectedBtn.textContent =
           'ดาวน์โหลดเฉพาะที่เลือก';
-
 
         setToolProcessing(
           false
@@ -2787,7 +2621,6 @@ function applyFinalOrder(
             )
         );
 
-
       if (file) {
         loadFile(file);
       }
@@ -2804,14 +2637,13 @@ function applyFinalOrder(
 
       ++loadSeq;
 
-
       if (observer) {
         observer.disconnect();
         observer = null;
       }
 
-
       if (dragState) {
+
         try {
           resetDragStyles(
             dragState.card
@@ -2819,25 +2651,24 @@ function applyFinalOrder(
         } catch (_) {}
 
         try {
+
           if (
             dragState.placeholder &&
             dragState.placeholder.isConnected
           ) {
             dragState.placeholder.remove();
           }
+
         } catch (_) {}
 
         dragState =
           null;
       }
 
-
       resetQueue();
       revokeThumbs();
 
-
       pageItems = [];
-
 
       destroyCurrentDoc()
         .catch(
@@ -2849,23 +2680,18 @@ function applyFinalOrder(
           }
         );
 
-
       currentFile =
         null;
-
 
       downloadRunning =
         false;
 
-
       grid.innerHTML =
         '';
-
 
       bulkbar.classList.add(
         'hidden'
       );
-
 
       if (noteEl) {
         noteEl.classList.add(
@@ -2873,12 +2699,10 @@ function applyFinalOrder(
         );
       }
 
-
       if (countEl) {
         countEl.textContent =
           '0';
       }
-
 
       if (selectAllEl) {
         selectAllEl.checked =
@@ -2887,7 +2711,6 @@ function applyFinalOrder(
         selectAllEl.indeterminate =
           false;
       }
-
 
       setToolProcessing(
         false
