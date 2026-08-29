@@ -183,6 +183,20 @@
         '';
 
 
+      /*
+       * เก็บ key/params ของ error ล่าสุดไว้
+       * เพื่อให้แปลภาษาใหม่ได้ตอน languagechange
+       * (errorMessage ด้านบนใช้เป็น fallback
+       * เมื่อไม่มี errorKey เท่านั้น)
+       */
+      this.errorKey =
+        null;
+
+
+      this.errorParams =
+        null;
+
+
       this.el =
         jobTemplate
           .content
@@ -356,9 +370,15 @@
             true;
 
 
+          this.errorKey =
+            'image.openFailed';
+
+          this.errorParams =
+            null;
+
           this.errorMessage =
             t(
-              'image.openFailed'
+              this.errorKey
             );
 
 
@@ -623,16 +643,28 @@
 
       /*
        * Error
+       * แปล error เดิมใหม่ด้วย key/params ที่เก็บไว้
+       * ถ้ามี errorKey ให้แปลใหม่ตามภาษาปัจจุบันเสมอ
        */
       if (
         this.hasError
       ) {
 
+        this.errorMessage =
+          this.errorKey
+            ? t(
+                this.errorKey,
+                this.errorParams ||
+                  undefined
+              )
+            : this.errorMessage ||
+              t(
+                'image.croppingFailed'
+              );
+
+
         this.statusEl.textContent =
-          this.errorMessage ||
-          t(
-            'image.croppingFailed'
-          );
+          this.errorMessage;
 
 
         this.statusEl.classList.remove(
@@ -1680,6 +1712,14 @@
         '';
 
 
+      this.errorKey =
+        null;
+
+
+      this.errorParams =
+        null;
+
+
       this.el.dataset.processing =
         'true';
 
@@ -1975,6 +2015,14 @@
           '';
 
 
+        this.errorKey =
+          null;
+
+
+        this.errorParams =
+          null;
+
+
         // --------------------------------------------------
         // Success
         // --------------------------------------------------
@@ -2018,12 +2066,19 @@
           true;
 
 
-        /*
-         * เก็บ key + message ตรง ๆ
-         * เพื่อเปลี่ยนภาษาแล้วสร้างข้อความใหม่ได้
-         */
+        this.errorKey =
+          'image.croppingFailed';
+
+        this.errorParams =
+          {
+            message
+          };
+
         this.errorMessage =
-          message;
+          t(
+            this.errorKey,
+            this.errorParams
+          );
 
 
         this.statusEl.textContent =
