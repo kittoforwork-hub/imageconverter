@@ -1,14 +1,38 @@
-/* ============================================================
-   ONLINE NOTEPAD
-   notepad.js
-   ============================================================ */
-
 (() => {
   'use strict';
 
-  /* ==========================================================
-     CONFIG
-  ========================================================== */
+
+  // ============================================================
+  // I18N
+  // ============================================================
+
+  const I18n =
+    window.I18n || null;
+
+
+  function t(
+    key,
+    values
+  ) {
+
+    if (
+      I18n &&
+      typeof I18n.t === 'function'
+    ) {
+
+      return I18n.t(
+        key,
+        values
+      );
+    }
+
+    return String(key);
+  }
+
+
+  // ============================================================
+  // CONFIG
+  // ============================================================
 
   const STORAGE_KEY =
     'online-notepad-content-v1';
@@ -20,9 +44,9 @@
     100;
 
 
-  /* ==========================================================
-     ELEMENTS
-  ========================================================== */
+  // ============================================================
+  // ELEMENTS
+  // ============================================================
 
   const textarea =
     document.getElementById(
@@ -110,9 +134,9 @@
     );
 
 
-  /* ==========================================================
-     VALIDATION
-  ========================================================== */
+  // ============================================================
+  // VALIDATION
+  // ============================================================
 
   if (!textarea) {
 
@@ -124,26 +148,95 @@
   }
 
 
-  /* ==========================================================
-     STATE
-  ========================================================== */
+  // ============================================================
+  // STATE
+  // ============================================================
 
-  let saveTimer = null;
+  let saveTimer =
+    null;
 
-  let isSaving = false;
+  let isSaving =
+    false;
 
-  let history = [];
+  let history =
+    [];
 
-  let historyIndex = -1;
+  let historyIndex =
+    -1;
 
-  let historyTimer = null;
+  let historyTimer =
+    null;
 
-  let suppressHistory = false;
+  let suppressHistory =
+    false;
 
 
-  /* ==========================================================
-     STORAGE
-  ========================================================== */
+  // ============================================================
+  // STATUS
+  // ============================================================
+
+  function setStatus(
+    key,
+    type = '',
+    values
+  ) {
+
+    if (saveStatus) {
+
+      saveStatus.textContent =
+        t(
+          key,
+          values
+        );
+    }
+
+
+    if (!saveStatusWrapper) {
+      return;
+    }
+
+
+    saveStatusWrapper.classList.remove(
+      'is-saving',
+      'is-saved',
+      'is-error'
+    );
+
+
+    if (
+      type === 'saving'
+    ) {
+
+      saveStatusWrapper.classList.add(
+        'is-saving'
+      );
+    }
+
+
+    if (
+      type === 'saved'
+    ) {
+
+      saveStatusWrapper.classList.add(
+        'is-saved'
+      );
+    }
+
+
+    if (
+      type === 'error'
+    ) {
+
+      saveStatusWrapper.classList.add(
+        'is-error'
+      );
+    }
+  }
+
+
+  // ============================================================
+  // STORAGE
+  // ============================================================
 
   function loadNote() {
 
@@ -155,22 +248,26 @@
         );
 
 
-      if (saved !== null) {
+      if (
+        saved !== null
+      ) {
 
         textarea.value =
           saved;
       }
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.warn(
-        '[Online Notepad] ไม่สามารถอ่าน localStorage ได้',
+        '[Online Notepad] localStorage read failed:',
         error
       );
 
 
       setStatus(
-        'ไม่สามารถโหลดข้อมูล',
+        'notepad.errors.loadFailed',
         'error'
       );
     }
@@ -188,7 +285,7 @@
 
 
       setStatus(
-        'บันทึกแล้ว',
+        'notepad.status.saved',
         'saved'
       );
 
@@ -196,7 +293,9 @@
       isSaving =
         false;
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         '[Online Notepad] Save failed:',
@@ -209,7 +308,7 @@
 
 
       setStatus(
-        'บันทึกไม่สำเร็จ',
+        'notepad.status.saveFailed',
         'error'
       );
     }
@@ -224,7 +323,7 @@
 
 
     setStatus(
-      'กำลังบันทึก...',
+      'notepad.status.saving',
       'saving'
     );
 
@@ -234,70 +333,20 @@
 
 
     saveTimer =
-      setTimeout(() => {
+      setTimeout(
+        () => {
 
-        saveNote();
+          saveNote();
 
-      }, AUTO_SAVE_DELAY);
+        },
+        AUTO_SAVE_DELAY
+      );
   }
 
 
-  /* ==========================================================
-     STATUS
-  ========================================================== */
-
-  function setStatus(
-    text,
-    type = ''
-  ) {
-
-    if (saveStatus) {
-
-      saveStatus.textContent =
-        text;
-    }
-
-
-    if (!saveStatusWrapper) {
-      return;
-    }
-
-
-    saveStatusWrapper.classList.remove(
-      'is-saving',
-      'is-saved',
-      'is-error'
-    );
-
-
-    if (type === 'saving') {
-
-      saveStatusWrapper.classList.add(
-        'is-saving'
-      );
-    }
-
-
-    if (type === 'saved') {
-
-      saveStatusWrapper.classList.add(
-        'is-saved'
-      );
-    }
-
-
-    if (type === 'error') {
-
-      saveStatusWrapper.classList.add(
-        'is-error'
-      );
-    }
-  }
-
-
-  /* ==========================================================
-     DOWNLOAD TXT
-  ========================================================== */
+  // ============================================================
+  // DOWNLOAD TXT
+  // ============================================================
 
   function downloadTxt() {
 
@@ -305,19 +354,20 @@
       textarea.value;
 
 
-    /*
-     * ไม่ให้ดาวน์โหลดถ้าไม่มีข้อความ
-     * หรือมีเพียงช่องว่าง
-     */
-
     if (
       !text ||
       text.trim().length === 0
     ) {
 
       setStatus(
-        'ยังไม่มีข้อความให้บันทึก',
+        'notepad.status.nothingToSave',
         'error'
+      );
+
+
+      showTemporaryButtonText(
+        saveTxtBtn,
+        'notepad.buttons.nothingToSave'
       );
 
 
@@ -327,13 +377,6 @@
       return false;
     }
 
-
-    /*
-     * UTF-8 BOM
-     *
-     * ช่วยให้ภาษาไทยเปิดใน
-     * Windows Notepad ได้ถูกต้อง
-     */
 
     const BOM =
       '\uFEFF';
@@ -368,10 +411,6 @@
       url;
 
 
-    /*
-     * ไฟล์ที่จะดาวน์โหลด
-     */
-
     link.download =
       'notepad.txt';
 
@@ -391,36 +430,31 @@
     link.remove();
 
 
-    /*
-     * คืนหน่วยความจำ
-     */
+    setTimeout(
+      () => {
 
-    setTimeout(() => {
+        try {
 
-      URL.revokeObjectURL(
-        url
-      );
+          URL.revokeObjectURL(
+            url
+          );
 
-    }, 1000);
+        } catch (_) {}
 
+      },
+      1000
+    );
 
-    /*
-     * แสดงสถานะ
-     */
 
     setStatus(
-      'บันทึกเป็น .txt แล้ว',
+      'notepad.status.txtSaved',
       'saved'
     );
 
 
-    /*
-     * Animation ปุ่ม
-     */
-
     showTemporaryButtonText(
       saveTxtBtn,
-      '✓ บันทึกแล้ว'
+      'notepad.buttons.txtSaved'
     );
 
 
@@ -428,9 +462,31 @@
   }
 
 
-  /* ==========================================================
-     COUNTERS
-  ========================================================== */
+  // ============================================================
+  // COUNTERS
+  // ============================================================
+
+  function getCountLocale() {
+
+    if (
+      I18n &&
+      typeof I18n.getLanguage ===
+        'function'
+    ) {
+
+      const lang =
+        I18n.getLanguage();
+
+
+      if (lang) {
+        return lang;
+      }
+    }
+
+
+    return 'en';
+  }
+
 
   function updateCounters() {
 
@@ -438,24 +494,28 @@
       textarea.value;
 
 
-    /* --------------------------------------------------------
-       Characters
-    -------------------------------------------------------- */
+    // ----------------------------------------------------------
+    // Characters
+    // ----------------------------------------------------------
 
-    if (characterCount) {
+    if (
+      characterCount
+    ) {
 
       characterCount.textContent =
         text.length.toLocaleString(
-          'th-TH'
+          getCountLocale()
         );
     }
 
 
-    /* --------------------------------------------------------
-       Words
-    -------------------------------------------------------- */
+    // ----------------------------------------------------------
+    // Words
+    // ----------------------------------------------------------
 
-    if (wordCount) {
+    if (
+      wordCount
+    ) {
 
       const trimmed =
         text.trim();
@@ -465,7 +525,9 @@
         0;
 
 
-      if (trimmed) {
+      if (
+        trimmed
+      ) {
 
         const englishWords =
           trimmed.match(
@@ -476,7 +538,9 @@
         const thaiBlocks =
           trimmed
             .split(/\s+/)
-            .filter(Boolean);
+            .filter(
+              Boolean
+            );
 
 
         words =
@@ -491,16 +555,18 @@
 
       wordCount.textContent =
         words.toLocaleString(
-          'th-TH'
+          getCountLocale()
         );
     }
 
 
-    /* --------------------------------------------------------
-       Lines
-    -------------------------------------------------------- */
+    // ----------------------------------------------------------
+    // Lines
+    // ----------------------------------------------------------
 
-    if (lineCount) {
+    if (
+      lineCount
+    ) {
 
       const lines =
         text === ''
@@ -512,15 +578,15 @@
 
       lineCount.textContent =
         lines.toLocaleString(
-          'th-TH'
+          getCountLocale()
         );
     }
   }
 
 
-  /* ==========================================================
-     HISTORY
-  ========================================================== */
+  // ============================================================
+  // HISTORY
+  // ============================================================
 
   function resetHistory() {
 
@@ -541,24 +607,22 @@
     value
   ) {
 
-    if (suppressHistory) {
+    if (
+      suppressHistory
+    ) {
       return;
     }
 
 
     if (
       historyIndex >= 0 &&
-      history[historyIndex] === value
+      history[historyIndex] ===
+        value
     ) {
 
       return;
     }
 
-
-    /*
-     * ถ้า Undo แล้วพิมพ์ใหม่
-     * ให้ตัด history ด้านหน้าออก
-     */
 
     if (
       historyIndex <
@@ -581,10 +645,6 @@
     historyIndex =
       history.length - 1;
 
-
-    /*
-     * จำกัดจำนวน history
-     */
 
     if (
       history.length >
@@ -628,13 +688,16 @@
 
 
     historyTimer =
-      setTimeout(() => {
+      setTimeout(
+        () => {
 
-        pushHistory(
-          textarea.value
-        );
+          pushHistory(
+            textarea.value
+          );
 
-      }, 350);
+        },
+        350
+      );
   }
 
 
@@ -705,14 +768,19 @@
 
   function updateHistoryButtons() {
 
-    if (undoBtn) {
+    if (
+      undoBtn
+    ) {
 
       undoBtn.disabled =
-        historyIndex <= 0;
+        historyIndex <=
+        0;
     }
 
 
-    if (redoBtn) {
+    if (
+      redoBtn
+    ) {
 
       redoBtn.disabled =
         historyIndex >=
@@ -721,9 +789,9 @@
   }
 
 
-  /* ==========================================================
-     FOCUS
-  ========================================================== */
+  // ============================================================
+  // FOCUS
+  // ============================================================
 
   function focusTextarea() {
 
@@ -731,17 +799,68 @@
 
       textarea.focus();
 
-    } catch (error) {
-
-      /* Ignore focus errors */
-
-    }
+    } catch (_) {}
   }
 
 
-  /* ==========================================================
-     COPY
-  ========================================================== */
+  // ============================================================
+  // TEMPORARY BUTTON TEXT
+  // ============================================================
+
+  function showTemporaryButtonText(
+    button,
+    key,
+    values
+  ) {
+
+    if (
+      !button
+    ) {
+      return;
+    }
+
+
+    const originalHTML =
+      button.innerHTML;
+
+
+    button.innerHTML =
+      `<span>${t(
+        key,
+        values
+      )}</span>`;
+
+
+    button.disabled =
+      true;
+
+
+    setTimeout(
+      () => {
+
+        button.innerHTML =
+          originalHTML;
+
+
+        /*
+         * สำคัญ:
+         * ถ้าเปลี่ยนภาษาในช่วงเวลาที่ปุ่ม
+         * กำลังแสดง temporary state
+         * ครั้งถัดไปจะใช้ภาษาใหม่
+         */
+
+        button.disabled =
+          false;
+
+      },
+      1200
+    );
+  }
+
+
+  // ============================================================
+  // COPY
+  // ============================================================
 
   async function copyNote() {
 
@@ -753,7 +872,7 @@
 
       showTemporaryButtonText(
         copyBtn,
-        'ไม่มีข้อความ'
+        'notepad.buttons.noText'
       );
 
 
@@ -762,10 +881,6 @@
 
 
     try {
-
-      /*
-       * Modern Clipboard API
-       */
 
       if (
         navigator.clipboard &&
@@ -780,17 +895,13 @@
 
         showTemporaryButtonText(
           copyBtn,
-          '✓ คัดลอกแล้ว'
+          'notepad.buttons.copied'
         );
 
 
         return;
       }
 
-
-      /*
-       * Fallback
-       */
 
       fallbackCopy(
         text
@@ -799,10 +910,12 @@
 
       showTemporaryButtonText(
         copyBtn,
-        '✓ คัดลอกแล้ว'
+        'notepad.buttons.copied'
       );
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.warn(
         '[Online Notepad] Clipboard API failed:',
@@ -819,10 +932,12 @@
 
         showTemporaryButtonText(
           copyBtn,
-          '✓ คัดลอกแล้ว'
+          'notepad.buttons.copied'
         );
 
-      } catch (fallbackError) {
+      } catch (
+        fallbackError
+      ) {
 
         console.error(
           '[Online Notepad] Copy failed:',
@@ -832,7 +947,7 @@
 
         showTemporaryButtonText(
           copyBtn,
-          'คัดลอกไม่ได้'
+          'notepad.buttons.copyFailed'
         );
       }
     }
@@ -882,6 +997,7 @@
 
     temp.focus();
 
+
     temp.select();
 
 
@@ -911,48 +1027,16 @@
   }
 
 
-  function showTemporaryButtonText(
-    button,
-    text
-  ) {
-
-    if (!button) {
-      return;
-    }
-
-
-    const originalHTML =
-      button.innerHTML;
-
-
-    button.innerHTML =
-      `<span>${text}</span>`;
-
-
-    button.disabled =
-      true;
-
-
-    setTimeout(() => {
-
-      button.innerHTML =
-        originalHTML;
-
-
-      button.disabled =
-        false;
-
-    }, 1200);
-  }
-
-
-  /* ==========================================================
-     CLEAR
-  ========================================================== */
+  // ============================================================
+  // CLEAR
+  // ============================================================
 
   function clearNote() {
 
-    if (!textarea.value) {
+    if (
+      !textarea.value
+    ) {
+
       return;
     }
 
@@ -974,13 +1058,15 @@
   }
 
 
-  /* ==========================================================
-     NEW NOTE MODAL
-  ========================================================== */
+  // ============================================================
+  // NEW NOTE MODAL
+  // ============================================================
 
   function openConfirmModal() {
 
-    if (!confirmModal) {
+    if (
+      !confirmModal
+    ) {
 
       clearNote();
 
@@ -996,20 +1082,27 @@
       'hidden';
 
 
-    setTimeout(() => {
+    setTimeout(
+      () => {
 
-      if (modalCancelBtn) {
+        if (
+          modalCancelBtn
+        ) {
 
-        modalCancelBtn.focus();
-      }
+          modalCancelBtn.focus();
+        }
 
-    }, 0);
+      },
+      0
+    );
   }
 
 
   function closeConfirmModal() {
 
-    if (!confirmModal) {
+    if (
+      !confirmModal
+    ) {
       return;
     }
 
@@ -1041,13 +1134,15 @@
   }
 
 
-  /* ==========================================================
-     SEARCH
-  ========================================================== */
+  // ============================================================
+  // SEARCH
+  // ============================================================
 
   function updateSearchUI() {
 
-    if (!searchInput) {
+    if (
+      !searchInput
+    ) {
       return;
     }
 
@@ -1058,7 +1153,9 @@
       );
 
 
-    if (!searchBox) {
+    if (
+      !searchBox
+    ) {
       return;
     }
 
@@ -1077,7 +1174,9 @@
 
   function searchText() {
 
-    if (!searchInput) {
+    if (
+      !searchInput
+    ) {
       return;
     }
 
@@ -1089,7 +1188,9 @@
     updateSearchUI();
 
 
-    if (!query) {
+    if (
+      !query
+    ) {
       return;
     }
 
@@ -1098,17 +1199,23 @@
       textarea.value;
 
 
-    if (!text) {
+    if (
+      !text
+    ) {
       return;
     }
 
 
     const lowerText =
-      text.toLocaleLowerCase();
+      text.toLocaleLowerCase(
+        getCountLocale()
+      );
 
 
     const lowerQuery =
-      query.toLocaleLowerCase();
+      query.toLocaleLowerCase(
+        getCountLocale()
+      );
 
 
     const index =
@@ -1117,11 +1224,15 @@
       );
 
 
-    if (index === -1) {
+    if (
+      index === -1
+    ) {
 
       searchInput.setAttribute(
         'aria-label',
-        'ไม่พบข้อความ'
+        t(
+          'notepad.search.notFound'
+        )
       );
 
 
@@ -1129,19 +1240,30 @@
     }
 
 
+    searchInput.setAttribute(
+      'aria-label',
+      t(
+        'notepad.search.found'
+      )
+    );
+
+
     focusTextarea();
 
 
     textarea.setSelectionRange(
       index,
-      index + query.length
+      index +
+        query.length
     );
   }
 
 
   function clearSearch() {
 
-    if (!searchInput) {
+    if (
+      !searchInput
+    ) {
       return;
     }
 
@@ -1162,9 +1284,9 @@
   }
 
 
-  /* ==========================================================
-     TEXT CHANGE
-  ========================================================== */
+  // ============================================================
+  // TEXT CHANGE
+  // ============================================================
 
   function handleTextInput() {
 
@@ -1176,9 +1298,9 @@
   }
 
 
-  /* ==========================================================
-     KEYBOARD SHORTCUTS
-  ========================================================== */
+  // ============================================================
+  // KEYBOARD
+  // ============================================================
 
   function handleKeyboard(
     event
@@ -1190,9 +1312,9 @@
       ).toLowerCase();
 
 
-    /* --------------------------------------------------------
-       Ctrl + Z
-    -------------------------------------------------------- */
+    // ----------------------------------------------------------
+    // Ctrl/Cmd + Z
+    // ----------------------------------------------------------
 
     if (
       (event.ctrlKey ||
@@ -1211,9 +1333,9 @@
     }
 
 
-    /* --------------------------------------------------------
-       Ctrl + Y
-    -------------------------------------------------------- */
+    // ----------------------------------------------------------
+    // Ctrl + Y
+    // ----------------------------------------------------------
 
     if (
       event.ctrlKey &&
@@ -1230,9 +1352,9 @@
     }
 
 
-    /* --------------------------------------------------------
-       Cmd + Shift + Z
-    -------------------------------------------------------- */
+    // ----------------------------------------------------------
+    // Cmd + Shift + Z
+    // ----------------------------------------------------------
 
     if (
       event.metaKey &&
@@ -1250,9 +1372,9 @@
     }
 
 
-    /* --------------------------------------------------------
-       Escape
-    -------------------------------------------------------- */
+    // ----------------------------------------------------------
+    // Escape
+    // ----------------------------------------------------------
 
     if (
       key === 'escape' &&
@@ -1267,13 +1389,15 @@
   }
 
 
-  /* ==========================================================
-     BEFORE UNLOAD
-  ========================================================== */
+  // ============================================================
+  // BEFORE UNLOAD
+  // ============================================================
 
   function handleBeforeUnload() {
 
-    if (!isSaving) {
+    if (
+      !isSaving
+    ) {
       return;
     }
 
@@ -1287,9 +1411,106 @@
   }
 
 
-  /* ==========================================================
-     EVENT LISTENERS
-  ========================================================== */
+  // ============================================================
+  // LANGUAGE CHANGE
+  // ============================================================
+
+  function refreshLanguage() {
+
+    updateCounters();
+
+
+    /*
+     * สถานะปัจจุบัน
+     */
+    if (
+      isSaving
+    ) {
+
+      setStatus(
+        'notepad.status.saving',
+        'saving'
+      );
+
+    } else {
+
+      setStatus(
+        'notepad.status.saved',
+        'saved'
+      );
+    }
+
+
+    /*
+     * Search aria-label
+     */
+    if (
+      searchInput
+    ) {
+
+      const label =
+        searchInput.getAttribute(
+          'aria-label'
+        );
+
+
+      if (
+        label
+      ) {
+
+        const foundText =
+          t(
+            'notepad.search.found'
+          );
+
+        const notFoundText =
+          t(
+            'notepad.search.notFound'
+          );
+
+
+        if (
+          label ===
+          foundText
+        ) {
+
+          searchInput.setAttribute(
+            'aria-label',
+            foundText
+          );
+
+        } else if (
+          label ===
+          notFoundText
+        ) {
+
+          searchInput.setAttribute(
+            'aria-label',
+            notFoundText
+          );
+        }
+      }
+    }
+
+
+    /*
+     * ถ้า HTML มี data-i18n
+     * ให้ระบบกลางแปลต่อด้วย
+     */
+    if (
+      I18n &&
+      typeof I18n.applyTranslations ===
+        'function'
+    ) {
+
+      I18n.applyTranslations();
+    }
+  }
+
+
+  // ============================================================
+  // EVENTS
+  // ============================================================
 
   textarea.addEventListener(
     'input',
@@ -1303,7 +1524,9 @@
   );
 
 
-  if (newNoteBtn) {
+  if (
+    newNoteBtn
+  ) {
 
     newNoteBtn.addEventListener(
       'click',
@@ -1312,7 +1535,9 @@
   }
 
 
-  if (copyBtn) {
+  if (
+    copyBtn
+  ) {
 
     copyBtn.addEventListener(
       'click',
@@ -1321,16 +1546,13 @@
   }
 
 
-  if (saveTxtBtn) {
+  if (
+    saveTxtBtn
+  ) {
 
     saveTxtBtn.addEventListener(
       'click',
       () => {
-
-        /*
-         * Save localStorage ก่อน
-         * เพื่อให้ข้อมูลล่าสุดถูกเก็บไว้
-         */
 
         clearTimeout(
           saveTimer
@@ -1338,26 +1560,23 @@
 
 
         if (
-          textarea.value.trim().length > 0
+          textarea.value.trim().length >
+          0
         ) {
 
           saveNote();
-
         }
 
 
-        /*
-         * Export TXT
-         */
-
         downloadTxt();
-
       }
     );
   }
 
 
-  if (clearBtn) {
+  if (
+    clearBtn
+  ) {
 
     clearBtn.addEventListener(
       'click',
@@ -1366,7 +1585,9 @@
   }
 
 
-  if (undoBtn) {
+  if (
+    undoBtn
+  ) {
 
     undoBtn.addEventListener(
       'click',
@@ -1375,7 +1596,9 @@
   }
 
 
-  if (redoBtn) {
+  if (
+    redoBtn
+  ) {
 
     redoBtn.addEventListener(
       'click',
@@ -1384,7 +1607,9 @@
   }
 
 
-  if (searchInput) {
+  if (
+    searchInput
+  ) {
 
     searchInput.addEventListener(
       'input',
@@ -1394,10 +1619,11 @@
 
     searchInput.addEventListener(
       'keydown',
-      (event) => {
+      event => {
 
         if (
-          event.key === 'Enter'
+          event.key ===
+          'Enter'
         ) {
 
           event.preventDefault();
@@ -1407,20 +1633,22 @@
 
 
         if (
-          event.key === 'Escape'
+          event.key ===
+          'Escape'
         ) {
 
           event.preventDefault();
 
           clearSearch();
         }
-
       }
     );
   }
 
 
-  if (searchClearBtn) {
+  if (
+    searchClearBtn
+  ) {
 
     searchClearBtn.addEventListener(
       'click',
@@ -1429,7 +1657,9 @@
   }
 
 
-  if (modalCancelBtn) {
+  if (
+    modalCancelBtn
+  ) {
 
     modalCancelBtn.addEventListener(
       'click',
@@ -1438,7 +1668,9 @@
   }
 
 
-  if (modalConfirmBtn) {
+  if (
+    modalConfirmBtn
+  ) {
 
     modalConfirmBtn.addEventListener(
       'click',
@@ -1447,7 +1679,9 @@
   }
 
 
-  if (confirmModal) {
+  if (
+    confirmModal
+  ) {
 
     const backdrop =
       confirmModal.querySelector(
@@ -1455,7 +1689,9 @@
       );
 
 
-    if (backdrop) {
+    if (
+      backdrop
+    ) {
 
       backdrop.addEventListener(
         'click',
@@ -1471,9 +1707,19 @@
   );
 
 
-  /* ==========================================================
-     INITIALIZE
-  ========================================================== */
+  // ============================================================
+  // LANGUAGE EVENT
+  // ============================================================
+
+  document.addEventListener(
+    'languagechange',
+    refreshLanguage
+  );
+
+
+  // ============================================================
+  // INITIALIZE
+  // ============================================================
 
   loadNote();
 
@@ -1485,25 +1731,24 @@
 
 
   setStatus(
-    'บันทึกแล้ว',
+    'notepad.status.saved',
     'saved'
   );
 
 
-  /*
-   * ให้ textarea พร้อมพิมพ์ทันที
-   */
+  setTimeout(
+    () => {
 
-  setTimeout(() => {
+      focusTextarea();
 
-    focusTextarea();
+    },
+    100
+  );
 
-  }, 100);
 
-
-  /* ==========================================================
-     PUBLIC API
-  ========================================================== */
+  // ============================================================
+  // PUBLIC API
+  // ============================================================
 
   window.OnlineNotepad = {
 
@@ -1518,7 +1763,9 @@
     ) {
 
       textarea.value =
-        String(text);
+        String(
+          text
+        );
 
 
       pushHistory(
