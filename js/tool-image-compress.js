@@ -688,6 +688,23 @@
         null;
 
 
+      /*
+       * เก็บ key/params ของ error ล่าสุดไว้
+       * เพื่อให้แปลภาษาใหม่ได้ตอน languagechange
+       * แทนที่จะค้างข้อความ error ภาษาเดิม
+       */
+      this.errorKey =
+        null;
+
+
+      this.errorParams =
+        null;
+
+
+      this.imageReadFailed =
+        false;
+
+
       this.isProcessing =
         false;
 
@@ -897,6 +914,10 @@
       this.previewImg.onerror =
         () => {
 
+          this.imageReadFailed =
+            true;
+
+
           if (
             this.origDimEl
           ) {
@@ -913,9 +934,16 @@
             this.statusEl
           ) {
 
+            this.errorKey =
+              'image.openFailed';
+
+            this.errorParams =
+              null;
+
+
             this.statusEl.textContent =
               t(
-                'image.openFailed'
+                this.errorKey
               );
 
 
@@ -1097,8 +1125,9 @@
 
 
       /*
-       * If current state is error,
-       * don't overwrite it during language refresh.
+       * ถ้ากำลังอยู่ในสถานะ error
+       * ให้แปล error เดิมใหม่ด้วย key/params ที่เก็บไว้
+       * แทนที่จะปล่อยข้อความค้างเป็นภาษาเดิม
        */
       if (
         this.statusEl &&
@@ -1106,6 +1135,33 @@
           'is-error'
         )
       ) {
+
+        if (
+          this.errorKey
+        ) {
+
+          this.statusEl.textContent =
+            t(
+              this.errorKey,
+              this.errorParams ||
+                undefined
+            );
+
+        }
+
+
+        if (
+          this.origDimEl &&
+          this.imageReadFailed
+        ) {
+
+          this.origDimEl.textContent =
+            t(
+              'image.readFailed'
+            );
+
+        }
+
 
         return;
 
@@ -1337,6 +1393,16 @@
       }
 
 
+      this.errorKey =
+        null;
+
+      this.errorParams =
+        null;
+
+      this.imageReadFailed =
+        false;
+
+
       if (
         this.statusEl
       ) {
@@ -1428,9 +1494,16 @@
           this.statusEl
         ) {
 
+          this.errorKey =
+            'image.readInfoFailed';
+
+          this.errorParams =
+            null;
+
+
           this.statusEl.textContent =
             t(
-              'image.readInfoFailed'
+              this.errorKey
             );
 
 
@@ -1876,18 +1949,25 @@
         }
 
 
+        this.errorKey =
+          'image.compressionFailed';
+
+        this.errorParams =
+          {
+            message:
+              error &&
+              error.message
+                ? error.message
+                : t(
+                    'errors.somethingWentWrong'
+                  )
+          };
+
+
         this.statusEl.textContent =
           t(
-            'image.compressionFailed',
-            {
-              message:
-                error &&
-                error.message
-                  ? error.message
-                  : t(
-                      'errors.somethingWentWrong'
-                    )
-            }
+            this.errorKey,
+            this.errorParams
           );
 
 
