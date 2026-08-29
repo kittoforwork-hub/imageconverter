@@ -57,7 +57,7 @@
    ============================================================ */
 
 .notepad-page,
-.notepad-page *,
+.notepad-page * ,
 .notepad-page *::before,
 .notepad-page *::after {
   box-sizing: border-box;
@@ -84,6 +84,21 @@
 .notepad-page button {
   appearance: none;
   -webkit-appearance: none;
+}
+
+
+/*
+ * รองรับข้อความหลายภาษา
+ */
+.notepad-page,
+.notepad-page button,
+.notepad-page input,
+.notepad-page textarea,
+.notepad-page h1,
+.notepad-page h2,
+.notepad-page p,
+.notepad-page span {
+  overflow-wrap: anywhere;
 }
 
 
@@ -146,11 +161,17 @@ body {
 .notepad-page {
   position: relative;
 
-  width: min(980px, 100%);
+  width:
+    min(
+      980px,
+      100%
+    );
 
-  min-height: 100vh;
+  min-height:
+    100vh;
 
-  margin: 0 auto;
+  margin:
+    0 auto;
 
   padding:
     34px
@@ -161,7 +182,6 @@ body {
 
 /*
  * Decorative background blobs
- * ให้เหมือน index.html
  */
 
 .notepad-page::before,
@@ -177,22 +197,29 @@ body {
     38% 62% 57% 43% /
     47% 42% 58% 53%;
 
-  pointer-events: none;
+  pointer-events:
+    none;
 
-  z-index: -1;
+  z-index:
+    -1;
 
-  opacity: .48;
+  opacity:
+    .48;
 
-  filter: blur(1px);
+  filter:
+    blur(1px);
 }
 
 
 .notepad-page::before {
-  top: 8%;
-  left: max(
-    10px,
-    calc(50% - 610px)
-  );
+  top:
+    8%;
+
+  left:
+    max(
+      10px,
+      calc(50% - 610px)
+    );
 
   background:
     rgba(255,205,153,.35);
@@ -203,12 +230,14 @@ body {
 
 
 .notepad-page::after {
-  right: max(
-    10px,
-    calc(50% - 610px)
-  );
+  right:
+    max(
+      10px,
+      calc(50% - 610px)
+    );
 
-  bottom: 8%;
+  bottom:
+    8%;
 
   background:
     rgba(203,218,255,.34);
@@ -300,14 +329,16 @@ body {
     transform:
       scale(.92);
 
-    opacity: .52;
+    opacity:
+      .52;
   }
 
   50% {
     transform:
       scale(1.08);
 
-    opacity: .85;
+    opacity:
+      .85;
   }
 }
 
@@ -341,11 +372,13 @@ body {
 
 @keyframes notepad-fade-in {
   from {
-    opacity: 0;
+    opacity:
+      0;
   }
 
   to {
-    opacity: 1;
+    opacity:
+      1;
   }
 }
 
@@ -353,11 +386,13 @@ body {
 @keyframes notepad-status-pulse {
   0%,
   100% {
-    opacity: 1;
+    opacity:
+      1;
   }
 
   50% {
-    opacity: .45;
+    opacity:
+      .45;
   }
 }
 
@@ -405,6 +440,9 @@ body {
 
   min-width:
     0;
+
+  flex:
+    1 1 auto;
 }
 
 
@@ -430,6 +468,9 @@ body {
 
   min-height:
     38px;
+
+  max-width:
+    100%;
 
   padding:
     8px 12px;
@@ -509,6 +550,9 @@ body {
 
 
 .notepad-home-arrow {
+  flex:
+    0 0 auto;
+
   font-size:
     17px;
 
@@ -613,6 +657,12 @@ body {
    TITLE
    ============================================================ */
 
+.notepad-title > div:last-child {
+  min-width:
+    0;
+}
+
+
 .notepad-title h1 {
   margin:
     0 0 5px;
@@ -629,6 +679,9 @@ body {
 
   letter-spacing:
     -.035em;
+
+  line-height:
+    1.15;
 }
 
 
@@ -686,11 +739,17 @@ body {
   align-items:
     center;
 
+  justify-content:
+    center;
+
   gap:
     8px;
 
   min-height:
     34px;
+
+  max-width:
+    42%;
 
   padding:
     7px 11px;
@@ -714,8 +773,17 @@ body {
   font-size:
     11px;
 
+  line-height:
+    1.35;
+
+  text-align:
+    center;
+
   white-space:
-    nowrap;
+    normal;
+
+  overflow-wrap:
+    anywhere;
 
   box-shadow:
     0 4px 12px
@@ -873,6 +941,12 @@ body {
 
   gap:
     5px;
+
+  min-width:
+    0;
+
+  flex:
+    0 1 auto;
 }
 
 
@@ -904,6 +978,9 @@ body {
 
   min-height:
     38px;
+
+  max-width:
+    100%;
 
   display:
     inline-flex;
@@ -941,6 +1018,12 @@ body {
 
   font-weight:
     500;
+
+  line-height:
+    1.35;
+
+  text-align:
+    center;
 
   cursor:
     pointer;
@@ -999,6 +1082,9 @@ body {
   width:
     38px;
 
+  flex:
+    0 0 38px;
+
   padding:
     0;
 
@@ -1032,12 +1118,18 @@ body {
 
   margin-left:
     auto;
+
+  flex:
+    1 1 220px;
 }
 
 
 .search-box {
   width:
     100%;
+
+  min-width:
+    0;
 
   height:
     38px;
@@ -1477,6 +1569,9 @@ body {
   font-size:
     10.5px;
 
+  line-height:
+    1.45;
+
   animation:
     notepad-panel-in
     .28s
@@ -1498,6 +1593,9 @@ body {
 
   gap:
     8px;
+
+  min-width:
+    0;
 }
 
 
@@ -1743,6 +1841,9 @@ body {
   font-weight:
     700;
 
+  line-height:
+    1.35;
+
   letter-spacing:
     -.02em;
 }
@@ -1800,6 +1901,9 @@ body {
   font-weight:
     500;
 
+  line-height:
+    1.35;
+
   cursor:
     pointer;
 
@@ -1829,7 +1933,9 @@ body {
 }
 
 
-/* Cancel */
+/* ============================================================
+   CANCEL
+   ============================================================ */
 
 .modal-btn-cancel {
   border:
@@ -1853,7 +1959,9 @@ body {
 }
 
 
-/* Confirm */
+/* ============================================================
+   CONFIRM
+   ============================================================ */
 
 .modal-btn-confirm {
   border:
@@ -1879,6 +1987,37 @@ body {
   box-shadow:
     0 9px 18px
     rgba(245,166,35,.19);
+}
+
+
+/* ============================================================
+   LANGUAGE-SAFE
+   ============================================================ */
+
+/*
+ * ภาษาญี่ปุ่น / เกาหลี / จีน
+ * ไม่ควรบังคับการเว้นคำแบบภาษาอังกฤษ
+ */
+
+html[lang^="ja"] .notepad-page,
+html[lang^="ko"] .notepad-page,
+html[lang^="zh"] .notepad-page {
+  word-break:
+    normal;
+}
+
+
+/*
+ * ภาษาไทย
+ * ป้องกันประโยคยาวล้นพื้นที่
+ */
+
+html[lang^="th"] .notepad-page {
+  word-break:
+    normal;
+
+  overflow-wrap:
+    anywhere;
 }
 
 
@@ -1924,6 +2063,12 @@ body {
         7vw,
         34px
       );
+  }
+
+
+  .notepad-status {
+    max-width:
+      100%;
   }
 
 
@@ -2077,6 +2222,9 @@ body {
   .notepad-status {
     align-self:
       flex-start;
+
+    max-width:
+      100%;
   }
 
 
@@ -2109,6 +2257,9 @@ body {
 
   .notepad-btn.icon-only {
     width:
+      36px;
+
+    flex-basis:
       36px;
 
     font-size:
