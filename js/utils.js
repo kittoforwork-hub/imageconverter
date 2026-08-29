@@ -3,29 +3,64 @@
 window.Utils = (() => {
   'use strict';
 
-  const I18n =
-    window.I18n || null;
-
 
   // ============================================================
-  // TRANSLATION HELPER
+  // I18N
   // ============================================================
+
+  /*
+   * อย่าเก็บ window.I18n ไว้ใน const
+   * เพราะ i18n อาจถูกสร้าง/เปลี่ยนหลัง utils โหลด
+   *
+   * ดึงทุกครั้งที่ใช้งาน เพื่อให้ภาษาปัจจุบันถูกต้องเสมอ
+   */
+
+  function getI18n() {
+    return window.I18n || null;
+  }
+
 
   function t(
     key,
     values
   ) {
+
+    const I18n =
+      getI18n();
+
+
     if (
       I18n &&
-      typeof I18n.t === 'function'
+      typeof I18n.t ===
+        'function'
     ) {
+
       return I18n.t(
         key,
         values
       );
+
     }
 
-    return String(key);
+
+    return String(
+      key
+    );
+  }
+
+
+  /*
+   * alias สำหรับ tool ที่อยากเรียก
+   * Utils.getText(...)
+   */
+  function getText(
+    key,
+    values
+  ) {
+    return t(
+      key,
+      values
+    );
   }
 
 
@@ -33,59 +68,108 @@ window.Utils = (() => {
   // BASIC HELPERS
   // ============================================================
 
-  function formatBytes(bytes) {
+  function formatBytes(
+    bytes
+  ) {
+
     const value =
       Number(bytes) || 0;
 
-    if (value < 1024) {
-      return value + ' B';
+
+    if (
+      value <
+      1024
+    ) {
+
+      return (
+        value +
+        ' B'
+      );
+
     }
+
 
     if (
       value <
       1024 * 1024
     ) {
+
       return (
-        (value / 1024).toFixed(1) +
+        (
+          value /
+          1024
+        ).toFixed(1) +
         ' KB'
       );
+
     }
+
 
     return (
       (
         value /
-        (1024 * 1024)
+        (
+          1024 *
+          1024
+        )
       ).toFixed(2) +
       ' MB'
     );
   }
 
 
-  function baseName(name) {
+  function baseName(
+    name
+  ) {
+
     const value =
-      String(name || '');
+      String(
+        name || ''
+      );
+
 
     const i =
-      value.lastIndexOf('.');
+      value.lastIndexOf(
+        '.'
+      );
 
-    return i > 0
-      ? value.slice(0, i)
-      : value;
+
+    return (
+      i > 0
+        ? value.slice(
+            0,
+            i
+          )
+        : value
+    );
   }
 
 
-  function extOf(name) {
+  function extOf(
+    name
+  ) {
+
     const value =
-      String(name || '');
+      String(
+        name || ''
+      );
+
 
     const i =
-      value.lastIndexOf('.');
+      value.lastIndexOf(
+        '.'
+      );
 
-    return i > 0
-      ? value
-          .slice(i + 1)
-          .toUpperCase()
-      : '—';
+
+    return (
+      i > 0
+        ? value
+            .slice(
+              i + 1
+            )
+            .toUpperCase()
+        : '—'
+    );
   }
 
 
@@ -97,7 +181,9 @@ window.Utils = (() => {
     blob,
     filename
   ) {
+
     if (!blob) {
+
       throw new Error(
         t(
           'errors.downloadDataNotFound'
@@ -105,42 +191,60 @@ window.Utils = (() => {
       );
     }
 
+
     const url =
       URL.createObjectURL(
         blob
       );
+
 
     const a =
       document.createElement(
         'a'
       );
 
+
     a.href =
       url;
+
 
     a.download =
       filename ||
       'download';
 
+
     document.body.appendChild(
       a
     );
 
+
     try {
+
       a.click();
+
     } finally {
+
       a.remove();
+
     }
 
-    // ปล่อย Object URL หลังจาก browser
-    // มีเวลาเริ่ม download แล้ว
+
+    /*
+     * รอให้ browser เริ่ม download
+     * ก่อน revoke Object URL
+     */
+
     setTimeout(
       () => {
+
         try {
+
           URL.revokeObjectURL(
             url
           );
+
         } catch (_) {}
+
       },
       4000
     );
@@ -156,90 +260,114 @@ window.Utils = (() => {
     input,
     onFiles
   ) {
+
     if (
       !zone ||
       !input ||
       typeof onFiles !==
         'function'
     ) {
+
       return;
     }
 
 
     // ----------------------------------------------------------
-    // Click
+    // CLICK
     // ----------------------------------------------------------
 
     zone.addEventListener(
       'click',
       event => {
-        // ป้องกัน click ซ้ำกรณี event เกิดจาก input เอง
+
+        /*
+         * ไม่ให้ input.click()
+         * ถูกเรียกซ้ำจาก event ของ input
+         */
+
         if (
           event.target ===
           input
         ) {
+
           return;
         }
 
+
         input.click();
+
       }
     );
 
 
     // ----------------------------------------------------------
-    // Keyboard accessibility
+    // KEYBOARD
     // ----------------------------------------------------------
 
     zone.addEventListener(
       'keydown',
       event => {
+
         if (
           event.key ===
             'Enter' ||
           event.key ===
             ' '
         ) {
+
           event.preventDefault();
 
           input.click();
+
         }
       }
     );
 
 
     // ----------------------------------------------------------
-    // File input
+    // FILE INPUT
     // ----------------------------------------------------------
 
     input.addEventListener(
       'change',
       () => {
+
         if (
           input.files &&
           input.files.length
         ) {
+
           onFiles(
             input.files
           );
+
         }
 
-        // เคลียร์ input เพื่อให้เลือกไฟล์เดิมซ้ำได้
-        input.value = '';
+
+        /*
+         * ให้เลือกไฟล์เดิมซ้ำได้
+         */
+
+        input.value =
+          '';
+
       }
     );
 
 
     // ----------------------------------------------------------
-    // Drag enter / over
+    // DRAG ENTER / OVER
     // ----------------------------------------------------------
 
     const dragStart =
       event => {
+
         event.preventDefault();
 
         zone.classList.add(
           'drag-over'
         );
+
       };
 
 
@@ -248,64 +376,84 @@ window.Utils = (() => {
       'dragover'
     ].forEach(
       eventName => {
+
         zone.addEventListener(
           eventName,
           dragStart
         );
+
       }
     );
 
 
     // ----------------------------------------------------------
-    // Drag leave
+    // DRAG LEAVE
     // ----------------------------------------------------------
 
     zone.addEventListener(
       'dragleave',
       event => {
+
         event.preventDefault();
 
-        // ถ้ายังลากอยู่ภายใน dropzone
-        // อย่าเอา class ออก
+
+        /*
+         * ถ้ายังอยู่ภายใน dropzone
+         * อย่าเพิ่งเอา state ออก
+         */
+
         if (
           event.relatedTarget &&
           zone.contains(
             event.relatedTarget
           )
         ) {
+
           return;
+
         }
+
 
         zone.classList.remove(
           'drag-over'
         );
+
       }
     );
 
 
     // ----------------------------------------------------------
-    // Drop
+    // DROP
     // ----------------------------------------------------------
 
     zone.addEventListener(
       'drop',
       event => {
+
         event.preventDefault();
+
 
         zone.classList.remove(
           'drag-over'
         );
 
+
         const files =
           event.dataTransfer &&
           event.dataTransfer.files;
+
 
         if (
           files &&
           files.length
         ) {
-          onFiles(files);
+
+          onFiles(
+            files
+          );
+
         }
+
       }
     );
   }
@@ -316,21 +464,28 @@ window.Utils = (() => {
   // ============================================================
 
   function yieldToUI() {
+
     return new Promise(
       resolve => {
+
         if (
           typeof requestAnimationFrame ===
           'function'
         ) {
+
           requestAnimationFrame(
             () => resolve()
           );
+
         } else {
+
           setTimeout(
             resolve,
             0
           );
+
         }
+
       }
     );
   }
@@ -340,34 +495,55 @@ window.Utils = (() => {
   // LARGE FILE WARNING
   // ============================================================
 
+  /*
+   * รองรับ 2 รูปแบบ
+   *
+   * แบบเดิม:
+   * confirmLargeFile(file, 50, 'ข้อความ...')
+   *
+   * แบบใหม่:
+   * confirmLargeFile(file, 50)
+   *
+   * แบบใหม่จะใช้ข้อความจาก i18n โดยอัตโนมัติ
+   */
+
   function confirmLargeFile(
     file,
     thresholdMB,
     message
   ) {
+
     if (!file) {
       return false;
     }
 
+
     const thresholdBytes =
-      (Number(
-        thresholdMB
-      ) || 0) *
+      (
+        Number(
+          thresholdMB
+        ) || 0
+      ) *
       1024 *
       1024;
+
 
     if (
       file.size <=
       thresholdBytes
     ) {
+
       return true;
+
     }
 
+
     /*
-     * ถ้ามีข้อความ custom จาก Tool
-     * ให้ใช้ข้อความนั้น
+     * ถ้า tool ส่งข้อความ custom มา
+     * ให้ใช้ข้อความนั้นก่อน
      *
-     * ถ้าไม่มี ให้ใช้ข้อความจากระบบภาษา
+     * ถ้าไม่ส่งมา
+     * จะใช้ข้อความตามภาษาปัจจุบัน
      */
 
     const finalMessage =
@@ -392,6 +568,7 @@ window.Utils = (() => {
         )
       );
 
+
     return window.confirm(
       finalMessage
     );
@@ -405,40 +582,59 @@ window.Utils = (() => {
   async function readAsArrayBuffer(
     file
   ) {
+
     if (!file) {
+
       throw new Error(
         t(
           'errors.fileNotFound'
         )
       );
+
     }
 
-    // Browser รุ่นใหม่
+
+    /*
+     * Browser รุ่นใหม่
+     */
+
     if (
       typeof file.arrayBuffer ===
       'function'
     ) {
+
       return file.arrayBuffer();
+
     }
 
-    // Fallback สำหรับ browser รุ่นเก่า
+
+    /*
+     * Fallback
+     */
+
     return new Promise(
       (
         resolve,
         reject
       ) => {
+
         const reader =
           new FileReader();
 
+
         reader.onload =
           () => {
+
             resolve(
               reader.result
             );
+
           };
+
 
         reader.onerror =
           () => {
+
             reject(
               reader.error ||
               new Error(
@@ -447,10 +643,13 @@ window.Utils = (() => {
                 )
               )
             );
+
           };
+
 
         reader.onabort =
           () => {
+
             reject(
               new Error(
                 t(
@@ -458,11 +657,14 @@ window.Utils = (() => {
                 )
               )
             );
+
           };
+
 
         reader.readAsArrayBuffer(
           file
         );
+
       }
     );
   }
@@ -472,22 +674,33 @@ window.Utils = (() => {
   // LOAD IMAGE
   // ============================================================
 
-  function loadImage(url) {
+  function loadImage(
+    url
+  ) {
+
     return new Promise(
       (
         resolve,
         reject
       ) => {
+
         const img =
           new Image();
 
+
         img.onload =
           () => {
-            resolve(img);
+
+            resolve(
+              img
+            );
+
           };
+
 
         img.onerror =
           () => {
+
             reject(
               new Error(
                 t(
@@ -495,10 +708,13 @@ window.Utils = (() => {
                 )
               )
             );
+
           };
+
 
         img.src =
           url;
+
       }
     );
   }
@@ -509,9 +725,9 @@ window.Utils = (() => {
   // ============================================================
 
   /*
-   * ใช้ Set แทน Array
-   * เพื่อไม่ให้ handler ตัวเดิมถูกลงทะเบียนซ้ำ
+   * Set ป้องกัน handler ซ้ำ
    */
+
   const resetHandlers =
     new Set();
 
@@ -519,52 +735,79 @@ window.Utils = (() => {
   function onClearCache(
     fn
   ) {
+
     if (
       typeof fn !==
       'function'
     ) {
+
       return () => {};
+
     }
+
 
     resetHandlers.add(
       fn
     );
 
-    // คืน function สำหรับ unregister
+
+    /*
+     * unregister
+     */
+
     return () => {
+
       resetHandlers.delete(
         fn
       );
+
     };
   }
 
 
   function clearCache() {
-    let count = 0;
 
-    // copy ออกมาก่อน เพื่อป้องกัน
-    // handler เปลี่ยน registry ระหว่าง cleanup
+    let count =
+      0;
+
+
+    /*
+     * copy ก่อน
+     * เพื่อป้องกัน registry เปลี่ยน
+     * ระหว่าง cleanup
+     */
+
     const handlers =
       Array.from(
         resetHandlers
       );
 
+
     handlers.forEach(
       fn => {
+
         try {
+
           fn();
 
           count++;
-        } catch (err) {
+
+        } catch (
+          err
+        ) {
+
           console.warn(
             t(
               'utils.cacheHandlerFailed'
             ),
             err
           );
+
         }
+
       }
     );
+
 
     return count;
   }
@@ -579,34 +822,53 @@ window.Utils = (() => {
     key,
     blob
   ) {
+
     if (
       !holder ||
       !key
     ) {
+
       throw new Error(
         t(
           'utils.invalidObjectUrlHolder'
         )
       );
+
     }
 
 
-    // revoke ของเดิมก่อน
-    if (holder[key]) {
+    /*
+     * revoke ของเดิมก่อน
+     */
+
+    if (
+      holder[key]
+    ) {
+
       try {
+
         URL.revokeObjectURL(
           holder[key]
         );
+
       } catch (_) {}
+
     }
 
 
-    // ถ้าไม่มี blob ให้เคลียร์ค่าอย่างเดียว
+    /*
+     * ไม่มี blob
+     * = ล้างค่า
+     */
+
     if (!blob) {
+
       holder[key] =
         null;
 
+
       return null;
+
     }
 
 
@@ -614,6 +876,7 @@ window.Utils = (() => {
       URL.createObjectURL(
         blob
       );
+
 
     return holder[key];
   }
@@ -624,23 +887,68 @@ window.Utils = (() => {
   // ============================================================
 
   return {
+
+    /*
+     * Translation
+     */
+
+    t,
+    getText,
+
+
+    /*
+     * Basic
+     */
+
     formatBytes,
     baseName,
     extOf,
 
+
+    /*
+     * Download
+     */
+
     downloadBlob,
 
+
+    /*
+     * Dropzone
+     */
+
     setupDropzone,
+
+
+    /*
+     * File
+     */
 
     readAsArrayBuffer,
     loadImage,
 
+
+    /*
+     * Cache
+     */
+
     onClearCache,
     clearCache,
 
+
+    /*
+     * Object URL
+     */
+
     replaceObjectUrl,
+
+
+    /*
+     * UI
+     */
 
     yieldToUI,
     confirmLargeFile
+
   };
+
 })();
