@@ -3,33 +3,86 @@
 (() => {
   'use strict';
 
-  const U = window.Utils;
-  const PW = window.PdfWorkerClient;
+
+  // ============================================================
+  // GLOBALS
+  // ============================================================
+
+  const U =
+    window.Utils;
+
+  const PW =
+    window.PdfWorkerClient;
+
+  const I18n =
+    window.I18n || null;
+
+
+  // ============================================================
+  // TRANSLATION HELPER
+  // ============================================================
+
+  function t(
+    key,
+    values
+  ) {
+
+    if (
+      I18n &&
+      typeof I18n.t === 'function'
+    ) {
+
+      return I18n.t(
+        key,
+        values
+      );
+
+    }
+
+    return String(
+      key
+    );
+  }
+
 
   // ============================================================
   // ELEMENTS
   // ============================================================
 
   const dropzone =
-    document.getElementById('dz-pdf-pages');
+    document.getElementById(
+      'dz-pdf-pages'
+    );
 
   const fileInput =
-    document.getElementById('input-pdf-pages');
+    document.getElementById(
+      'input-pdf-pages'
+    );
 
   const bulkbar =
-    document.getElementById('bulk-pdf-pages');
+    document.getElementById(
+      'bulk-pdf-pages'
+    );
 
   const nameEl =
-    bulkbar?.querySelector('.js-pdfname');
+    bulkbar?.querySelector(
+      '.js-pdfname'
+    );
 
   const countEl =
-    document.getElementById('count-pdf-pages');
+    document.getElementById(
+      'count-pdf-pages'
+    );
 
   const selectAllEl =
-    document.getElementById('selectAll-pdf-pages');
+    document.getElementById(
+      'selectAll-pdf-pages'
+    );
 
   const downloadBtn =
-    document.getElementById('download-pdf-pages');
+    document.getElementById(
+      'download-pdf-pages'
+    );
 
   const downloadSelectedBtn =
     document.getElementById(
@@ -37,13 +90,19 @@
     );
 
   const noteEl =
-    document.getElementById('note-pdf-pages');
+    document.getElementById(
+      'note-pdf-pages'
+    );
 
   const grid =
-    document.getElementById('grid-pdf-pages');
+    document.getElementById(
+      'grid-pdf-pages'
+    );
 
   const cardTemplate =
-    document.getElementById('tpl-page-manage');
+    document.getElementById(
+      'tpl-page-manage'
+    );
 
 
   // ============================================================
@@ -59,9 +118,11 @@
     !grid ||
     !cardTemplate
   ) {
+
     console.error(
       'PDF Pages: required elements are missing'
     );
+
     return;
   }
 
@@ -70,52 +131,306 @@
   // CONFIG
   // ============================================================
 
-  const THUMB_TARGET_WIDTH = 420;
-  const THUMB_MAX_DIMENSION = 1800;
-  const LARGE_FILE_WARN_MB = 50;
+  const THUMB_TARGET_WIDTH =
+    420;
 
-  const DRAG_START_DISTANCE = 6;
+  const THUMB_MAX_DIMENSION =
+    1800;
+
+  const LARGE_FILE_WARN_MB =
+    50;
+
+  const DRAG_START_DISTANCE =
+    6;
 
 
   // ============================================================
   // STATE
   // ============================================================
 
-  let currentFile = null;
-  let currentDoc = null;
+  let currentFile =
+    null;
 
-  let loadSeq = 0;
+  let currentDoc =
+    null;
 
-  let pageItems = [];
+  let loadSeq =
+    0;
 
-  let observer = null;
+  let pageItems =
+    [];
 
-  let renderQueue = [];
-  let queueRunning = false;
+  let observer =
+    null;
 
-  let downloadRunning = false;
+  let renderQueue =
+    [];
 
-  let dragState = null;
+  let queueRunning =
+    false;
 
-  let suppressClickUntil = 0;
+  let downloadRunning =
+    false;
+
+  let dragState =
+    null;
+
+  let suppressClickUntil =
+    0;
 
 
   // ============================================================
-  // TOOL STATE
+  // LOCALIZED HELPERS
   // ============================================================
 
-  function setToolProcessing(on) {
+  function pageLabel(
+    number
+  ) {
+
+    return t(
+      'pdf.pageLabel',
+      {
+        number
+      }
+    );
+
+  }
+
+
+  function pageCountLabel(
+    number
+  ) {
+
+    return t(
+      'pdf.pageCountLabel',
+      {
+        number
+      }
+    );
+
+  }
+
+
+  function getDeleteButtonLabel(
+    deleted
+  ) {
+
+    return deleted
+      ? t(
+          'pdf.restoreThisPage'
+        )
+      : t(
+          'pdf.deleteThisPage'
+        );
+
+  }
+
+
+  // ============================================================
+  // LANGUAGE UI
+  // ============================================================
+
+  function updateLanguageUI() {
+
+    /*
+     * ----------------------------------------------------------
+     * Static button text
+     * ----------------------------------------------------------
+     */
+
+    if (
+      downloadBtn
+    ) {
+
+      if (
+        downloadRunning
+      ) {
+
+        downloadBtn.textContent =
+          t(
+            'pdf.buildingPdf'
+          );
+
+      } else {
+
+        downloadBtn.textContent =
+          t(
+            'pdf.downloadPdfOrdered'
+          );
+
+      }
+
+    }
+
+
+    if (
+      downloadSelectedBtn
+    ) {
+
+      if (
+        downloadRunning
+      ) {
+
+        downloadSelectedBtn.textContent =
+          t(
+            'pdf.buildingPdf'
+          );
+
+      } else {
+
+        downloadSelectedBtn.textContent =
+          t(
+            'pdf.downloadSelected'
+          );
+
+      }
+
+    }
+
+
+    /*
+     * ----------------------------------------------------------
+     * Existing cards
+     * ----------------------------------------------------------
+     */
+
+    grid
+      .querySelectorAll(
+        '.page-card-manage'
+      )
+      .forEach(
+        card => {
+
+          const index =
+            Number(
+              card.dataset.idx
+            );
+
+
+          const item =
+            pageItems.find(
+              entry =>
+                entry.origIndex ===
+                index
+            );
+
+
+          if (!item) {
+            return;
+          }
+
+
+          const label =
+            card.querySelector(
+              '.js-pagelabel'
+            );
+
+
+          const position =
+            pageItems.indexOf(
+              item
+            );
+
+
+          if (label) {
+
+            label.textContent =
+              pageLabel(
+                position + 1
+              );
+
+          }
+
+
+          const img =
+            card.querySelector(
+              'img'
+            );
+
+
+          if (img) {
+
+            img.alt =
+              pageLabel(
+                position + 1
+              );
+
+          }
+
+
+          const deleteBtn =
+            card.querySelector(
+              '.js-delete'
+            );
+
+
+          if (deleteBtn) {
+
+            deleteBtn.title =
+              getDeleteButtonLabel(
+                item.deleted
+              );
+
+          }
+
+        }
+      );
+
+
+    /*
+     * ----------------------------------------------------------
+     * Drag placeholder
+     * ----------------------------------------------------------
+     */
+
+    if (
+      dragState &&
+      dragState.placeholder
+    ) {
+
+      const text =
+        dragState.placeholder.querySelector(
+          'span'
+        );
+
+
+      if (text) {
+
+        text.textContent =
+          t(
+            'pdf.dropPageHere'
+          );
+
+      }
+
+    }
+
+  }
+
+
+  // ============================================================
+  // TOOL PROCESSING STATE
+  // ============================================================
+
+  function setToolProcessing(
+    on
+  ) {
+
     const panel =
       document.getElementById(
         'panel-pdf-pages'
       );
 
+
     if (!panel) {
       return;
     }
 
+
     panel.dataset.processing =
-      on ? 'true' : 'false';
+      on
+        ? 'true'
+        : 'false';
   }
 
 
@@ -124,42 +439,59 @@
   // ============================================================
 
   function getVisibleItems() {
+
     return pageItems.filter(
-      item => !item.deleted
+      item =>
+        !item.deleted
     );
+
   }
 
 
   function getSelectedItems() {
+
     return pageItems.filter(
       item =>
         item.selected &&
         !item.deleted
     );
+
   }
 
 
   function updateCounts() {
+
     const visible =
       getVisibleItems().length;
+
 
     const selected =
       getSelectedItems().length;
 
+
     if (countEl) {
+
       countEl.textContent =
-        String(visible);
+        String(
+          visible
+        );
+
     }
 
+
     if (selectAllEl) {
+
       selectAllEl.checked =
         visible > 0 &&
         selected === visible;
 
+
       selectAllEl.indeterminate =
         selected > 0 &&
         selected < visible;
+
     }
+
   }
 
 
@@ -168,21 +500,30 @@
   // ============================================================
 
   function revokeThumbs() {
+
     pageItems.forEach(
       item => {
+
         if (!item.thumbUrl) {
           return;
         }
 
+
         try {
+
           URL.revokeObjectURL(
             item.thumbUrl
           );
+
         } catch (_) {}
 
-        item.thumbUrl = null;
+
+        item.thumbUrl =
+          null;
+
       }
     );
+
   }
 
 
@@ -191,39 +532,64 @@
   // ============================================================
 
   function resetQueue() {
-    renderQueue = [];
-    queueRunning = false;
+
+    renderQueue =
+      [];
+
+    queueRunning =
+      false;
+
   }
 
 
-  function queueRender(index) {
+  function queueRender(
+    index
+  ) {
+
     if (
       !Number.isInteger(index) ||
       index < 0 ||
       index >= pageItems.length
     ) {
+
       return;
+
     }
+
 
     if (
-      !renderQueue.includes(index)
+      !renderQueue.includes(
+        index
+      )
     ) {
-      renderQueue.push(index);
+
+      renderQueue.push(
+        index
+      );
+
     }
 
+
     processQueue();
+
   }
 
 
   async function processQueue() {
+
     if (
       queueRunning ||
       !currentDoc
     ) {
+
       return;
+
     }
 
-    queueRunning = true;
+
+    queueRunning =
+      true;
+
 
     try {
 
@@ -234,27 +600,36 @@
         const index =
           renderQueue.shift();
 
+
         if (
           index == null ||
           index < 0 ||
           index >= pageItems.length
         ) {
+
           continue;
+
         }
+
 
         const item =
           pageItems[index];
+
 
         if (
           !item ||
           item.deleted ||
           item.thumbUrl
         ) {
+
           continue;
+
         }
+
 
         const expectedLoadSeq =
           loadSeq;
+
 
         try {
 
@@ -263,26 +638,35 @@
               index + 1
             );
 
+
           if (
             expectedLoadSeq !==
             loadSeq
           ) {
+
             continue;
+
           }
+
 
           const originalViewport =
             page.getViewport({
-              scale: 1
+              scale:
+                1
             });
+
 
           const baseScale =
             THUMB_TARGET_WIDTH /
             originalViewport.width;
 
+
           const viewport =
             page.getViewport({
-              scale: baseScale
+              scale:
+                baseScale
             });
+
 
           const width =
             Math.max(
@@ -292,6 +676,7 @@
               )
             );
 
+
           const height =
             Math.max(
               1,
@@ -299,6 +684,7 @@
                 viewport.height
               )
             );
+
 
           const scale =
             Math.min(
@@ -310,24 +696,41 @@
                 )
             );
 
+
           const renderViewport =
             page.getViewport({
               scale:
-                baseScale * scale
+                baseScale *
+                scale
             });
+
 
           const canvas =
             document.createElement(
               'canvas'
             );
 
+
           const context =
             canvas.getContext(
               '2d',
               {
-                alpha: false
+                alpha:
+                  false
               }
             );
+
+
+          if (!context) {
+
+            throw new Error(
+              t(
+                'errors.canvasContext'
+              )
+            );
+
+          }
+
 
           canvas.width =
             Math.max(
@@ -337,6 +740,7 @@
               )
             );
 
+
           canvas.height =
             Math.max(
               1,
@@ -345,19 +749,25 @@
               )
             );
 
+
           await page.render({
             canvasContext:
               context,
+
             viewport:
               renderViewport
           }).promise;
+
 
           if (
             expectedLoadSeq !==
             loadSeq
           ) {
+
             continue;
+
           }
+
 
           const blob =
             await new Promise(
@@ -369,35 +779,52 @@
                 )
             );
 
-          if (
-            !blob
-          ) {
+
+          if (!blob) {
+
             throw new Error(
-              'ไม่สามารถสร้างภาพตัวอย่างหน้า PDF ได้'
+              t(
+                'errors.thumbnailCreateFailed'
+              )
             );
+
           }
+
 
           if (
             expectedLoadSeq !==
             loadSeq
           ) {
+
             continue;
+
           }
+
 
           if (
             item.thumbUrl
           ) {
+
             try {
+
               URL.revokeObjectURL(
                 item.thumbUrl
               );
+
             } catch (_) {}
+
           }
+
 
           item.thumbUrl =
             URL.createObjectURL(
               blob
             );
+
+
+          item.thumbError =
+            false;
+
 
           updateCardThumbnail(
             index
@@ -411,34 +838,48 @@
             error
           );
 
+
           const currentItem =
             pageItems[index];
+
 
           if (
             currentItem &&
             expectedLoadSeq ===
               loadSeq
           ) {
+
             currentItem.thumbError =
               true;
+
 
             updateCardThumbnail(
               index
             );
+
           }
+
         }
+
       }
 
     } finally {
-      queueRunning = false;
+
+      queueRunning =
+        false;
+
 
       if (
         renderQueue.length &&
         currentDoc
       ) {
+
         processQueue();
+
       }
+
     }
+
   }
 
 
@@ -447,24 +888,33 @@
   // ============================================================
 
   async function destroyCurrentDoc() {
+
     const doc =
       currentDoc;
 
+
     currentDoc =
       null;
+
 
     if (!doc) {
       return;
     }
 
+
     try {
+
       await doc.destroy();
+
     } catch (error) {
+
       console.warn(
         'PDF document destroy warning:',
         error
       );
+
     }
+
   }
 
 
@@ -472,126 +922,191 @@
   // LOAD FILE
   // ============================================================
 
-  async function loadFile(file) {
+  async function loadFile(
+    file
+  ) {
+
     if (!file) {
       return;
     }
 
+
     const requestId =
       ++loadSeq;
 
+
     const validPdf =
-      file.type === 'application/pdf' ||
+      file.type ===
+        'application/pdf' ||
       /\.pdf$/i.test(
         file.name
       );
 
+
     if (!validPdf) {
+
       alert(
-        'กรุณาเลือกไฟล์ PDF เท่านั้น'
+        t(
+          'errors.pdfOnly'
+        )
       );
+
+
       return;
+
     }
+
 
     if (
       !U.confirmLargeFile(
         file,
-        LARGE_FILE_WARN_MB,
-        'ไฟล์ PDF นี้มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) จึงอาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก'
+        LARGE_FILE_WARN_MB
       )
     ) {
+
       return;
+
     }
 
+
     try {
-      setToolProcessing(true);
+
+      setToolProcessing(
+        true
+      );
+
 
       if (observer) {
+
         observer.disconnect();
-        observer = null;
+
+        observer =
+          null;
+
       }
+
 
       resetQueue();
 
       revokeThumbs();
 
-      pageItems = [];
+      pageItems =
+        [];
+
 
       if (dragState) {
+
         cleanupDragState();
+
       }
+
 
       clearDropIndicators();
 
+
       await destroyCurrentDoc();
 
+
       if (
-        requestId !== loadSeq
+        requestId !==
+        loadSeq
       ) {
+
         return;
+
       }
+
 
       currentFile =
         file;
 
+
       if (nameEl) {
+
         nameEl.textContent =
           `${file.name} · ${U.formatBytes(
             file.size
           )}`;
+
       }
 
-      grid.innerHTML = '';
+
+      grid.innerHTML =
+        '';
+
 
       bulkbar.classList.remove(
         'hidden'
       );
 
+
       if (noteEl) {
+
         noteEl.classList.remove(
           'hidden'
         );
+
       }
 
+
       if (countEl) {
+
         countEl.textContent =
           '…';
+
       }
+
 
       const bytes =
         await U.readAsArrayBuffer(
           file
         );
 
+
       if (
-        requestId !== loadSeq
+        requestId !==
+        loadSeq
       ) {
+
         return;
+
       }
+
 
       const loadingTask =
         pdfjsLib.getDocument({
-          data: bytes,
+          data:
+            bytes,
+
           canvasFactory:
             window.KittoCanvasFactory
         });
 
+
       const doc =
         await loadingTask.promise;
 
+
       if (
-        requestId !== loadSeq
+        requestId !==
+        loadSeq
       ) {
 
         try {
+
           await doc.destroy();
+
         } catch (_) {}
 
+
         return;
+
       }
+
 
       currentDoc =
         doc;
+
 
       for (
         let i = 0;
@@ -600,15 +1115,27 @@
       ) {
 
         pageItems.push({
-          origIndex: i,
-          thumbUrl: null,
-          rendering: false,
-          deleted: false,
-          selected: false,
-          thumbError: false
+          origIndex:
+            i,
+
+          thumbUrl:
+            null,
+
+          rendering:
+            false,
+
+          deleted:
+            false,
+
+          selected:
+            false,
+
+          thumbError:
+            false
         });
 
       }
+
 
       updateCounts();
 
@@ -617,69 +1144,97 @@
     } catch (error) {
 
       if (
-        requestId !== loadSeq
+        requestId !==
+        loadSeq
       ) {
+
         return;
+
       }
+
 
       console.error(
         'PDF load error:',
         error
       );
 
+
       await destroyCurrentDoc();
+
 
       currentFile =
         null;
 
+
       pageItems =
         [];
 
+
       grid.innerHTML =
         '';
+
 
       bulkbar.classList.add(
         'hidden'
       );
 
+
       if (noteEl) {
+
         noteEl.classList.add(
           'hidden'
         );
+
       }
+
 
       if (countEl) {
+
         countEl.textContent =
           '0';
+
       }
 
+
       if (selectAllEl) {
+
         selectAllEl.checked =
           false;
 
         selectAllEl.indeterminate =
           false;
+
       }
 
+
       alert(
-        'ไม่สามารถเปิดไฟล์ PDF ได้\n\n' +
-        (
-          error?.message ||
-          'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
+        t(
+          'errors.pdfOpenFailed',
+          {
+            message:
+              error?.message ||
+              t(
+                'errors.somethingWentWrong'
+              )
+          }
         )
       );
 
     } finally {
 
       if (
-        requestId === loadSeq
+        requestId ===
+        loadSeq
       ) {
+
         setToolProcessing(
           false
         );
+
       }
 
     }
+
   }
 
 
@@ -690,14 +1245,17 @@
   function updateCardThumbnail(
     index
   ) {
+
     const card =
       grid.querySelector(
         `.page-card-manage[data-idx="${index}"]`
       );
 
+
     if (!card) {
       return;
     }
+
 
     const item =
       pageItems.find(
@@ -706,60 +1264,85 @@
           index
       );
 
+
     if (!item) {
       return;
     }
+
 
     const img =
       card.querySelector(
         'img'
       );
 
+
     if (
       img &&
       item.thumbUrl
     ) {
+
       img.src =
         item.thumbUrl;
 
+
       img.alt =
-        `หน้า ${getItemPosition(item) + 1}`;
+        pageLabel(
+          getItemPosition(item) + 1
+        );
+
 
       card.classList.remove(
         'is-pending',
         'is-thumb-error'
       );
 
+
       return;
+
     }
+
 
     if (
       item.thumbError
     ) {
+
       card.classList.remove(
         'is-pending'
       );
 
+
       card.classList.add(
         'is-thumb-error'
       );
+
     }
+
   }
 
 
-  function getItemPosition(item) {
-    return pageItems.indexOf(item);
+  function getItemPosition(
+    item
+  ) {
+
+    return pageItems.indexOf(
+      item
+    );
+
   }
 
 
   // ============================================================
-  // OBSERVER
+  // INTERSECTION OBSERVER
   // ============================================================
 
   function setupObserver() {
+
     if (observer) {
+
       observer.disconnect();
+
     }
+
 
     observer =
       new IntersectionObserver(
@@ -771,24 +1354,32 @@
               if (
                 !entry.isIntersecting
               ) {
+
                 return;
+
               }
+
 
               const card =
                 entry.target;
+
 
               const idx =
                 Number(
                   card.dataset.idx
                 );
 
+
               if (
                 !Number.isInteger(
                   idx
                 )
               ) {
+
                 return;
+
               }
+
 
               const item =
                 pageItems.find(
@@ -797,21 +1388,27 @@
                     idx
                 );
 
+
               if (
                 !item ||
                 item.deleted ||
                 item.thumbUrl
               ) {
+
                 observer.unobserve(
                   card
                 );
 
+
                 return;
+
               }
+
 
               queueRender(
                 idx
               );
+
 
               observer.unobserve(
                 card
@@ -820,17 +1417,22 @@
             }
           );
 
+
           processQueue();
 
         },
         {
-          root: null,
+          root:
+            null,
+
           rootMargin:
             '400px 0px',
+
           threshold:
             0.01
         }
       );
+
 
     grid
       .querySelectorAll(
@@ -844,6 +1446,7 @@
               card.dataset.idx
             );
 
+
           const item =
             pageItems.find(
               entry =>
@@ -851,18 +1454,22 @@
                 idx
             );
 
+
           if (
             item &&
             !item.thumbUrl &&
             !item.deleted
           ) {
+
             observer.observe(
               card
             );
+
           }
 
         }
       );
+
   }
 
 
@@ -874,17 +1481,22 @@
     card,
     item
   ) {
+
     if (
       !card ||
       !item
     ) {
+
       return;
+
     }
+
 
     card.classList.toggle(
       'is-deleted',
       item.deleted
     );
+
 
     card.classList.toggle(
       'is-selected',
@@ -892,21 +1504,25 @@
       !item.deleted
     );
 
+
     card.classList.toggle(
       'is-pending',
       !item.thumbUrl &&
       !item.deleted
     );
 
+
     card.dataset.deleted =
       item.deleted
         ? 'true'
         : 'false';
 
+
     card.dataset.selected =
       item.selected
         ? 'true'
         : 'false';
+
   }
 
 
@@ -917,10 +1533,15 @@
   function renderGrid() {
 
     if (observer) {
+
       observer.disconnect();
+
     }
 
-    grid.innerHTML = '';
+
+    grid.innerHTML =
+      '';
+
 
     pageItems.forEach(
       (item, position) => {
@@ -928,12 +1549,16 @@
         const card =
           cardTemplate.content
             .firstElementChild
-            .cloneNode(true);
+            .cloneNode(
+              true
+            );
+
 
         card.dataset.idx =
           String(
             item.origIndex
           );
+
 
         updateCardState(
           card,
@@ -950,15 +1575,21 @@
             'img'
           );
 
+
         if (
           img &&
           item.thumbUrl
         ) {
+
           img.src =
             item.thumbUrl;
 
+
           img.alt =
-            `หน้า ${position + 1}`;
+            pageLabel(
+              position + 1
+            );
+
         }
 
 
@@ -971,9 +1602,14 @@
             '.js-pagelabel'
           );
 
+
         if (label) {
+
           label.textContent =
-            `หน้า ${position + 1}`;
+            pageLabel(
+              position + 1
+            );
+
         }
 
 
@@ -986,28 +1622,37 @@
             '.js-select'
           );
 
+
         if (checkbox) {
 
           checkbox.checked =
             item.selected &&
             !item.deleted;
 
+
           checkbox.disabled =
             item.deleted;
+
 
           checkbox.addEventListener(
             'pointerdown',
             event => {
+
               event.stopPropagation();
+
             }
           );
+
 
           checkbox.addEventListener(
             'click',
             event => {
+
               event.stopPropagation();
+
             }
           );
+
 
           checkbox.addEventListener(
             'change',
@@ -1016,23 +1661,31 @@
               if (
                 item.deleted
               ) {
+
                 checkbox.checked =
                   false;
 
+
                 return;
+
               }
+
 
               item.selected =
                 checkbox.checked;
+
 
               updateCardState(
                 card,
                 item
               );
 
+
               updateCounts();
+
             }
           );
+
         }
 
 
@@ -1048,32 +1701,44 @@
               Date.now() <
               suppressClickUntil
             ) {
+
               return;
+
             }
+
 
             if (
               event.target.closest(
                 'button, input, a, select, textarea'
               )
             ) {
+
               return;
+
             }
+
 
             if (
               item.deleted
             ) {
+
               return;
+
             }
+
 
             item.selected =
               !item.selected;
+
 
             updateCardState(
               card,
               item
             );
 
+
             updateCounts();
+
           }
         );
 
@@ -1087,10 +1752,18 @@
             '.js-move-up'
           );
 
+
         if (upBtn) {
 
           upBtn.disabled =
             position === 0;
+
+
+          upBtn.title =
+            t(
+              'pdf.moveUp'
+            );
+
 
           upBtn.addEventListener(
             'click',
@@ -1098,12 +1771,15 @@
 
               event.stopPropagation();
 
+
               moveItem(
                 position,
                 -1
               );
+
             }
           );
+
         }
 
 
@@ -1116,11 +1792,19 @@
             '.js-move-down'
           );
 
+
         if (downBtn) {
 
           downBtn.disabled =
             position ===
             pageItems.length - 1;
+
+
+          downBtn.title =
+            t(
+              'pdf.moveDown'
+            );
+
 
           downBtn.addEventListener(
             'click',
@@ -1128,12 +1812,15 @@
 
               event.stopPropagation();
 
+
               moveItem(
                 position,
                 1
               );
+
             }
           );
+
         }
 
 
@@ -1146,23 +1833,27 @@
             '.js-delete'
           );
 
+
         if (deleteBtn) {
 
           deleteBtn.title =
-            item.deleted
-              ? 'กู้คืนหน้านี้'
-              : 'ลบหน้านี้';
+            getDeleteButtonLabel(
+              item.deleted
+            );
+
 
           deleteBtn.textContent =
             item.deleted
               ? '↺'
               : '✕';
 
+
           deleteBtn.addEventListener(
             'click',
             event => {
 
               event.stopPropagation();
+
 
               if (
                 item.deleted
@@ -1171,15 +1862,19 @@
                 item.deleted =
                   false;
 
+
                 item.thumbError =
                   false;
+
 
                 if (
                   !item.thumbUrl
                 ) {
+
                   queueRender(
                     item.origIndex
                   );
+
                 }
 
               } else {
@@ -1187,14 +1882,20 @@
                 item.deleted =
                   true;
 
+
                 item.selected =
                   false;
+
               }
 
+
               renderGrid();
+
               updateCounts();
+
             }
           );
+
         }
 
 
@@ -1207,6 +1908,7 @@
           item
         );
 
+
         grid.appendChild(
           card
         );
@@ -1214,7 +1916,9 @@
       }
     );
 
+
     setupObserver();
+
   }
 
 
@@ -1226,27 +1930,38 @@
     position,
     direction
   ) {
+
     const target =
-      position + direction;
+      position +
+      direction;
+
 
     if (
       target < 0 ||
       target >= pageItems.length
     ) {
+
       return;
+
     }
+
 
     const temp =
       pageItems[position];
 
+
     pageItems[position] =
       pageItems[target];
+
 
     pageItems[target] =
       temp;
 
+
     renderGrid();
+
     updateCounts();
+
   }
 
 
@@ -1258,9 +1973,16 @@
     card,
     item
   ) {
-    if (!card || !item) {
+
+    if (
+      !card ||
+      !item
+    ) {
+
       return;
+
     }
+
 
     card.addEventListener(
       'pointerdown',
@@ -1269,34 +1991,49 @@
         if (
           event.isPrimary === false
         ) {
+
           return;
+
         }
+
 
         if (
           item.deleted
         ) {
+
           return;
+
         }
+
 
         if (
           event.button !== 0
         ) {
+
           return;
+
         }
+
 
         if (
           event.target.closest(
             'button, input, select, textarea, a'
           )
         ) {
+
           return;
+
         }
+
 
         const rect =
           card.getBoundingClientRect();
 
+
         dragState = {
+
           card,
+
           item,
 
           pointerId:
@@ -1316,11 +2053,14 @@
             event.clientY -
             rect.top,
 
-          moved: false,
+          moved:
+            false,
 
-          started: false,
+          started:
+            false,
 
-          placeholder: null,
+          placeholder:
+            null,
 
           originalParent:
             card.parentNode,
@@ -1329,17 +2069,25 @@
             card.nextSibling,
 
           originalIndex:
-            pageItems.indexOf(item)
+            pageItems.indexOf(
+              item
+            )
         };
 
-        // ไม่ใช้ setPointerCapture
-        // เพราะ card จะถูกย้ายออกจาก grid ไป body
+
+        /*
+         * ไม่ใช้ setPointerCapture
+         * เพราะ card จะถูกย้ายไป body
+         */
         event.preventDefault();
+
       },
       {
-        passive: false
+        passive:
+          false
       }
     );
+
   }
 
 
@@ -1355,18 +2103,24 @@
         return;
       }
 
+
       if (
         event.pointerId !==
         dragState.pointerId
       ) {
+
         return;
+
       }
 
+
       event.preventDefault();
+
 
       const dx =
         event.clientX -
         dragState.startX;
+
 
       const dy =
         event.clientY -
@@ -1374,20 +2128,25 @@
 
 
       // --------------------------------------------------------
-      // ยังไม่ถึงระยะเริ่มลาก
+      // START DISTANCE
       // --------------------------------------------------------
 
       if (
         !dragState.moved &&
-        Math.hypot(dx, dy) <
+        Math.hypot(
+          dx,
+          dy
+        ) <
           DRAG_START_DISTANCE
       ) {
+
         return;
+
       }
 
 
       // --------------------------------------------------------
-      // เริ่มลากจริง
+      // START REAL DRAG
       // --------------------------------------------------------
 
       if (
@@ -1397,27 +2156,27 @@
         dragState.moved =
           true;
 
+
         startRealDrag(
           dragState.card,
           dragState.item
         );
+
       }
 
 
       // --------------------------------------------------------
-      // ยังไม่ได้สร้าง floating card
+      // FLOATING CARD
       // --------------------------------------------------------
 
       if (
         !dragState.started
       ) {
+
         return;
+
       }
 
-
-      // --------------------------------------------------------
-      // ขยับ card
-      // --------------------------------------------------------
 
       moveFloatingCard(
         event.clientX,
@@ -1425,17 +2184,15 @@
       );
 
 
-      // --------------------------------------------------------
-      // อัปเดตตำแหน่งปล่อย
-      // --------------------------------------------------------
-
       updateDropPosition(
         event.clientX,
         event.clientY
       );
+
     },
     {
-      passive: false
+      passive:
+        false
     }
   );
 
@@ -1452,19 +2209,26 @@
         return;
       }
 
+
       if (
         event.pointerId !==
         dragState.pointerId
       ) {
+
         return;
+
       }
+
 
       event.preventDefault();
 
+
       finishDrag();
+
     },
     {
-      passive: false
+      passive:
+        false
     }
   );
 
@@ -1481,14 +2245,19 @@
         return;
       }
 
+
       if (
         event.pointerId !==
         dragState.pointerId
       ) {
+
         return;
+
       }
 
+
       cancelDrag();
+
     }
   );
 
@@ -1501,26 +2270,33 @@
     card,
     item
   ) {
+
     if (
       !dragState ||
       dragState.started
     ) {
+
       return;
+
     }
+
 
     if (
       !card ||
       !card.isConnected
     ) {
+
       return;
+
     }
+
 
     const rect =
       card.getBoundingClientRect();
 
 
     // ----------------------------------------------------------
-    // CREATE PLACEHOLDER
+    // PLACEHOLDER
     // ----------------------------------------------------------
 
     const placeholder =
@@ -1528,23 +2304,30 @@
         'div'
       );
 
+
     placeholder.className =
       'page-drag-placeholder';
+
 
     placeholder.dataset.idx =
       String(
         item.origIndex
       );
 
+
     placeholder.style.width =
       `${rect.width}px`;
+
 
     placeholder.style.height =
       `${rect.height}px`;
 
+
     placeholder.innerHTML = `
       <div class="page-drag-placeholder-inner">
-        <span>วางหน้าที่นี่</span>
+        <span>${t(
+          'pdf.dropPageHere'
+        )}</span>
       </div>
     `;
 
@@ -1554,16 +2337,21 @@
     // ----------------------------------------------------------
 
     if (
-      card.parentNode === grid
+      card.parentNode ===
+      grid
     ) {
+
       grid.insertBefore(
         placeholder,
         card
       );
+
     } else {
+
       grid.appendChild(
         placeholder
       );
+
     }
 
 
@@ -1575,36 +2363,47 @@
       'is-dragging'
     );
 
+
     document.body.appendChild(
       card
     );
 
+
     card.style.position =
       'fixed';
+
 
     card.style.width =
       `${rect.width}px`;
 
+
     card.style.height =
       `${rect.height}px`;
+
 
     card.style.left =
       `${rect.left}px`;
 
+
     card.style.top =
       `${rect.top}px`;
+
 
     card.style.margin =
       '0';
 
+
     card.style.zIndex =
       '10000';
+
 
     card.style.pointerEvents =
       'none';
 
+
     card.style.transform =
       'none';
+
 
     card.style.transformOrigin =
       'top left';
@@ -1617,10 +2416,13 @@
     dragState.placeholder =
       placeholder;
 
+
     dragState.started =
       true;
 
+
     clearDropIndicators();
+
   }
 
 
@@ -1632,30 +2434,39 @@
     clientX,
     clientY
   ) {
+
     if (
       !dragState ||
       !dragState.card ||
       !dragState.started
     ) {
+
       return;
+
     }
+
 
     const card =
       dragState.card;
+
 
     const left =
       clientX -
       dragState.grabOffsetX;
 
+
     const top =
       clientY -
       dragState.grabOffsetY;
 
+
     card.style.left =
       `${left}px`;
 
+
     card.style.top =
       `${top}px`;
+
   }
 
 
@@ -1667,12 +2478,15 @@
     clientX,
     clientY
   ) {
+
     if (!dragState) {
       return null;
     }
 
+
     const draggedCard =
       dragState.card;
+
 
     const cards =
       Array.from(
@@ -1686,24 +2500,31 @@
             card ===
             draggedCard
           ) {
+
             return false;
+
           }
+
 
           if (
             card.classList.contains(
               'is-deleted'
             )
           ) {
+
             return false;
+
           }
 
+
           return true;
+
         }
       );
 
 
     // ----------------------------------------------------------
-    // อยู่บน card โดยตรง
+    // DIRECT HIT
     // ----------------------------------------------------------
 
     for (
@@ -1713,26 +2534,34 @@
       const rect =
         card.getBoundingClientRect();
 
+
       if (
         clientX >= rect.left &&
         clientX <= rect.right &&
         clientY >= rect.top &&
         clientY <= rect.bottom
       ) {
+
         return {
           card,
           rect
         };
+
       }
+
     }
 
 
     // ----------------------------------------------------------
-    // card ที่ใกล้ที่สุด
+    // NEAREST CARD
     // ----------------------------------------------------------
 
-    let nearest = null;
-    let nearestDistance = Infinity;
+    let nearest =
+      null;
+
+    let nearestDistance =
+      Infinity;
+
 
     cards.forEach(
       card => {
@@ -1740,13 +2569,16 @@
         const rect =
           card.getBoundingClientRect();
 
+
         const centerX =
           rect.left +
           rect.width / 2;
 
+
         const centerY =
           rect.top +
           rect.height / 2;
+
 
         const distance =
           Math.hypot(
@@ -1756,6 +2588,7 @@
               centerY
           );
 
+
         if (
           distance <
           nearestDistance
@@ -1764,16 +2597,20 @@
           nearestDistance =
             distance;
 
+
           nearest = {
             card,
             rect
           };
+
         }
 
       }
     );
 
+
     return nearest;
+
   }
 
 
@@ -1785,12 +2622,16 @@
     clientX,
     clientY
   ) {
+
     if (
       !dragState ||
       !dragState.placeholder
     ) {
+
       return;
+
     }
+
 
     const target =
       getDropTarget(
@@ -1798,18 +2639,25 @@
         clientY
       );
 
+
     if (!target) {
+
       clearDropIndicators();
+
       return;
+
     }
+
 
     const {
       card,
       rect
     } = target;
 
+
     const placeholder =
       dragState.placeholder;
+
 
     clearDropIndicators();
 
@@ -1818,9 +2666,11 @@
       rect.left +
       rect.width / 2;
 
+
     const centerY =
       rect.top +
       rect.height / 2;
+
 
     const dx =
       Math.abs(
@@ -1828,16 +2678,20 @@
         centerX
       );
 
+
     const dy =
       Math.abs(
         clientY -
         centerY
       );
 
+
     let insertBefore;
 
+
     if (
-      dx > dy
+      dx >
+      dy
     ) {
 
       insertBefore =
@@ -1849,11 +2703,12 @@
       insertBefore =
         clientY <
         centerY;
+
     }
 
 
     // ----------------------------------------------------------
-    // PLACEHOLDER POSITION
+    // PLACEHOLDER
     // ----------------------------------------------------------
 
     if (
@@ -1865,9 +2720,11 @@
         card
       );
 
+
       card.classList.add(
         'is-drop-before-target'
       );
+
 
       placeholder.dataset.position =
         'before';
@@ -1879,13 +2736,17 @@
         card.nextSibling
       );
 
+
       card.classList.add(
         'is-drop-after-target'
       );
 
+
       placeholder.dataset.position =
         'after';
+
     }
+
   }
 
 
@@ -1909,6 +2770,7 @@
 
         }
       );
+
   }
 
 
@@ -1922,53 +2784,52 @@
       return;
     }
 
+
     const state =
       dragState;
 
+
     const card =
       state.card;
+
 
     const placeholder =
       state.placeholder;
 
 
-    // ----------------------------------------------------------
-    // Remove placeholder
-    // ----------------------------------------------------------
-
     if (
       placeholder &&
       placeholder.isConnected
     ) {
+
       placeholder.remove();
+
     }
 
-
-    // ----------------------------------------------------------
-    // Remove floating card
-    // ----------------------------------------------------------
 
     if (
       card &&
       card.isConnected &&
-      card.parentNode !== grid
+      card.parentNode !==
+        grid
     ) {
+
       card.remove();
+
     }
 
-
-    // ----------------------------------------------------------
-    // Reset styles
-    // ----------------------------------------------------------
 
     resetDragStyles(
       card
     );
 
+
     clearDropIndicators();
+
 
     dragState =
       null;
+
   }
 
 
@@ -1982,21 +2843,25 @@
       return;
     }
 
+
     const state =
       dragState;
+
 
     const card =
       state.card;
 
+
     const placeholder =
       state.placeholder;
+
 
     const item =
       state.item;
 
 
     // ----------------------------------------------------------
-    // ไม่ได้ลากจริง
+    // NOT A REAL DRAG
     // ----------------------------------------------------------
 
     if (
@@ -2008,28 +2873,35 @@
         placeholder &&
         placeholder.isConnected
       ) {
+
         placeholder.remove();
+
       }
+
 
       resetDragStyles(
         card
       );
 
+
       dragState =
         null;
 
+
       return;
+
     }
 
 
     // ----------------------------------------------------------
-    // อ่าน order จาก grid
+    // READ FINAL ORDER
     // ----------------------------------------------------------
 
     const children =
       Array.from(
         grid.children
       );
+
 
     const finalOrder =
       [];
@@ -2047,7 +2919,9 @@
             item.origIndex
           );
 
+
           return;
+
         }
 
 
@@ -2062,13 +2936,19 @@
               child.dataset.idx
             );
 
+
           if (
-            Number.isInteger(index)
+            Number.isInteger(
+              index
+            )
           ) {
+
             finalOrder.push(
               index
             );
+
           }
+
         }
 
       }
@@ -2076,7 +2956,7 @@
 
 
     // ----------------------------------------------------------
-    // Safety
+    // SAFETY
     // ----------------------------------------------------------
 
     if (
@@ -2084,14 +2964,16 @@
         item.origIndex
       )
     ) {
+
       finalOrder.push(
         item.origIndex
       );
+
     }
 
 
     // ----------------------------------------------------------
-    // Apply order
+    // APPLY ORDER
     // ----------------------------------------------------------
 
     applyFinalOrder(
@@ -2100,58 +2982,52 @@
 
 
     // ----------------------------------------------------------
-    // Remove placeholder
+    // CLEAN FLOATING UI
     // ----------------------------------------------------------
 
     if (
       placeholder &&
       placeholder.isConnected
     ) {
+
       placeholder.remove();
+
     }
 
-
-    // ----------------------------------------------------------
-    // Remove floating card
-    // ----------------------------------------------------------
 
     if (
       card &&
       card.isConnected &&
-      card.parentNode !== grid
+      card.parentNode !==
+        grid
     ) {
+
       card.remove();
+
     }
 
 
-    // ----------------------------------------------------------
-    // Prevent click after drag
-    // ----------------------------------------------------------
-
     suppressClickUntil =
-      Date.now() + 300;
+      Date.now() +
+      300;
 
-
-    // ----------------------------------------------------------
-    // Reset
-    // ----------------------------------------------------------
 
     resetDragStyles(
       card
     );
 
+
     clearDropIndicators();
+
 
     dragState =
       null;
 
 
-    // ----------------------------------------------------------
-    // Re-render
-    // ----------------------------------------------------------
-
     renderGrid();
+
     updateCounts();
+
   }
 
 
@@ -2165,64 +3041,62 @@
       return;
     }
 
+
     const state =
       dragState;
 
+
     const card =
       state.card;
+
 
     const placeholder =
       state.placeholder;
 
 
-    // ----------------------------------------------------------
-    // Remove placeholder
-    // ----------------------------------------------------------
-
     if (
       placeholder &&
       placeholder.isConnected
     ) {
+
       placeholder.remove();
+
     }
 
-
-    // ----------------------------------------------------------
-    // Remove floating card
-    // ----------------------------------------------------------
 
     if (
       card &&
       card.isConnected &&
-      card.parentNode !== grid
+      card.parentNode !==
+        grid
     ) {
+
       card.remove();
+
     }
 
 
-    // ----------------------------------------------------------
-    // Prevent synthetic click
-    // ----------------------------------------------------------
-
     suppressClickUntil =
-      Date.now() + 300;
+      Date.now() +
+      300;
 
-
-    // ----------------------------------------------------------
-    // Reset
-    // ----------------------------------------------------------
 
     resetDragStyles(
       card
     );
 
+
     clearDropIndicators();
+
 
     dragState =
       null;
 
+
     renderGrid();
+
     updateCounts();
+
   }
 
 
@@ -2233,9 +3107,11 @@
   function resetDragStyles(
     card
   ) {
+
     if (!card) {
       return;
     }
+
 
     card.classList.remove(
       'is-dragging',
@@ -2243,6 +3119,7 @@
       'is-drop-before-target',
       'is-drop-after-target'
     );
+
 
     card.style.position =
       '';
@@ -2273,6 +3150,7 @@
 
     card.style.transformOrigin =
       '';
+
   }
 
 
@@ -2283,12 +3161,16 @@
   function applyFinalOrder(
     order
   ) {
+
     if (
       !Array.isArray(order) ||
       !order.length
     ) {
+
       return;
+
     }
+
 
     const byIndex =
       new Map(
@@ -2300,8 +3182,10 @@
         )
       );
 
+
     const used =
       new Set();
+
 
     const reordered =
       [];
@@ -2315,6 +3199,7 @@
             index
           );
 
+
         if (
           item &&
           !used.has(
@@ -2326,9 +3211,11 @@
             index
           );
 
+
           reordered.push(
             item
           );
+
         }
 
       }
@@ -2343,9 +3230,11 @@
             item.origIndex
           )
         ) {
+
           reordered.push(
             item
           );
+
         }
 
       }
@@ -2354,6 +3243,7 @@
 
     pageItems =
       reordered;
+
   }
 
 
@@ -2361,7 +3251,9 @@
   // SELECT ALL
   // ============================================================
 
-  if (selectAllEl) {
+  if (
+    selectAllEl
+  ) {
 
     selectAllEl.addEventListener(
       'change',
@@ -2370,24 +3262,32 @@
         const checked =
           selectAllEl.checked;
 
+
         pageItems.forEach(
           item => {
 
             if (
               item.deleted
             ) {
+
               item.selected =
                 false;
+
             } else {
+
               item.selected =
                 checked;
+
             }
 
           }
         );
 
+
         renderGrid();
+
         updateCounts();
+
       }
     );
 
@@ -2401,24 +3301,36 @@
   async function buildPdf(
     indices
   ) {
+
     if (!currentFile) {
+
       throw new Error(
-        'ยังไม่ได้เลือกไฟล์ PDF'
+        t(
+          'errors.pdfFileNotSelected'
+        )
       );
+
     }
+
 
     if (
       !indices.length
     ) {
+
       throw new Error(
-        'ไม่พบหน้าสำหรับสร้าง PDF'
+        t(
+          'errors.noPdfPages'
+        )
       );
+
     }
+
 
     const srcBytes =
       await U.readAsArrayBuffer(
         currentFile
       );
+
 
     const response =
       await PW.buildPagesPdf(
@@ -2426,22 +3338,31 @@
         indices
       );
 
+
     if (
       !response ||
       !response.bytes
     ) {
+
       throw new Error(
-        'ไม่ได้รับ PDF จาก Worker'
+        t(
+          'errors.pdfWorkerNoOutput'
+        )
       );
+
     }
 
+
     return new Blob(
-      [response.bytes],
+      [
+        response.bytes
+      ],
       {
         type:
           'application/pdf'
       }
     );
+
   }
 
 
@@ -2449,7 +3370,9 @@
   // DOWNLOAD EDITED PDF
   // ============================================================
 
-  if (downloadBtn) {
+  if (
+    downloadBtn
+  ) {
 
     downloadBtn.addEventListener(
       'click',
@@ -2459,8 +3382,11 @@
           downloadRunning ||
           !currentFile
         ) {
+
           return;
+
         }
+
 
         const indices =
           getVisibleItems()
@@ -2469,24 +3395,41 @@
                 item.origIndex
             );
 
-        if (!indices.length) {
+
+        if (
+          !indices.length
+        ) {
+
           alert(
-            'ไม่เหลือหน้าใน PDF'
+            t(
+              'errors.noPagesRemaining'
+            )
           );
 
+
           return;
+
         }
+
 
         downloadRunning =
           true;
 
+
         downloadBtn.disabled =
           true;
 
-        downloadBtn.textContent =
-          'กำลังสร้าง PDF…';
 
-        setToolProcessing(true);
+        downloadBtn.textContent =
+          t(
+            'pdf.buildingPdf'
+          );
+
+
+        setToolProcessing(
+          true
+        );
+
 
         try {
 
@@ -2495,12 +3438,14 @@
               indices
             );
 
+
           U.downloadBlob(
             blob,
             `${U.baseName(
               currentFile.name
             )}-edited.pdf`
           );
+
 
         } catch (error) {
 
@@ -2509,29 +3454,43 @@
             error
           );
 
+
           alert(
-            'ไม่สามารถสร้าง PDF ได้\n\n' +
-            (
-              error?.message ||
-              'เกิดข้อผิดพลาด'
+            t(
+              'errors.pdfBuildFailed',
+              {
+                message:
+                  error?.message ||
+                  t(
+                    'errors.somethingWentWrong'
+                  )
+              }
             )
           );
+
 
         } finally {
 
           downloadRunning =
             false;
 
+
           downloadBtn.disabled =
             false;
 
+
           downloadBtn.textContent =
-            'ดาวน์โหลด PDF (ตามลำดับ/ลบแล้ว)';
+            t(
+              'pdf.downloadPdfOrdered'
+            );
+
 
           setToolProcessing(
             false
           );
+
         }
+
       }
     );
 
@@ -2542,7 +3501,9 @@
   // DOWNLOAD SELECTED
   // ============================================================
 
-  if (downloadSelectedBtn) {
+  if (
+    downloadSelectedBtn
+  ) {
 
     downloadSelectedBtn.addEventListener(
       'click',
@@ -2552,8 +3513,11 @@
           downloadRunning ||
           !currentFile
         ) {
+
           return;
+
         }
+
 
         const indices =
           getSelectedItems()
@@ -2562,24 +3526,41 @@
                 item.origIndex
             );
 
-        if (!indices.length) {
+
+        if (
+          !indices.length
+        ) {
+
           alert(
-            'กรุณาเลือกหน้าอย่างน้อย 1 หน้า'
+            t(
+              'errors.selectAtLeastOnePage'
+            )
           );
 
+
           return;
+
         }
+
 
         downloadRunning =
           true;
 
+
         downloadSelectedBtn.disabled =
           true;
 
-        downloadSelectedBtn.textContent =
-          'กำลังสร้าง PDF…';
 
-        setToolProcessing(true);
+        downloadSelectedBtn.textContent =
+          t(
+            'pdf.buildingPdf'
+          );
+
+
+        setToolProcessing(
+          true
+        );
+
 
         try {
 
@@ -2588,12 +3569,14 @@
               indices
             );
 
+
           U.downloadBlob(
             blob,
             `${U.baseName(
               currentFile.name
             )}-selected.pdf`
           );
+
 
         } catch (error) {
 
@@ -2602,29 +3585,43 @@
             error
           );
 
+
           alert(
-            'ไม่สามารถสร้าง PDF ได้\n\n' +
-            (
-              error?.message ||
-              'เกิดข้อผิดพลาด'
+            t(
+              'errors.pdfBuildFailed',
+              {
+                message:
+                  error?.message ||
+                  t(
+                    'errors.somethingWentWrong'
+                  )
+              }
             )
           );
+
 
         } finally {
 
           downloadRunning =
             false;
 
+
           downloadSelectedBtn.disabled =
             false;
 
+
           downloadSelectedBtn.textContent =
-            'ดาวน์โหลดเฉพาะที่เลือก';
+            t(
+              'pdf.downloadSelected'
+            );
+
 
           setToolProcessing(
             false
           );
+
         }
+
       }
     );
 
@@ -2652,9 +3649,29 @@
             )
         );
 
+
       if (file) {
-        loadFile(file);
+
+        loadFile(
+          file
+        );
+
       }
+
+    }
+  );
+
+
+  // ============================================================
+  // LANGUAGE CHANGE
+  // ============================================================
+
+  document.addEventListener(
+    'languagechange',
+    () => {
+
+      updateLanguageUI();
+
     }
   );
 
@@ -2668,85 +3685,137 @@
 
       ++loadSeq;
 
+
       if (observer) {
+
         observer.disconnect();
-        observer = null;
+
+        observer =
+          null;
+
       }
 
+
       if (dragState) {
+
         cleanupDragState();
+
       }
+
 
       suppressClickUntil =
         0;
 
+
       resetQueue();
+
       revokeThumbs();
 
-      pageItems = [];
+      pageItems =
+        [];
+
 
       destroyCurrentDoc()
         .catch(
           err => {
+
             console.warn(
               'PDF cleanup warning:',
               err
             );
+
           }
         );
+
 
       currentFile =
         null;
 
+
       downloadRunning =
         false;
 
+
       if (downloadBtn) {
+
         downloadBtn.disabled =
           false;
 
+
         downloadBtn.textContent =
-          'ดาวน์โหลด PDF (ตามลำดับ/ลบแล้ว)';
+          t(
+            'pdf.downloadPdfOrdered'
+          );
+
       }
 
-      if (downloadSelectedBtn) {
+
+      if (
+        downloadSelectedBtn
+      ) {
+
         downloadSelectedBtn.disabled =
           false;
 
+
         downloadSelectedBtn.textContent =
-          'ดาวน์โหลดเฉพาะที่เลือก';
+          t(
+            'pdf.downloadSelected'
+          );
+
       }
+
 
       grid.innerHTML =
         '';
+
 
       bulkbar.classList.add(
         'hidden'
       );
 
+
       if (noteEl) {
+
         noteEl.classList.add(
           'hidden'
         );
+
       }
+
 
       if (countEl) {
+
         countEl.textContent =
           '0';
+
       }
 
+
       if (selectAllEl) {
+
         selectAllEl.checked =
           false;
 
+
         selectAllEl.indeterminate =
           false;
+
       }
+
 
       setToolProcessing(
         false
       );
+
     }
   );
+
+
+  // ============================================================
+  // INITIAL UI
+  // ============================================================
+
+  updateLanguageUI();
 
 })();
