@@ -1,18 +1,49 @@
-/* ============================================================
-   IMAGE COMPRESS
-   tool-image-compress.js
-   ============================================================ */
+/* global window, document, URL, JSZip, requestAnimationFrame */
 
 (() => {
   'use strict';
 
+
+  // ============================================================
+  // GLOBALS
+  // ============================================================
+
   const U =
     window.Utils;
 
+  const I18n =
+    window.I18n || null;
 
-  /* ==========================================================
-     ELEMENTS
-  ========================================================== */
+
+  // ============================================================
+  // TRANSLATION HELPER
+  // ============================================================
+
+  function t(
+    key,
+    values
+  ) {
+
+    if (
+      I18n &&
+      typeof I18n.t === 'function'
+    ) {
+
+      return I18n.t(
+        key,
+        values
+      );
+    }
+
+    return String(
+      key
+    );
+  }
+
+
+  // ============================================================
+  // ELEMENTS
+  // ============================================================
 
   const dropzone =
     document.getElementById(
@@ -75,9 +106,9 @@
     );
 
 
-  /* ==========================================================
-     VALIDATION
-  ========================================================== */
+  // ============================================================
+  // VALIDATION
+  // ============================================================
 
   if (
     !dropzone ||
@@ -94,9 +125,9 @@
   }
 
 
-  /* ==========================================================
-     STATE
-  ========================================================== */
+  // ============================================================
+  // STATE
+  // ============================================================
 
   let jobSeq =
     0;
@@ -105,21 +136,32 @@
     [];
 
 
-  /* ==========================================================
-     CONSTANTS
-  ========================================================== */
+  // ============================================================
+  // CONSTANTS
+  // ============================================================
 
   const EXT_BY_FORMAT = {
-    'image/png': 'png',
-    'image/jpeg': 'jpg',
-    'image/webp': 'webp'
+
+    'image/png':
+      'png',
+
+    'image/jpeg':
+      'jpg',
+
+    'image/webp':
+      'webp'
+
   };
 
 
   const ALLOWED_FORMATS = [
+
     'image/jpeg',
+
     'image/png',
+
     'image/webp'
+
   ];
 
 
@@ -127,31 +169,26 @@
     20000;
 
 
-  /*
-   * จำนวนงานที่ประมวลผลพร้อมกัน
-   */
-
   const CONCURRENCY =
     3;
 
-
-  /*
-   * จำกัดพื้นที่ canvas เพื่อป้องกัน
-   * browser memory พุ่งเกินไป
-   */
 
   const MAX_CANVAS_PIXELS =
     100000000;
 
 
-  /* ==========================================================
-     HELPERS
-  ========================================================== */
+  // ============================================================
+  // HELPERS
+  // ============================================================
 
   function getQuality() {
 
-    if (!qualityEl) {
+    if (
+      !qualityEl
+    ) {
+
       return 0.85;
+
     }
 
 
@@ -168,6 +205,7 @@
     ) {
 
       return 0.85;
+
     }
 
 
@@ -183,8 +221,12 @@
 
   function getMaxSize() {
 
-    if (!maxSizeEl) {
+    if (
+      !maxSizeEl
+    ) {
+
       return 0;
+
     }
 
 
@@ -203,6 +245,7 @@
     ) {
 
       return 0;
+
     }
 
 
@@ -228,6 +271,7 @@
     ) {
 
       return 'image/jpeg';
+
     }
 
 
@@ -247,15 +291,16 @@
     ) {
 
       return {
-        width: 1,
-        height: 1
+
+        width:
+          1,
+
+        height:
+          1
+
       };
     }
 
-
-    /*
-     * ถ้าไม่จำกัดด้านยาว
-     */
 
     if (
       !maxSize ||
@@ -266,6 +311,7 @@
     ) {
 
       return {
+
         width:
           Math.max(
             1,
@@ -281,6 +327,7 @@
               naturalH
             )
           )
+
       };
     }
 
@@ -314,8 +361,11 @@
 
 
     return {
+
       width,
+
       height
+
     };
   }
 
@@ -343,10 +393,13 @@
     ) {
 
       return {
+
         width:
           outW,
+
         height:
           outH
+
       };
     }
 
@@ -379,10 +432,13 @@
 
 
     return {
+
       width:
         outW,
+
       height:
         outH
+
     };
   }
 
@@ -404,6 +460,7 @@
     ) {
 
       return {
+
         percent:
           0,
 
@@ -412,6 +469,7 @@
 
         isSmaller:
           false
+
       };
     }
 
@@ -430,15 +488,15 @@
 
 
     return {
-      percent:
-        percent,
 
-      bytes:
-        bytes,
+      percent,
+
+      bytes,
 
       isSmaller:
         newSize <
         originalSize
+
     };
   }
 
@@ -456,6 +514,7 @@
     ) {
 
       return '—';
+
     }
 
 
@@ -466,26 +525,27 @@
       );
 
 
-    /*
-     * เล็กลง
-     */
-
     if (
       result.isSmaller
     ) {
 
-      return (
-        `-${result.percent.toFixed(1)}% · ` +
-        `ประหยัด ${U.formatBytes(
-          result.bytes
-        )}`
+      return t(
+        'image.savingSmaller',
+        {
+
+          percent:
+            result.percent.toFixed(1),
+
+          size:
+            U.formatBytes(
+              result.bytes
+            )
+
+        }
       );
+
     }
 
-
-    /*
-     * ใหญ่ขึ้น
-     */
 
     if (
       newSize >
@@ -503,14 +563,22 @@
         100;
 
 
-      return (
-        `+${increase.toFixed(1)}% · ` +
-        'ไฟล์ใหญ่ขึ้น'
+      return t(
+        'image.savingLarger',
+        {
+
+          percent:
+            increase.toFixed(1)
+
+        }
       );
+
     }
 
 
-    return '0% · ขนาดเท่าเดิม';
+    return t(
+      'image.savingSame'
+    );
   }
 
 
@@ -518,8 +586,12 @@
     url
   ) {
 
-    if (!url) {
+    if (
+      !url
+    ) {
+
       return;
+
     }
 
 
@@ -529,11 +601,8 @@
         url
       );
 
-    } catch (_) {
+    } catch (_) {}
 
-      /* ignore */
-
-    }
   }
 
 
@@ -542,8 +611,12 @@
     value
   ) {
 
-    if (!job.progressEl) {
+    if (
+      !job.progressEl
+    ) {
+
       return;
+
     }
 
 
@@ -564,9 +637,9 @@
   }
 
 
-  /* ==========================================================
-     COMPRESS JOB
-  ========================================================== */
+  // ============================================================
+  // COMPRESS JOB
+  // ============================================================
 
   class CompressJob {
 
@@ -582,10 +655,6 @@
       this.file =
         file;
 
-
-      /*
-       * เก็บค่าตั้งต้นของงาน
-       */
 
       this.format =
         getFormat();
@@ -636,9 +705,9 @@
     }
 
 
-    /* ========================================================
-       DOM
-    ======================================================== */
+    // ========================================================
+    // DOM
+    // ========================================================
 
     buildDom() {
 
@@ -700,65 +769,85 @@
         );
 
 
-      const filenameEl =
+      this.filenameEl =
         el.querySelector(
           '.js-filename'
         );
 
 
-      const origDimEl =
+      this.origDimEl =
         el.querySelector(
           '.js-origdim'
         );
 
 
-      const origSizeEl =
+      this.origSizeEl =
         el.querySelector(
           '.js-origsize'
         );
 
 
-      if (filenameEl) {
+      if (
+        this.filenameEl
+      ) {
 
-        filenameEl.textContent =
+        this.filenameEl.textContent =
           this.file.name;
+
       }
 
 
-      if (origSizeEl) {
+      if (
+        this.origSizeEl
+      ) {
 
-        origSizeEl.textContent =
+        this.origSizeEl.textContent =
           U.formatBytes(
             this.file.size
           );
+
       }
 
 
-      if (origDimEl) {
+      if (
+        this.origDimEl
+      ) {
 
-        origDimEl.textContent =
-          'กำลังอ่าน...';
+        this.origDimEl.textContent =
+          t(
+            'image.reading'
+          );
+
       }
 
 
-      if (this.newDimEl) {
+      if (
+        this.newDimEl
+      ) {
 
         this.newDimEl.textContent =
           '—';
+
       }
 
 
-      if (this.newSizeEl) {
+      if (
+        this.newSizeEl
+      ) {
 
         this.newSizeEl.textContent =
           '—';
+
       }
 
 
-      if (this.savingEl) {
+      if (
+        this.savingEl
+      ) {
 
         this.savingEl.textContent =
           '—';
+
       }
 
 
@@ -766,6 +855,13 @@
         this,
         0
       );
+
+
+      /*
+       * สำคัญสำหรับ app.js
+       */
+      this.el.dataset.processing =
+        'false';
 
 
       this.previewImg.src =
@@ -776,19 +872,20 @@
         () => {
 
           this.naturalW =
-            this.previewImg
-              .naturalWidth;
+            this.previewImg.naturalWidth;
 
 
           this.naturalH =
-            this.previewImg
-              .naturalHeight;
+            this.previewImg.naturalHeight;
 
 
-          if (origDimEl) {
+          if (
+            this.origDimEl
+          ) {
 
-            origDimEl.textContent =
+            this.origDimEl.textContent =
               `${this.naturalW}×${this.naturalH}`;
+
           }
 
 
@@ -800,35 +897,55 @@
       this.previewImg.onerror =
         () => {
 
-          if (origDimEl) {
+          if (
+            this.origDimEl
+          ) {
 
-            origDimEl.textContent =
-              'อ่านรูปไม่สำเร็จ';
+            this.origDimEl.textContent =
+              t(
+                'image.readFailed'
+              );
+
           }
 
 
-          if (this.statusEl) {
+          if (
+            this.statusEl
+          ) {
 
             this.statusEl.textContent =
-              'เปิดรูปไม่สำเร็จ';
+              t(
+                'image.openFailed'
+              );
+
+
+            this.statusEl.classList.remove(
+              'is-ready'
+            );
 
 
             this.statusEl.classList.add(
               'is-error'
             );
+
           }
 
 
-          if (this.compressBtn) {
+          if (
+            this.compressBtn
+          ) {
 
             this.compressBtn.disabled =
               true;
+
           }
 
         };
 
 
-      if (this.compressBtn) {
+      if (
+        this.compressBtn
+      ) {
 
         this.compressBtn.addEventListener(
           'click',
@@ -848,7 +965,9 @@
         );
 
 
-      if (removeBtn) {
+      if (
+        removeBtn
+      ) {
 
         removeBtn.addEventListener(
           'click',
@@ -867,8 +986,7 @@
 
 
             if (
-              index >=
-              0
+              index >= 0
             ) {
 
               jobs.splice(
@@ -883,14 +1001,158 @@
 
           }
         );
+
+      }
+
+
+      this.updateLanguageUI();
+    }
+
+
+    // ========================================================
+    // LANGUAGE UI
+    // ========================================================
+
+    updateLanguageUI() {
+
+      if (
+        this.isProcessing
+      ) {
+
+        return;
+
+      }
+
+
+      /*
+       * Result exists
+       */
+      if (
+        this.resultBlob
+      ) {
+
+        const saving =
+          calculateSaving(
+            this.file.size,
+            this.resultBlob.size
+          );
+
+
+        if (
+          saving.isSmaller
+        ) {
+
+          this.statusEl.textContent =
+            t(
+              'image.readySavedPercent',
+              {
+
+                percent:
+                  saving.percent.toFixed(
+                    1
+                  )
+
+              }
+            );
+
+        } else if (
+          this.resultBlob.size >
+          this.file.size
+        ) {
+
+          this.statusEl.textContent =
+            t(
+              'image.readyFileLarger'
+            );
+
+        } else {
+
+          this.statusEl.textContent =
+            t(
+              'image.readyDownload',
+              {
+
+                size:
+                  U.formatBytes(
+                    this.resultBlob.size
+                  )
+
+              }
+            );
+        }
+
+
+        this.statusEl.classList.remove(
+          'is-error'
+        );
+
+
+        this.statusEl.classList.add(
+          'is-ready'
+        );
+
+
+        return;
+      }
+
+
+      /*
+       * If current state is error,
+       * don't overwrite it during language refresh.
+       */
+      if (
+        this.statusEl &&
+        this.statusEl.classList.contains(
+          'is-error'
+        )
+      ) {
+
+        return;
+
+      }
+
+
+      /*
+       * Waiting
+       */
+      if (
+        this.statusEl
+      ) {
+
+        this.statusEl.textContent =
+          t(
+            'image.waitingCompress'
+          );
+
+
+        this.statusEl.classList.remove(
+          'is-ready'
+        );
+
+      }
+
+
+      /*
+       * Original image metadata
+       */
+      if (
+        this.origDimEl &&
+        !this.naturalW
+      ) {
+
+        this.origDimEl.textContent =
+          t(
+            'image.reading'
+          );
+
       }
 
     }
 
 
-    /* ========================================================
-       PREVIEW INFO
-    ======================================================== */
+    // ========================================================
+    // PREVIEW INFO
+    // ========================================================
 
     updatePreviewInfo() {
 
@@ -900,6 +1162,7 @@
       ) {
 
         return;
+
       }
 
 
@@ -918,7 +1181,9 @@
         );
 
 
-      if (this.newDimEl) {
+      if (
+        this.newDimEl
+      ) {
 
         this.newDimEl.textContent =
           `${safeDimensions.width}×${safeDimensions.height}`;
@@ -928,9 +1193,9 @@
     }
 
 
-    /* ========================================================
-       UPDATE OPTIONS
-    ======================================================== */
+    // ========================================================
+    // UPDATE OPTIONS
+    // ========================================================
 
     updateOptionsFromGlobal(
       invalidate = true
@@ -991,18 +1256,24 @@
     }
 
 
-    /* ========================================================
-       MARK STALE
-    ======================================================== */
+    // ========================================================
+    // MARK STALE
+    // ========================================================
 
     markStale() {
 
-      if (this.isProcessing) {
+      if (
+        this.isProcessing
+      ) {
+
         return;
+
       }
 
 
-      if (this.resultUrl) {
+      if (
+        this.resultUrl
+      ) {
 
         revokeUrl(
           this.resultUrl
@@ -1011,6 +1282,7 @@
 
         this.resultUrl =
           null;
+
       }
 
 
@@ -1018,7 +1290,9 @@
         null;
 
 
-      if (this.downloadBtn) {
+      if (
+        this.downloadBtn
+      ) {
 
         this.downloadBtn.removeAttribute(
           'href'
@@ -1043,24 +1317,34 @@
       );
 
 
-      if (this.newSizeEl) {
+      if (
+        this.newSizeEl
+      ) {
 
         this.newSizeEl.textContent =
           '—';
+
       }
 
 
-      if (this.savingEl) {
+      if (
+        this.savingEl
+      ) {
 
         this.savingEl.textContent =
           '—';
+
       }
 
 
-      if (this.statusEl) {
+      if (
+        this.statusEl
+      ) {
 
         this.statusEl.textContent =
-          'รอลดขนาด';
+          t(
+            'image.waitingCompress'
+          );
 
 
         this.statusEl.classList.remove(
@@ -1073,9 +1357,9 @@
     }
 
 
-    /* ========================================================
-       COMPRESS
-    ======================================================== */
+    // ========================================================
+    // COMPRESS
+    // ========================================================
 
     async compress() {
 
@@ -1084,11 +1368,12 @@
       ) {
 
         return;
+
       }
 
 
       /*
-       * ถ้ารูปยังโหลดไม่เสร็จ
+       * Wait for image
        */
 
       if (
@@ -1107,6 +1392,7 @@
               resolve();
 
               return;
+
             }
 
 
@@ -1138,29 +1424,32 @@
         !this.naturalH
       ) {
 
-        if (this.statusEl) {
+        if (
+          this.statusEl
+        ) {
 
           this.statusEl.textContent =
-            'อ่านข้อมูลรูปไม่สำเร็จ';
+            t(
+              'image.readInfoFailed'
+            );
+
+
+          this.statusEl.classList.remove(
+            'is-ready'
+          );
 
 
           this.statusEl.classList.add(
             'is-error'
           );
+
         }
 
 
         return;
+
       }
 
-
-      /*
-       * อ่านค่าปัจจุบัน
-       *
-       * invalidate = false
-       * เพราะตอนนี้กำลังจะสร้างผลลัพธ์ใหม่
-       * ไม่จำเป็นต้อง markStale ซ้ำ
-       */
 
       this.updateOptionsFromGlobal(
         false
@@ -1171,12 +1460,12 @@
         true;
 
 
-      this.compressBtn.disabled =
-        true;
-
-
       this.el.dataset.processing =
         'true';
+
+
+      this.compressBtn.disabled =
+        true;
 
 
       this.statusEl.classList.remove(
@@ -1186,7 +1475,9 @@
 
 
       this.statusEl.textContent =
-        'กำลังลดขนาด…';
+        t(
+          'image.compressing'
+        );
 
 
       setProgress(
@@ -1194,10 +1485,6 @@
         8
       );
 
-
-      /*
-       * ช่วยให้ UI มีโอกาสวาดสถานะกำลังทำงาน
-       */
 
       await new Promise(
         resolve =>
@@ -1213,9 +1500,9 @@
 
       try {
 
-        /*
-         * คำนวณขนาด
-         */
+        // ----------------------------------------------------
+        // Calculate dimensions
+        // ----------------------------------------------------
 
         let dimensions =
           getOutputDimensions(
@@ -1224,10 +1511,6 @@
             this.maxSize
           );
 
-
-        /*
-         * ป้องกัน canvas ใหญ่เกิน
-         */
 
         dimensions =
           fitCanvasDimensions(
@@ -1242,15 +1525,21 @@
         ) {
 
           throw new Error(
-            'ขนาดภาพปลายทางไม่ถูกต้อง'
+            t(
+              'errors.invalidImageDimensions'
+            )
           );
+
         }
 
 
-        if (this.newDimEl) {
+        if (
+          this.newDimEl
+        ) {
 
           this.newDimEl.textContent =
             `${dimensions.width}×${dimensions.height}`;
+
         }
 
 
@@ -1284,17 +1573,22 @@
           );
 
 
-        if (!ctx) {
+        if (
+          !ctx
+        ) {
 
           throw new Error(
-            'ไม่สามารถสร้าง Canvas ได้'
+            t(
+              'errors.canvasContext'
+            )
           );
+
         }
 
 
-        /*
-         * JPG ไม่มี transparency
-         */
+        // ----------------------------------------------------
+        // JPG background
+        // ----------------------------------------------------
 
         if (
           this.format ===
@@ -1314,11 +1608,6 @@
 
         }
 
-
-        /*
-         * ให้ browser ใช้
-         * image smoothing คุณภาพสูง
-         */
 
         ctx.imageSmoothingEnabled =
           true;
@@ -1378,7 +1667,9 @@
 
                     reject(
                       new Error(
-                        'สร้างไฟล์ผลลัพธ์ไม่สำเร็จ'
+                        t(
+                          'errors.createFailed'
+                        )
                       )
                     );
 
@@ -1393,11 +1684,16 @@
           );
 
 
-        if (!blob) {
+        if (
+          !blob
+        ) {
 
           throw new Error(
-            'สร้างไฟล์ผลลัพธ์ไม่สำเร็จ'
+            t(
+              'errors.createFailed'
+            )
           );
+
         }
 
 
@@ -1406,10 +1702,6 @@
           82
         );
 
-
-        /*
-         * ลบผลลัพธ์เก่า
-         */
 
         if (
           this.resultUrl
@@ -1435,7 +1727,8 @@
         const ext =
           EXT_BY_FORMAT[
             this.format
-          ] || 'jpg';
+          ] ||
+          'jpg';
 
 
         const outputName =
@@ -1444,7 +1737,9 @@
           )}.${ext}`;
 
 
-        if (this.downloadBtn) {
+        if (
+          this.downloadBtn
+        ) {
 
           this.downloadBtn.href =
             this.resultUrl;
@@ -1461,11 +1756,9 @@
         }
 
 
-        /*
-         * ขนาดใหม่
-         */
-
-        if (this.newSizeEl) {
+        if (
+          this.newSizeEl
+        ) {
 
           this.newSizeEl.textContent =
             U.formatBytes(
@@ -1475,11 +1768,9 @@
         }
 
 
-        /*
-         * เปอร์เซ็นต์การลด
-         */
-
-        if (this.savingEl) {
+        if (
+          this.savingEl
+        ) {
 
           this.savingEl.textContent =
             formatSaving(
@@ -1503,16 +1794,24 @@
           );
 
 
-        /*
-         * Status
-         */
+        // ----------------------------------------------------
+        // Success status
+        // ----------------------------------------------------
 
         if (
           saving.isSmaller
         ) {
 
           this.statusEl.textContent =
-            `พร้อมดาวน์โหลด · ลด ${saving.percent.toFixed(1)}%`;
+            t(
+              'image.readySavedPercent',
+              {
+                percent:
+                  saving.percent.toFixed(
+                    1
+                  )
+              }
+            );
 
         } else if (
           blob.size >
@@ -1520,16 +1819,29 @@
         ) {
 
           this.statusEl.textContent =
-            'พร้อมดาวน์โหลด · ไฟล์ใหญ่ขึ้น';
+            t(
+              'image.readyFileLarger'
+            );
 
         } else {
 
           this.statusEl.textContent =
-            `พร้อมดาวน์โหลด · ${U.formatBytes(
-              blob.size
-            )}`;
+            t(
+              'image.readyDownload',
+              {
+                size:
+                  U.formatBytes(
+                    blob.size
+                  )
+              }
+            );
 
         }
+
+
+        this.statusEl.classList.remove(
+          'is-error'
+        );
 
 
         this.statusEl.classList.add(
@@ -1537,14 +1849,9 @@
         );
 
 
-        /*
-         * ทำเครื่องหมายว่างานเสร็จ
-         */
-
-        this.el.dataset.processing =
-          'false';
-
-      } catch (error) {
+      } catch (
+        error
+      ) {
 
         console.error(
           '[Image Compress]',
@@ -1558,7 +1865,9 @@
         );
 
 
-        if (this.downloadBtn) {
+        if (
+          this.downloadBtn
+        ) {
 
           this.downloadBtn.classList.add(
             'hidden'
@@ -1568,30 +1877,34 @@
 
 
         this.statusEl.textContent =
-          'ลดขนาดไม่สำเร็จ: ' +
-          (
-            error &&
-            error.message
-              ? error.message
-              : 'เกิดข้อผิดพลาด'
+          t(
+            'image.compressionFailed',
+            {
+              message:
+                error &&
+                error.message
+                  ? error.message
+                  : t(
+                      'errors.somethingWentWrong'
+                    )
+            }
           );
+
+
+        this.statusEl.classList.remove(
+          'is-ready'
+        );
 
 
         this.statusEl.classList.add(
           'is-error'
         );
 
-
-        this.el.dataset.processing =
-          'false';
-
       } finally {
 
-        /*
-         * คืน canvas
-         */
-
-        if (canvas) {
+        if (
+          canvas
+        ) {
 
           canvas.width =
             1;
@@ -1603,6 +1916,7 @@
 
           canvas =
             null;
+
         }
 
 
@@ -1622,13 +1936,15 @@
     }
 
 
-    /* ========================================================
-       DISPOSE
-    ======================================================== */
+    // ========================================================
+    // DISPOSE
+    // ========================================================
 
     dispose() {
 
-      if (this.sourceUrl) {
+      if (
+        this.sourceUrl
+      ) {
 
         revokeUrl(
           this.sourceUrl
@@ -1637,7 +1953,9 @@
       }
 
 
-      if (this.resultUrl) {
+      if (
+        this.resultUrl
+      ) {
 
         revokeUrl(
           this.resultUrl
@@ -1670,13 +1988,15 @@
   }
 
 
-  /* ==========================================================
-     BULK UI
-  ========================================================== */
+  // ============================================================
+  // BULK UI
+  // ============================================================
 
   function updateBulkUI() {
 
-    if (countEl) {
+    if (
+      countEl
+    ) {
 
       countEl.textContent =
         String(
@@ -1686,7 +2006,9 @@
     }
 
 
-    if (bulkbar) {
+    if (
+      bulkbar
+    ) {
 
       bulkbar.classList.toggle(
         'hidden',
@@ -1703,7 +2025,9 @@
       );
 
 
-    if (downloadZipBtn) {
+    if (
+      downloadZipBtn
+    ) {
 
       downloadZipBtn.classList.toggle(
         'hidden',
@@ -1715,9 +2039,9 @@
   }
 
 
-  /* ==========================================================
-     ADD FILES
-  ========================================================== */
+  // ============================================================
+  // ADD FILES
+  // ============================================================
 
   function addFiles(
     fileList
@@ -1764,9 +2088,9 @@
   }
 
 
-  /* ==========================================================
-     APPLY GLOBAL SETTINGS
-  ========================================================== */
+  // ============================================================
+  // REFRESH GLOBAL SETTINGS
+  // ============================================================
 
   function refreshAllJobs() {
 
@@ -1786,7 +2110,9 @@
   }
 
 
-  if (qualityEl) {
+  if (
+    qualityEl
+  ) {
 
     qualityEl.addEventListener(
       'change',
@@ -1796,7 +2122,9 @@
   }
 
 
-  if (maxSizeEl) {
+  if (
+    maxSizeEl
+  ) {
 
     maxSizeEl.addEventListener(
       'change',
@@ -1806,7 +2134,9 @@
   }
 
 
-  if (formatEl) {
+  if (
+    formatEl
+  ) {
 
     formatEl.addEventListener(
       'change',
@@ -1816,11 +2146,13 @@
   }
 
 
-  /* ==========================================================
-     CLEAR ALL
-  ========================================================== */
+  // ============================================================
+  // CLEAR ALL
+  // ============================================================
 
-  if (clearAllBtn) {
+  if (
+    clearAllBtn
+  ) {
 
     clearAllBtn.addEventListener(
       'click',
@@ -1848,24 +2180,26 @@
   }
 
 
-  /* ==========================================================
-     COMPRESS ALL
-  ========================================================== */
+  // ============================================================
+  // COMPRESS ALL
+  // ============================================================
 
-  if (compressAllBtn) {
+  if (
+    compressAllBtn
+  ) {
 
     compressAllBtn.addEventListener(
       'click',
       async () => {
 
-        if (!jobs.length) {
+        if (
+          !jobs.length
+        ) {
+
           return;
+
         }
 
-
-        /*
-         * อ่าน settings ล่าสุด
-         */
 
         refreshAllJobs();
 
@@ -1875,24 +2209,9 @@
 
 
         compressAllBtn.textContent =
-          'กำลังลดขนาดทั้งหมด…';
-
-
-        /*
-         * ป้องกันการกดซ้ำ
-         */
-
-        jobs.forEach(
-          job => {
-
-            if (
-              job.isProcessing
-            ) {
-              job.isQueued = true;
-            }
-
-          }
-        );
+          t(
+            'image.compressingAll'
+          );
 
 
         try {
@@ -1918,6 +2237,7 @@
               ) {
 
                 continue;
+
               }
 
 
@@ -1954,7 +2274,9 @@
 
 
           compressAllBtn.textContent =
-            'ลดขนาดทั้งหมด';
+            t(
+              'image.compressAll'
+            );
 
 
           updateBulkUI();
@@ -1967,11 +2289,13 @@
   }
 
 
-  /* ==========================================================
-     DOWNLOAD ZIP
-  ========================================================== */
+  // ============================================================
+  // DOWNLOAD ZIP
+  // ============================================================
 
-  if (downloadZipBtn) {
+  if (
+    downloadZipBtn
+  ) {
 
     downloadZipBtn.addEventListener(
       'click',
@@ -1984,9 +2308,12 @@
           );
 
 
-        if (!ready.length) {
+        if (
+          !ready.length
+        ) {
 
           return;
+
         }
 
 
@@ -1995,7 +2322,9 @@
 
 
         downloadZipBtn.textContent =
-          'กำลังบีบอัด…';
+          t(
+            'image.compressingZip'
+          );
 
 
         try {
@@ -2014,7 +2343,8 @@
               const ext =
                 EXT_BY_FORMAT[
                   job.format
-                ] || 'jpg';
+                ] ||
+                'jpg';
 
 
               const base =
@@ -2039,6 +2369,7 @@
 
                 name =
                   `${base}-${n++}.${ext}`;
+
               }
 
 
@@ -2071,7 +2402,9 @@
           );
 
 
-        } catch (error) {
+        } catch (
+          error
+        ) {
 
           console.error(
             '[Image Compress] ZIP failed:',
@@ -2085,7 +2418,9 @@
 
 
           downloadZipBtn.textContent =
-            'ดาวน์โหลดทั้งหมด (.zip)';
+            t(
+              'image.downloadZip'
+            );
 
         }
 
@@ -2095,9 +2430,9 @@
   }
 
 
-  /* ==========================================================
-     DROPZONE
-  ========================================================== */
+  // ============================================================
+  // DROPZONE
+  // ============================================================
 
   if (
     U &&
@@ -2114,9 +2449,9 @@
   }
 
 
-  /* ==========================================================
-     CLEAR CACHE
-  ========================================================== */
+  // ============================================================
+  // CLEAR CACHE
+  // ============================================================
 
   if (
     U &&
@@ -2147,5 +2482,78 @@
     );
 
   }
+
+
+  // ============================================================
+  // LANGUAGE CHANGE
+  // ============================================================
+
+  document.addEventListener(
+    'languagechange',
+    () => {
+
+      /*
+       * Bulk buttons
+       */
+
+      if (
+        compressAllBtn &&
+        !compressAllBtn.disabled
+      ) {
+
+        compressAllBtn.textContent =
+          t(
+            'image.compressAll'
+          );
+
+      }
+
+
+      if (
+        downloadZipBtn &&
+        !downloadZipBtn.disabled
+      ) {
+
+        downloadZipBtn.textContent =
+          t(
+            'image.downloadZip'
+          );
+
+      }
+
+
+      /*
+       * Labels inside current jobs
+       */
+
+      jobs.forEach(
+        job => {
+
+          job.updateLanguageUI();
+
+          if (
+            job.origDimEl &&
+            !job.naturalW
+          ) {
+
+            job.origDimEl.textContent =
+              t(
+                'image.reading'
+              );
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  // ============================================================
+  // INITIAL UI
+  // ============================================================
+
+  updateBulkUI();
 
 })();
