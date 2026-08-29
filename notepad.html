@@ -43,7 +43,6 @@
 
           data-i18n-title="notepad.backHome"
           data-i18n-aria-label="notepad.backHome"
-
         >
 
           <span
@@ -96,7 +95,10 @@
 
       <!-- SAVE STATUS -->
 
-      <div class="notepad-status">
+      <div
+        class="notepad-status"
+        aria-live="polite"
+      >
 
         <span
           class="status-dot"
@@ -120,7 +122,11 @@
          TOOLBAR
     ======================================================== -->
 
-    <section class="notepad-toolbar">
+    <section
+      class="notepad-toolbar"
+      aria-label="Notepad toolbar"
+      data-i18n-aria-label="notepad.toolbar"
+    >
 
       <!-- MAIN ACTIONS -->
 
@@ -132,9 +138,7 @@
           type="button"
           class="notepad-btn"
           id="btn-new-note"
-
           data-i18n-title="notepad.newNote"
-
         >
 
           <span aria-hidden="true">
@@ -156,9 +160,7 @@
           type="button"
           class="notepad-btn"
           id="btn-copy-note"
-
           data-i18n-title="notepad.copyAll"
-
         >
 
           <span aria-hidden="true">
@@ -180,9 +182,7 @@
           type="button"
           class="notepad-btn"
           id="btn-save-txt"
-
           data-i18n-title="notepad.saveTxt"
-
         >
 
           <span aria-hidden="true">
@@ -207,9 +207,7 @@
           type="button"
           class="notepad-btn"
           id="btn-clear-note"
-
           data-i18n-title="notepad.clear"
-
         >
 
           <span aria-hidden="true">
@@ -248,7 +246,6 @@
 
           data-i18n-title="notepad.undo"
           data-i18n-aria-label="notepad.undoLabel"
-
         >
           ↶
         </button>
@@ -263,7 +260,6 @@
 
           data-i18n-title="notepad.redo"
           data-i18n-aria-label="notepad.redoLabel"
-
         >
           ↷
         </button>
@@ -315,7 +311,6 @@
 
             data-i18n-title="notepad.clearSearch"
             data-i18n-aria-label="notepad.clearSearch"
-
           >
             ×
           </button>
@@ -331,7 +326,10 @@
          EDITOR
     ======================================================== -->
 
-    <section class="notepad-editor-wrapper">
+    <section
+      class="notepad-editor-wrapper"
+      data-i18n-aria-label="notepad.editorSection"
+    >
 
       <div class="notepad-editor">
 
@@ -373,7 +371,7 @@
           </span>
 
           :
-          
+
           <strong id="notepad-character-count">
             0
           </strong>
@@ -502,12 +500,9 @@
 
     <div
       class="notepad-modal-box"
-
       role="dialog"
       aria-modal="true"
-
       aria-labelledby="notepad-confirm-title"
-
     >
 
       <div
@@ -541,7 +536,6 @@
           id="btn-modal-cancel"
 
           data-i18n="common.cancel"
-
         >
           ยกเลิก
         </button>
@@ -553,7 +547,6 @@
           id="btn-modal-confirm"
 
           data-i18n="notepad.createNew"
-
         >
           สร้างใหม่
         </button>
