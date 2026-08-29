@@ -1,94 +1,148 @@
 (() => {
   'use strict';
 
-  const catButtons = Array.from(
-    document.querySelectorAll('.cat-btn')
-  );
-
-  const chipGroups = Array.from(
-    document.querySelectorAll('.tool-chips')
-  );
-
-  const panels = Array.from(
-    document.querySelectorAll('.tool-panel')
-  );
-
-  let currentCat = null;
+  const I18n =
+    window.I18n || null;
 
 
-  // ------------------------------------------------------------
+  // ============================================================
+  // TRANSLATION HELPER
+  // ============================================================
+
+  function t(
+    key,
+    values
+  ) {
+
+    if (
+      I18n &&
+      typeof I18n.t ===
+        'function'
+    ) {
+
+      return I18n.t(
+        key,
+        values
+      );
+    }
+
+    return String(
+      key
+    );
+  }
+
+
+  // ============================================================
+  // ELEMENTS
+  // ============================================================
+
+  const catButtons =
+    Array.from(
+      document.querySelectorAll(
+        '.cat-btn'
+      )
+    );
+
+
+  const chipGroups =
+    Array.from(
+      document.querySelectorAll(
+        '.tool-chips'
+      )
+    );
+
+
+  const panels =
+    Array.from(
+      document.querySelectorAll(
+        '.tool-panel'
+      )
+    );
+
+
+  let currentCat =
+    null;
+
+
+  // ============================================================
   // TOOL META
-  // ------------------------------------------------------------
+  // ============================================================
+
+  /*
+   * ใช้ translation key แทนข้อความภาษาไทยโดยตรง
+   */
 
   const TOOL_META = {
 
-    /* ==========================================================
-       IMAGE
-    ========================================================== */
+    // ----------------------------------------------------------
+    // IMAGE
+    // ----------------------------------------------------------
 
     'img-convert': [
       'image',
-      'พร้อมแปลงรูปให้แล้ว ✨'
+      'image.characterConvert'
     ],
 
     'img-crop': [
       'image',
-      'จัดเฟรมรูปให้น่ารักพอดี ✂️'
+      'image.characterCrop'
     ],
 
     'img-bgremove': [
       'image',
-      'ค่อย ๆ ลบพื้นหลังให้เนียนกริบ 🫧'
+      'image.characterBgRemove'
     ],
 
     'img-compress': [
       'image',
-      'บีบขนาดรูปให้เล็กลงแบบคงคุณภาพไว้ 📦'
+      'image.characterCompress'
     ],
 
 
-    /* ==========================================================
-       PDF
-    ========================================================== */
+    // ----------------------------------------------------------
+    // PDF
+    // ----------------------------------------------------------
 
     'pdf-from-images': [
       'pdf',
-      'รวมรูปให้กลายเป็น PDF แบบเรียบร้อย 📄'
+      'pdf.characterFromImages'
     ],
 
     'pdf-to-images': [
       'pdf',
-      'แยกหน้า PDF ออกเป็นรูปให้ทีละหน้า 🧩'
+      'pdf.characterToImages'
     ],
 
     'pdf-pages': [
       'pdf',
-      'จัดการหน้ากระดาษแบบคลิกแล้วเข้าใจง่าย 📚'
+      'pdf.characterPages'
     ],
 
     'pdf-merge': [
       'pdf',
-      'เรียงเอกสารแล้วรวมเป็นไฟล์เดียว 💗'
+      'pdf.characterMerge'
     ],
 
     'pdf-watermark': [
       'pdf',
-      'เติมลายน้ำแบบนุ่ม ๆ ไม่กวนเอกสาร 💧'
+      'pdf.characterWatermark'
     ],
 
     'pdf-pagenumbers': [
       'pdf',
-      'ใส่เลขหน้าให้เอกสารดูเป็นระเบียบ 🔖'
+      'pdf.characterPageNumbers'
     ]
 
   };
 
 
-  // ------------------------------------------------------------
+  // ============================================================
   // CATEGORY
-  // ------------------------------------------------------------
+  // ============================================================
 
-  function showCategory(cat) {
+  function showCategory(
+    cat
+  ) {
 
     if (
       currentCat &&
@@ -103,30 +157,35 @@
       cat;
 
 
-    catButtons.forEach(button => {
+    catButtons.forEach(
+      button => {
 
-      button.classList.toggle(
-        'is-active',
-        button.dataset.cat === cat
-      );
+        button.classList.toggle(
+          'is-active',
+          button.dataset.cat ===
+            cat
+        );
+      }
+    );
 
-    });
 
+    chipGroups.forEach(
+      group => {
 
-    chipGroups.forEach(group => {
-
-      group.classList.toggle(
-        'hidden',
-        group.dataset.catGroup !== cat
-      );
-
-    });
+        group.classList.toggle(
+          'hidden',
+          group.dataset.catGroup !==
+            cat
+        );
+      }
+    );
 
 
     const activeGroup =
       chipGroups.find(
         group =>
-          group.dataset.catGroup === cat
+          group.dataset.catGroup ===
+          cat
       );
 
 
@@ -143,331 +202,363 @@
         : null;
 
 
-    if (activeChip) {
+    if (
+      activeChip
+    ) {
 
       showTool(
         activeChip.dataset.tool
       );
-
     }
-
   }
 
 
-  // ------------------------------------------------------------
+  // ============================================================
   // TOOL
-  // ------------------------------------------------------------
+  // ============================================================
 
-  function showTool(tool) {
+  function showTool(
+    tool
+  ) {
 
     document
-      .querySelectorAll('.tool-chip')
-      .forEach(button => {
+      .querySelectorAll(
+        '.tool-chip'
+      )
+      .forEach(
+        button => {
 
-        button.classList.toggle(
-          'is-active',
-          button.dataset.tool === tool
-        );
-
-      });
-
-
-    panels.forEach(panel => {
-
-      panel.classList.toggle(
-        'hidden',
-        panel.id !==
-          'panel-' + tool
+          button.classList.toggle(
+            'is-active',
+            button.dataset.tool ===
+              tool
+          );
+        }
       );
 
-    });
 
+    panels.forEach(
+      panel => {
 
-    scheduleCuteRefresh();
-
-  }
-
-
-  // ------------------------------------------------------------
-  // EVENTS
-  // ------------------------------------------------------------
-
-  catButtons.forEach(button => {
-
-    button.addEventListener(
-      'click',
-      () => {
-
-        showCategory(
-          button.dataset.cat
+        panel.classList.toggle(
+          'hidden',
+          panel.id !==
+            'panel-' +
+            tool
         );
-
       }
     );
 
-  });
+
+    scheduleCuteRefresh();
+  }
 
 
-  document
-    .querySelectorAll('.tool-chip')
-    .forEach(button => {
+  // ============================================================
+  // EVENTS
+  // ============================================================
+
+  catButtons.forEach(
+    button => {
 
       button.addEventListener(
         'click',
         () => {
 
-          showTool(
-            button.dataset.tool
+          showCategory(
+            button.dataset.cat
           );
-
         }
       );
+    }
+  );
 
-    });
+
+  document
+    .querySelectorAll(
+      '.tool-chip'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () => {
+
+            showTool(
+              button.dataset.tool
+            );
+          }
+        );
+      }
+    );
 
 
-  // ------------------------------------------------------------
+  // ============================================================
   // CUTE UI
-  // ------------------------------------------------------------
+  // ============================================================
 
   function setupCuteToolUI() {
 
-    panels.forEach(panel => {
+    panels.forEach(
+      panel => {
 
-      const tool =
-        panel.id.replace(
-          /^panel-/,
-          ''
-        );
-
-
-      const meta =
-        TOOL_META[tool] ||
-        [
-          'image',
-          'พร้อมเริ่มงานแล้ว ✨'
-        ];
-
-
-      panel.dataset.tool =
-        tool;
-
-
-      panel.dataset.toolKind =
-        meta[0];
-
-
-      // --------------------------------------------------------
-      // Character
-      // --------------------------------------------------------
-
-      if (
-        !panel.querySelector(
-          '.cute-character'
-        )
-      ) {
-
-        const dot =
-          document.createElement(
-            'span'
+        const tool =
+          panel.id.replace(
+            /^panel-/,
+            ''
           );
 
 
-        dot.className =
-          'cute-character';
+        const meta =
+          TOOL_META[tool] ||
+          [
+            'image',
+            'common.ready'
+          ];
 
 
-        dot.setAttribute(
-          'aria-hidden',
-          'true'
-        );
+        panel.dataset.tool =
+          tool;
 
 
-        panel.appendChild(
-          dot
-        );
-
-      }
+        panel.dataset.toolKind =
+          meta[0];
 
 
-      // --------------------------------------------------------
-      // Dropzone
-      // --------------------------------------------------------
+        // ------------------------------------------------------
+        // Character
+        // ------------------------------------------------------
 
-      const dz =
-        panel.querySelector(
-          '.dropzone'
-        );
+        if (
+          !panel.querySelector(
+            '.cute-character'
+          )
+        ) {
+
+          const dot =
+            document.createElement(
+              'span'
+            );
 
 
-      if (!dz) {
-        return;
-      }
+          dot.className =
+            'cute-character';
 
 
-      if (
-        !dz.querySelector(
-          '.cute-empty-state'
-        )
-      ) {
-
-        const empty =
-          document.createElement(
-            'div'
+          dot.setAttribute(
+            'aria-hidden',
+            'true'
           );
 
 
-        empty.className =
-          'cute-empty-state';
-
-
-        empty.innerHTML =
-          '<span class="cute-dot"></span>' +
-          '<span class="cute-empty-copy"></span>';
-
-
-        const inner =
-          dz.querySelector(
-            '.dz-inner'
+          panel.appendChild(
+            dot
           );
-
-
-        (
-          inner ||
-          dz
-        ).appendChild(
-          empty
-        );
-
-      }
-
-
-      const copy =
-        dz.querySelector(
-          '.cute-empty-copy'
-        );
-
-
-      if (copy) {
-
-        copy.textContent =
-          meta[1];
-
-      }
-
-
-      // --------------------------------------------------------
-      // Progress
-      // --------------------------------------------------------
-
-      if (
-        !dz.querySelector(
-          '.cute-progress'
-        )
-      ) {
-
-        const progress =
-          document.createElement(
-            'div'
-          );
-
-
-        progress.className =
-          'cute-progress';
-
-
-        progress.innerHTML = `
-          <div class="cute-progress-head">
-
-            <strong>
-              กำลังทำงาน…
-            </strong>
-
-            <span class="cute-progress-count">
-              กำลังประมวลผล
-            </span>
-
-          </div>
-
-          <div class="cute-progress-track">
-
-            <div class="cute-progress-bar"></div>
-
-          </div>
-        `;
-
-
-        dz.appendChild(
-          progress
-        );
-
-      }
-
-
-      // --------------------------------------------------------
-      // Drag state
-      // --------------------------------------------------------
-
-      const setDrag =
-        on => {
-
-          dz.classList.toggle(
-            'is-dragover',
-            on
-          );
-
-        };
-
-
-      dz.addEventListener(
-        'dragenter',
-        () =>
-          setDrag(true)
-      );
-
-
-      dz.addEventListener(
-        'dragover',
-        () =>
-          setDrag(true)
-      );
-
-
-      dz.addEventListener(
-        'dragleave',
-        event => {
-
-          if (
-            !dz.contains(
-              event.relatedTarget
-            )
-          ) {
-
-            setDrag(false);
-
-          }
-
         }
-      );
 
 
-      dz.addEventListener(
-        'drop',
-        () =>
-          setDrag(false)
-      );
+        // ------------------------------------------------------
+        // Dropzone
+        // ------------------------------------------------------
 
-    });
+        const dz =
+          panel.querySelector(
+            '.dropzone'
+          );
+
+
+        if (
+          !dz
+        ) {
+          return;
+        }
+
+
+        // ------------------------------------------------------
+        // Empty state
+        // ------------------------------------------------------
+
+        if (
+          !dz.querySelector(
+            '.cute-empty-state'
+          )
+        ) {
+
+          const empty =
+            document.createElement(
+              'div'
+            );
+
+
+          empty.className =
+            'cute-empty-state';
+
+
+          empty.innerHTML =
+            '<span class="cute-dot"></span>' +
+            '<span class="cute-empty-copy"></span>';
+
+
+          const inner =
+            dz.querySelector(
+              '.dz-inner'
+            );
+
+
+          (
+            inner ||
+            dz
+          ).appendChild(
+            empty
+          );
+        }
+
+
+        const copy =
+          dz.querySelector(
+            '.cute-empty-copy'
+          );
+
+
+        if (
+          copy
+        ) {
+
+          copy.dataset.i18n =
+            meta[1];
+
+
+          copy.textContent =
+            t(
+              meta[1]
+            );
+        }
+
+
+        // ------------------------------------------------------
+        // Progress
+        // ------------------------------------------------------
+
+        if (
+          !dz.querySelector(
+            '.cute-progress'
+          )
+        ) {
+
+          const progress =
+            document.createElement(
+              'div'
+            );
+
+
+          progress.className =
+            'cute-progress';
+
+
+          progress.innerHTML = `
+            <div class="cute-progress-head">
+
+              <strong
+                class="cute-progress-title"
+              ></strong>
+
+              <span
+                class="cute-progress-count"
+              ></span>
+
+            </div>
+
+            <div class="cute-progress-track">
+
+              <div
+                class="cute-progress-bar"
+              ></div>
+
+            </div>
+          `;
+
+
+          dz.appendChild(
+            progress
+          );
+        }
+
+
+        // ------------------------------------------------------
+        // Drag state
+        // ------------------------------------------------------
+
+        const setDrag =
+          on => {
+
+            dz.classList.toggle(
+              'is-dragover',
+              on
+            );
+          };
+
+
+        dz.addEventListener(
+          'dragenter',
+          () => {
+
+            setDrag(
+              true
+            );
+          }
+        );
+
+
+        dz.addEventListener(
+          'dragover',
+          () => {
+
+            setDrag(
+              true
+            );
+          }
+        );
+
+
+        dz.addEventListener(
+          'dragleave',
+          event => {
+
+            if (
+              !dz.contains(
+                event.relatedTarget
+              )
+            ) {
+
+              setDrag(
+                false
+              );
+            }
+          }
+        );
+
+
+        dz.addEventListener(
+          'drop',
+          () => {
+
+            setDrag(
+              false
+            );
+          }
+        );
+      }
+    );
 
 
     refreshCuteStates();
-
   }
 
 
-  // ------------------------------------------------------------
+  // ============================================================
   // CUTE STATE REFRESH
-  // ------------------------------------------------------------
+  // ============================================================
 
   let cuteRefreshQueued =
     false;
@@ -475,7 +566,9 @@
 
   function scheduleCuteRefresh() {
 
-    if (cuteRefreshQueued) {
+    if (
+      cuteRefreshQueued
+    ) {
       return;
     }
 
@@ -484,7 +577,7 @@
       true;
 
 
-    requestAnimationFrame(
+    const run =
       () => {
 
         cuteRefreshQueued =
@@ -492,14 +585,35 @@
 
 
         refreshCuteStates();
+      };
 
-      }
-    );
 
+    if (
+      typeof requestAnimationFrame ===
+      'function'
+    ) {
+
+      requestAnimationFrame(
+        run
+      );
+
+    } else {
+
+      setTimeout(
+        run,
+        0
+      );
+    }
   }
 
 
-  function isCardProcessing(card) {
+  // ============================================================
+  // PROCESSING DETECTION
+  // ============================================================
+
+  function isCardProcessing(
+    card
+  ) {
 
     if (
       card.dataset.processing ===
@@ -507,7 +621,6 @@
     ) {
 
       return true;
-
     }
 
 
@@ -517,12 +630,14 @@
     ) {
 
       return false;
-
     }
 
 
-    // fallback สำหรับ tool เดิม
-
+    /*
+     * fallback สำหรับ Tool เดิม
+     *
+     * รองรับข้อความหลายภาษา
+     */
     const text =
       (
         card.textContent ||
@@ -530,230 +645,319 @@
       ).toLowerCase();
 
 
-    return /กำลัง|processing|converting|removing|loading|building|merging|exporting|saving|working|จัดทำ|ประมวลผล/.test(
-      text
-    );
+    return (
+      // Thai
+      /กำลัง|ประมวลผล|จัดทำ|กำลังทำงาน/.test(
+        text
+      ) ||
 
+      // English
+      /processing|converting|removing|loading|building|merging|exporting|saving|working|creating|compressing|cropping/.test(
+        text
+      ) ||
+
+      // Japanese
+      /処理中|変換中|読み込み中|作成中|保存中/.test(
+        text
+      ) ||
+
+      // Korean
+      /처리 중|변환 중|불러오는 중|생성 중|저장 중/.test(
+        text
+      ) ||
+
+      // Chinese
+      /处理中|转换中|加载中|创建中|保存中/.test(
+        text
+      )
+    );
   }
 
+
+  // ============================================================
+  // REFRESH CUTE STATES
+  // ============================================================
 
   function refreshCuteStates() {
 
-    panels.forEach(panel => {
+    panels.forEach(
+      panel => {
 
-      const dz =
-        panel.querySelector(
-          '.dropzone'
-        );
-
-
-      if (!dz) {
-        return;
-      }
-
-
-      const jobs =
-        panel.querySelector(
-          '[id^="jobs-"]'
-        );
-
-
-      const list =
-        panel.querySelector(
-          '[id^="list-"]'
-        );
-
-
-      const result =
-        panel.querySelector(
-          '[id^="result-"]'
-        );
-
-
-      const cards =
-        panel.querySelectorAll(
-          '.ticket, .file-row, .page-card'
-        );
-
-
-      const hasFiles =
-        cards.length > 0 ||
-        !!(
-          jobs &&
-          jobs.children.length
-        ) ||
-        !!(
-          list &&
-          list.children.length
-        );
-
-
-      const empty =
-        dz.querySelector(
-          '.cute-empty-state'
-        );
-
-
-      if (empty) {
-
-        empty.classList.toggle(
-          'is-hidden',
-          hasFiles
-        );
-
-      }
-
-
-      let processing =
-        false;
-
-
-      cards.forEach(card => {
-
-        const busy =
-          isCardProcessing(
-            card
+        const dz =
+          panel.querySelector(
+            '.dropzone'
           );
-
-
-        card.classList.toggle(
-          'is-processing',
-          busy
-        );
-
-
-        if (busy) {
-          processing = true;
-        }
-
-      });
-
-
-      if (
-        result &&
-        !result.classList.contains(
-          'hidden'
-        )
-      ) {
-
-        processing =
-          false;
-      }
-
-
-      const progress =
-        dz.querySelector(
-          '.cute-progress'
-        );
-
-
-      if (progress) {
-
-        progress.classList.toggle(
-          'is-visible',
-          processing
-        );
 
 
         if (
-          !processing &&
-          hasFiles
+          !dz
         ) {
-
-          progress.classList.add(
-            'is-done'
-          );
-
-
-          const strong =
-            progress.querySelector(
-              'strong'
-            );
-
-
-          const count =
-            progress.querySelector(
-              '.cute-progress-count'
-            );
-
-
-          if (strong) {
-
-            strong.textContent =
-              'พร้อมแล้ว ✨';
-          }
-
-
-          if (count) {
-
-            count.textContent =
-              'ทำงานเสร็จ';
-          }
-
-
-        } else if (processing) {
-
-          progress.classList.remove(
-            'is-done'
-          );
-
-
-          const strong =
-            progress.querySelector(
-              'strong'
-            );
-
-
-          const count =
-            progress.querySelector(
-              '.cute-progress-count'
-            );
-
-
-          if (strong) {
-
-            strong.textContent =
-              'กำลังทำงาน…';
-          }
-
-
-          if (count) {
-
-            count.textContent =
-              cards.length
-                ? `${cards.length} รายการ`
-                : 'กำลังประมวลผล';
-
-          }
-
-
-        } else {
-
-          progress.classList.remove(
-            'is-done'
-          );
-
+          return;
         }
 
+
+        const jobs =
+          panel.querySelector(
+            '[id^="jobs-"]'
+          );
+
+
+        const list =
+          panel.querySelector(
+            '[id^="list-"]'
+          );
+
+
+        const result =
+          panel.querySelector(
+            '[id^="result-"]'
+          );
+
+
+        const cards =
+          panel.querySelectorAll(
+            '.ticket, .file-row, .page-card'
+          );
+
+
+        const hasFiles =
+          cards.length > 0 ||
+          !!(
+            jobs &&
+            jobs.children.length
+          ) ||
+          !!(
+            list &&
+            list.children.length
+          );
+
+
+        // ------------------------------------------------------
+        // Empty state
+        // ------------------------------------------------------
+
+        const empty =
+          dz.querySelector(
+            '.cute-empty-state'
+          );
+
+
+        if (
+          empty
+        ) {
+
+          empty.classList.toggle(
+            'is-hidden',
+            hasFiles
+          );
+        }
+
+
+        // ------------------------------------------------------
+        // Processing
+        // ------------------------------------------------------
+
+        let processing =
+          false;
+
+
+        cards.forEach(
+          card => {
+
+            const busy =
+              isCardProcessing(
+                card
+              );
+
+
+            card.classList.toggle(
+              'is-processing',
+              busy
+            );
+
+
+            if (
+              busy
+            ) {
+
+              processing =
+                true;
+            }
+          }
+        );
+
+
+        // ------------------------------------------------------
+        // Result
+        // ------------------------------------------------------
+
+        if (
+          result &&
+          !result.classList.contains(
+            'hidden'
+          )
+        ) {
+
+          processing =
+            false;
+        }
+
+
+        // ------------------------------------------------------
+        // Progress
+        // ------------------------------------------------------
+
+        const progress =
+          dz.querySelector(
+            '.cute-progress'
+          );
+
+
+        if (
+          progress
+        ) {
+
+          progress.classList.toggle(
+            'is-visible',
+            processing
+          );
+
+
+          const strong =
+            progress.querySelector(
+              '.cute-progress-title'
+            );
+
+
+          const count =
+            progress.querySelector(
+              '.cute-progress-count'
+            );
+
+
+          // ----------------------------------------------------
+          // DONE
+          // ----------------------------------------------------
+
+          if (
+            !processing &&
+            hasFiles
+          ) {
+
+            progress.classList.add(
+              'is-done'
+            );
+
+
+            if (
+              strong
+            ) {
+
+              strong.textContent =
+                t(
+                  'cute.ready'
+                );
+            }
+
+
+            if (
+              count
+            ) {
+
+              count.textContent =
+                t(
+                  'cute.completed'
+                );
+            }
+
+
+          // ----------------------------------------------------
+          // PROCESSING
+          // ----------------------------------------------------
+
+          } else if (
+            processing
+          ) {
+
+            progress.classList.remove(
+              'is-done'
+            );
+
+
+            if (
+              strong
+            ) {
+
+              strong.textContent =
+                t(
+                  'cute.processing'
+                );
+            }
+
+
+            if (
+              count
+            ) {
+
+              if (
+                cards.length
+              ) {
+
+                count.textContent =
+                  t(
+                    'cute.itemCount',
+                    {
+                      count:
+                        cards.length
+                    }
+                  );
+
+              } else {
+
+                count.textContent =
+                  t(
+                    'common.processing'
+                  );
+              }
+            }
+
+
+          // ----------------------------------------------------
+          // IDLE
+          // ----------------------------------------------------
+
+          } else {
+
+            progress.classList.remove(
+              'is-done'
+            );
+          }
+        }
+
+
+        // ------------------------------------------------------
+        // Busy state
+        // ------------------------------------------------------
+
+        dz.classList.toggle(
+          'is-busy',
+          processing
+        );
       }
-
-
-      dz.classList.toggle(
-        'is-busy',
-        processing
-      );
-
-    });
-
+    );
   }
 
+
+  // ============================================================
+  // INITIALIZE
+  // ============================================================
 
   setupCuteToolUI();
 
 
-  // ------------------------------------------------------------
+  // ============================================================
   // MUTATION OBSERVER
-  // ------------------------------------------------------------
+  // ============================================================
 
   let cuteObserver =
     null;
@@ -765,7 +969,9 @@
     );
 
 
-  if (panelContainer) {
+  if (
+    panelContainer
+  ) {
 
     cuteObserver =
       new MutationObserver(
@@ -794,7 +1000,6 @@
 
 
               break;
-
             }
 
 
@@ -824,20 +1029,17 @@
 
 
                 break;
-
               }
-
             }
-
           }
 
 
-          if (relevant) {
+          if (
+            relevant
+          ) {
 
             scheduleCuteRefresh();
-
           }
-
         }
       );
 
@@ -860,13 +1062,72 @@
         ]
       }
     );
-
   }
 
 
-  // ------------------------------------------------------------
+  // ============================================================
+  // LANGUAGE CHANGE
+  // ============================================================
+
+  document.addEventListener(
+    'languagechange',
+    () => {
+
+      /*
+       * อัปเดตข้อความของ cute empty state
+       */
+      panels.forEach(
+        panel => {
+
+          const tool =
+            panel.dataset.tool;
+
+
+          if (
+            !tool
+          ) {
+            return;
+          }
+
+
+          const meta =
+            TOOL_META[tool];
+
+
+          if (
+            !meta
+          ) {
+            return;
+          }
+
+
+          const copy =
+            panel.querySelector(
+              '.cute-empty-copy'
+            );
+
+
+          if (
+            copy
+          ) {
+
+            copy.textContent =
+              t(
+                meta[1]
+              );
+          }
+        }
+      );
+
+
+      scheduleCuteRefresh();
+    }
+  );
+
+
+  // ============================================================
   // CACHE CLEAR
-  // ------------------------------------------------------------
+  // ============================================================
 
   function runAutoClearCache() {
 
@@ -877,7 +1138,6 @@
     ) {
 
       window.Utils.clearCache();
-
     }
 
 
@@ -888,21 +1148,21 @@
     ) {
 
       window.PdfWorkerClient.dispose();
-
     }
 
 
     scheduleCuteRefresh();
-
   }
 
 
-  // ------------------------------------------------------------
+  // ============================================================
   // IDLE MANAGEMENT
-  // ------------------------------------------------------------
+  // ============================================================
 
   const IDLE_LIMIT_MS =
-    5 * 60 * 1000;
+    5 *
+    60 *
+    1000;
 
 
   let lastActivity =
@@ -913,7 +1173,6 @@
 
     lastActivity =
       Date.now();
-
   }
 
 
@@ -924,21 +1183,22 @@
     'change',
     'drop',
     'wheel'
-  ].forEach(eventName => {
+  ].forEach(
+    eventName => {
 
-    document.addEventListener(
-      eventName,
-      markActivity,
-      {
-        passive:
-          true,
+      document.addEventListener(
+        eventName,
+        markActivity,
+        {
+          passive:
+            true,
 
-        capture:
-          true
-      }
-    );
-
-  });
+          capture:
+            true
+        }
+      );
+    }
+  );
 
 
   function hasProcessingWork() {
@@ -946,7 +1206,6 @@
     return !!document.querySelector(
       '.tool-panel:not(.hidden) .is-processing'
     );
-
   }
 
 
@@ -960,7 +1219,6 @@
         '.tool-panel:not(.hidden) .is-ready'
       ].join(',')
     );
-
   }
 
 
@@ -970,7 +1228,9 @@
       document.activeElement;
 
 
-    if (!active) {
+    if (
+      !active
+    ) {
       return false;
     }
 
@@ -983,7 +1243,6 @@
       ) ||
       active.isContentEditable
     );
-
   }
 
 
@@ -1001,7 +1260,6 @@
       ) {
 
         return;
-
       }
 
 
@@ -1010,7 +1268,6 @@
       ) {
 
         return;
-
       }
 
 
@@ -1019,7 +1276,6 @@
       ) {
 
         return;
-
       }
 
 
@@ -1028,7 +1284,6 @@
       ) {
 
         return;
-
       }
 
 
@@ -1039,13 +1294,14 @@
         Date.now();
 
     },
-    60 * 1000
+    60 *
+    1000
   );
 
 
-  // ------------------------------------------------------------
+  // ============================================================
   // PAGE HIDE
-  // ------------------------------------------------------------
+  // ============================================================
 
   window.addEventListener(
     'pagehide',
@@ -1058,7 +1314,6 @@
       ) {
 
         window.Utils.clearCache();
-
       }
 
 
@@ -1069,27 +1324,26 @@
       ) {
 
         window.PdfWorkerClient.dispose();
-
       }
 
 
-      if (cuteObserver) {
+      if (
+        cuteObserver
+      ) {
 
         try {
 
           cuteObserver.disconnect();
 
         } catch (_) {}
-
       }
-
     }
   );
 
 
-  // ------------------------------------------------------------
+  // ============================================================
   // START
-  // ------------------------------------------------------------
+  // ============================================================
 
   showCategory(
     'image'
