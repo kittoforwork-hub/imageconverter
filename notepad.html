@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Online Notepad</title>
+
+  <!-- Notepad CSS -->
+  <link rel="stylesheet" href="css/notepad.css">
+</head>
+
+<body>
+
+  <main class="notepad-page">
+
+    <!-- =========================================================
+         HEADER
+    ========================================================== -->
+    <header class="notepad-header">
+
+      <div class="notepad-title">
+        <div class="notepad-icon">📝</div>
+
+        <div>
+          <h1>Online Notepad</h1>
+          <p>จดข้อความของคุณได้ง่าย ๆ และบันทึกอัตโนมัติ</p>
+        </div>
+      </div>
+
+      <div class="notepad-status">
+        <span class="status-dot"></span>
+        <span id="notepad-save-status">พร้อมใช้งาน</span>
+      </div>
+
+    </header>
+
+
+    <!-- =========================================================
+         TOOLBAR
+    ========================================================== -->
+    <section class="notepad-toolbar">
+
+      <div class="toolbar-group">
+
+        <button
+          type="button"
+          class="notepad-btn"
+          id="btn-new-note"
+          title="สร้างโน้ตใหม่"
+        >
+          <span>📄</span>
+          <span>ใหม่</span>
+        </button>
+
+        <button
+          type="button"
+          class="notepad-btn"
+          id="btn-copy-note"
+          title="คัดลอกข้อความทั้งหมด"
+        >
+          <span>📋</span>
+          <span>คัดลอก</span>
+        </button>
+
+        <button
+          type="button"
+          class="notepad-btn"
+          id="btn-clear-note"
+          title="ล้างข้อความ"
+        >
+          <span>🗑️</span>
+          <span>ล้าง</span>
+        </button>
+
+      </div>
+
+
+      <div class="toolbar-divider"></div>
+
+
+      <div class="toolbar-group">
+
+        <button
+          type="button"
+          class="notepad-btn icon-only"
+          id="btn-undo"
+          title="ย้อนกลับ (Ctrl + Z)"
+          aria-label="Undo"
+        >
+          ↶
+        </button>
+
+        <button
+          type="button"
+          class="notepad-btn icon-only"
+          id="btn-redo"
+          title="ทำซ้ำ (Ctrl + Y)"
+          aria-label="Redo"
+        >
+          ↷
+        </button>
+
+      </div>
+
+
+      <div class="toolbar-divider"></div>
+
+
+      <div class="toolbar-group toolbar-search">
+
+        <div class="search-box">
+
+          <span class="search-icon">🔍</span>
+
+          <input
+            type="search"
+            id="notepad-search"
+            placeholder="ค้นหา..."
+            autocomplete="off"
+            spellcheck="false"
+          >
+
+          <button
+            type="button"
+            id="btn-search-clear"
+            class="search-clear"
+            title="ล้างการค้นหา"
+            aria-label="ล้างการค้นหา"
+          >
+            ×
+          </button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =========================================================
+         EDITOR
+    ========================================================== -->
+    <section class="notepad-editor-wrapper">
+
+      <div class="notepad-editor">
+
+        <textarea
+          id="notepad-textarea"
+          class="notepad-textarea"
+          placeholder="เริ่มพิมพ์ข้อความของคุณที่นี่..."
+          spellcheck="false"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+        ></textarea>
+
+      </div>
+
+    </section>
+
+
+    <!-- =========================================================
+         FOOTER / INFORMATION
+    ========================================================== -->
+    <footer class="notepad-footer">
+
+      <div class="notepad-info">
+
+        <span>
+          ตัวอักษร:
+          <strong id="notepad-character-count">0</strong>
+        </span>
+
+        <span class="info-divider">•</span>
+
+        <span>
+          คำ:
+          <strong id="notepad-word-count">0</strong>
+        </span>
+
+        <span class="info-divider">•</span>
+
+        <span>
+          บรรทัด:
+          <strong id="notepad-line-count">0</strong>
+        </span>
+
+      </div>
+
+
+      <div class="notepad-shortcuts">
+
+        <span>
+          <kbd>Ctrl</kbd>
+          <kbd>S</kbd>
+          บันทึก
+        </span>
+
+        <span>
+          <kbd>Ctrl</kbd>
+          <kbd>Z</kbd>
+          ย้อนกลับ
+        </span>
+
+      </div>
+
+    </footer>
+
+  </main>
+
+
+  <!-- =========================================================
+       NEW NOTE CONFIRMATION
+  ========================================================== -->
+  <div
+    class="notepad-modal"
+    id="notepad-confirm-modal"
+    hidden
+  >
+
+    <div class="notepad-modal-backdrop"></div>
+
+    <div
+      class="notepad-modal-box"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="notepad-confirm-title"
+    >
+
+      <div class="modal-icon">
+        ⚠️
+      </div>
+
+      <h2 id="notepad-confirm-title">
+        สร้างโน้ตใหม่?
+      </h2>
+
+      <p>
+        ข้อความปัจจุบันจะถูกล้างออก
+      </p>
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="modal-btn modal-btn-cancel"
+          id="btn-modal-cancel"
+        >
+          ยกเลิก
+        </button>
+
+        <button
+          type="button"
+          class="modal-btn modal-btn-confirm"
+          id="btn-modal-confirm"
+        >
+          สร้างใหม่
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================================================
+       NOTEPAD JAVASCRIPT
+  ========================================================== -->
+  <script src="js/notepad.js"></script>
+
+</body>
+</html>
