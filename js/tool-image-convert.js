@@ -3,8 +3,16 @@
 (() => {
   'use strict';
 
-  const U = window.Utils;
-  const I18n = window.I18n || null;
+
+  // ============================================================
+  // GLOBALS
+  // ============================================================
+
+  const U =
+    window.Utils;
+
+  const I18n =
+    window.I18n || null;
 
 
   // ============================================================
@@ -15,17 +23,22 @@
     key,
     values
   ) {
+
     if (
       I18n &&
       typeof I18n.t === 'function'
     ) {
+
       return I18n.t(
         key,
         values
       );
+
     }
 
-    return String(key);
+    return String(
+      key
+    );
   }
 
 
@@ -100,7 +113,9 @@
     !jobsEl ||
     !jobTemplate
   ) {
+
     return;
+
   }
 
 
@@ -108,15 +123,25 @@
   // STATE
   // ============================================================
 
-  let jobSeq = 0;
+  let jobSeq =
+    0;
 
-  const jobs = [];
+
+  const jobs =
+    [];
 
 
   const EXT_BY_FORMAT = {
-    'image/png': 'png',
-    'image/jpeg': 'jpg',
-    'image/webp': 'webp'
+
+    'image/png':
+      'png',
+
+    'image/jpeg':
+      'jpg',
+
+    'image/webp':
+      'webp'
+
   };
 
 
@@ -126,51 +151,70 @@
 
   class ConvertJob {
 
-    constructor(file) {
+    constructor(
+      file
+    ) {
 
       this.id =
         'conv-' +
         (++jobSeq);
 
+
       this.file =
         file;
+
 
       this.format =
         'image/png';
 
+
       this.rotation =
         0;
+
 
       this.flipH =
         false;
 
+
       this.flipV =
         false;
+
 
       this.aspectLocked =
         true;
 
+
       this.naturalW =
         0;
+
 
       this.naturalH =
         0;
 
+
       this.resultBlob =
         null;
+
 
       this.resultUrl =
         null;
 
+
       this.isConverting =
         false;
 
+
       this.el =
-        jobTemplate.content
+        jobTemplate
+          .content
           .firstElementChild
-          .cloneNode(true);
+          .cloneNode(
+            true
+          );
+
 
       this.buildDom();
+
     }
 
 
@@ -199,55 +243,66 @@
           '.ticket-thumb img'
         );
 
+
       this.widthInput =
         el.querySelector(
           '.js-width'
         );
+
 
       this.heightInput =
         el.querySelector(
           '.js-height'
         );
 
+
       this.lockBtn =
         el.querySelector(
           '.js-lock'
         );
+
 
       this.qualityRow =
         el.querySelector(
           '.js-quality-row'
         );
 
+
       this.qualityInput =
         el.querySelector(
           '.js-quality'
         );
+
 
       this.qualityVal =
         el.querySelector(
           '.js-quality-val'
         );
 
+
       this.statusEl =
         el.querySelector(
           '.js-status'
         );
+
 
       this.convertBtn =
         el.querySelector(
           '.js-convert-btn'
         );
 
+
       this.downloadBtn =
         el.querySelector(
           '.js-download-btn'
         );
 
+
       this.formatGroup =
         el.querySelector(
           '.js-format-group'
         );
+
 
       this.rotateGroup =
         el.querySelector(
@@ -264,15 +319,18 @@
           '.js-filename'
         );
 
+
       const originalSizeEl =
         el.querySelector(
           '.js-origsize'
         );
 
+
       const originalExtEl =
         el.querySelector(
           '.js-origext'
         );
+
 
       const originalDimEl =
         el.querySelector(
@@ -280,35 +338,55 @@
         );
 
 
-      if (filenameEl) {
+      if (
+        filenameEl
+      ) {
+
         filenameEl.textContent =
           this.file.name;
+
       }
 
 
-      if (originalSizeEl) {
+      if (
+        originalSizeEl
+      ) {
+
         originalSizeEl.textContent =
           U.formatBytes(
             this.file.size
           );
+
       }
 
 
-      if (originalExtEl) {
+      if (
+        originalExtEl
+      ) {
+
         originalExtEl.textContent =
           U.extOf(
             this.file.name
           );
+
       }
 
+
+      // ------------------------------------------------------
+      // Processing state for app.js
+      // ------------------------------------------------------
+
+      this.el.dataset.processing =
+        'false';
+
+
+      // ------------------------------------------------------
+      // Image
+      // ------------------------------------------------------
 
       this.thumbImg.src =
         url;
 
-
-      // ------------------------------------------------------
-      // Image metadata
-      // ------------------------------------------------------
 
       this.thumbImg.onload =
         () => {
@@ -316,19 +394,23 @@
           this.naturalW =
             this.thumbImg.naturalWidth;
 
+
           this.naturalH =
             this.thumbImg.naturalHeight;
 
 
-          if (originalDimEl) {
+          if (
+            originalDimEl
+          ) {
+
             originalDimEl.textContent =
               `${this.naturalW}×${this.naturalH}`;
+
           }
 
 
           /*
            * ตั้งค่า default dimensions
-           * ตามภาพต้นฉบับ
            */
           if (
             this.naturalW &&
@@ -338,18 +420,73 @@
             if (
               !this.widthInput.value
             ) {
+
               this.widthInput.value =
                 this.naturalW;
+
             }
 
 
             if (
               !this.heightInput.value
             ) {
+
               this.heightInput.value =
                 this.naturalH;
+
             }
+
           }
+
+        };
+
+
+      this.thumbImg.onerror =
+        () => {
+
+          if (
+            originalDimEl
+          ) {
+
+            originalDimEl.textContent =
+              t(
+                'image.readFailed'
+              );
+
+          }
+
+
+          if (
+            this.statusEl
+          ) {
+
+            this.statusEl.textContent =
+              t(
+                'image.openFailed'
+              );
+
+
+            this.statusEl.classList.remove(
+              'is-ready'
+            );
+
+
+            this.statusEl.classList.add(
+              'is-error'
+            );
+
+          }
+
+
+          if (
+            this.convertBtn
+          ) {
+
+            this.convertBtn.disabled =
+              true;
+
+          }
+
         };
 
 
@@ -376,8 +513,12 @@
             );
 
 
-          if (!btn) {
+          if (
+            !btn
+          ) {
+
             return;
+
           }
 
 
@@ -386,8 +527,8 @@
               '.seg-btn'
             )
             .forEach(
-              b =>
-                b.classList.remove(
+              button =>
+                button.classList.remove(
                   'is-active'
                 )
             );
@@ -405,6 +546,7 @@
           this.updateQualityVisibility();
 
           this.markStale();
+
         }
       );
 
@@ -423,8 +565,12 @@
             );
 
 
-          if (!btn) {
+          if (
+            !btn
+          ) {
+
             return;
+
           }
 
 
@@ -441,7 +587,8 @@
               (
                 this.rotation +
                 270
-              ) % 360;
+              ) %
+              360;
 
           } else if (
             action ===
@@ -452,7 +599,8 @@
               (
                 this.rotation +
                 90
-              ) % 360;
+              ) %
+              360;
 
           } else if (
             action ===
@@ -469,6 +617,7 @@
 
             this.flipV =
               !this.flipV;
+
           }
 
 
@@ -488,6 +637,7 @@
 
 
           this.markStale();
+
         }
       );
 
@@ -508,6 +658,7 @@
             'is-locked',
             this.aspectLocked
           );
+
         }
       );
 
@@ -531,20 +682,34 @@
               this.naturalW;
 
 
-            this.heightInput.value =
-              Math.max(
-                1,
-                Math.round(
-                  parseFloat(
-                    this.widthInput.value
-                  ) *
-                  ratio
-                )
+            const width =
+              parseFloat(
+                this.widthInput.value
               );
+
+
+            if (
+              Number.isFinite(
+                width
+              )
+            ) {
+
+              this.heightInput.value =
+                Math.max(
+                  1,
+                  Math.round(
+                    width *
+                    ratio
+                  )
+                );
+
+            }
+
           }
 
 
           this.markStale();
+
         }
       );
 
@@ -568,20 +733,34 @@
               this.naturalH;
 
 
-            this.widthInput.value =
-              Math.max(
-                1,
-                Math.round(
-                  parseFloat(
-                    this.heightInput.value
-                  ) *
-                  ratio
-                )
+            const height =
+              parseFloat(
+                this.heightInput.value
               );
+
+
+            if (
+              Number.isFinite(
+                height
+              )
+            ) {
+
+              this.widthInput.value =
+                Math.max(
+                  1,
+                  Math.round(
+                    height *
+                    ratio
+                  )
+                );
+
+            }
+
           }
 
 
           this.markStale();
+
         }
       );
 
@@ -594,17 +773,30 @@
         'input',
         () => {
 
+          const value =
+            parseFloat(
+              this.qualityInput.value
+            );
+
+
+          const percent =
+            Number.isFinite(
+              value
+            )
+              ? Math.round(
+                  value *
+                  100
+                )
+              : 0;
+
+
           this.qualityVal.textContent =
-            Math.round(
-              parseFloat(
-                this.qualityInput.value
-              ) *
-              100
-            ) +
+            percent +
             '%';
 
 
           this.markStale();
+
         }
       );
 
@@ -616,7 +808,9 @@
       this.convertBtn.addEventListener(
         'click',
         () => {
+
           this.convert();
+
         }
       );
 
@@ -631,13 +825,16 @@
         );
 
 
-      if (removeBtn) {
+      if (
+        removeBtn
+      ) {
 
         removeBtn.addEventListener(
           'click',
           () => {
 
             this.dispose();
+
 
             el.remove();
 
@@ -648,18 +845,26 @@
               );
 
 
-            if (idx >= 0) {
+            if (
+              idx >=
+              0
+            ) {
+
               jobs.splice(
                 idx,
                 1
               );
+
             }
 
 
             updateBulkUI();
+
           }
         );
+
       }
+
     }
 
 
@@ -669,24 +874,39 @@
 
     updateLanguageUI() {
 
+      if (
+        !this.statusEl
+      ) {
+
+        return;
+
+      }
+
+
       /*
-       * ไม่เขียนทับ filename
-       * และไม่แตะค่าที่ผู้ใช้กรอก
+       * กำลังแปลง
        *
-       * อัปเดตเฉพาะข้อความของ UI
+       * ไม่แก้ข้อความตรงนี้ เพราะ convert()
+       * จะดูแลข้อความ dynamic เอง
        */
-
-
       if (
         this.isConverting
       ) {
 
         this.statusEl.textContent =
           t(
-            'common.processing'
+            'image.converting'
           );
 
-      } else if (
+        return;
+
+      }
+
+
+      /*
+       * มีผลลัพธ์แล้ว
+       */
+      if (
         this.resultBlob
       ) {
 
@@ -701,13 +921,45 @@
             }
           );
 
-      } else {
 
-        this.statusEl.textContent =
-          t(
-            'image.waitingConvert'
-          );
+        this.statusEl.classList.remove(
+          'is-error'
+        );
+
+
+        this.statusEl.classList.add(
+          'is-ready'
+        );
+
+
+        return;
+
       }
+
+
+      /*
+       * ถ้า error อยู่
+       * อย่าเขียนทับ error เดิม
+       */
+      if (
+        this.statusEl.classList.contains(
+          'is-error'
+        )
+      ) {
+
+        return;
+
+      }
+
+
+      /*
+       * รอแปลง
+       */
+      this.statusEl.textContent =
+        t(
+          'image.waitingConvert'
+        );
+
     }
 
 
@@ -717,11 +969,21 @@
 
     updateQualityVisibility() {
 
+      if (
+        !this.qualityRow
+      ) {
+
+        return;
+
+      }
+
+
       this.qualityRow.classList.toggle(
         'hidden',
         this.format ===
           'image/png'
       );
+
     }
 
 
@@ -732,17 +994,30 @@
     markStale() {
 
       if (
+        this.isConverting
+      ) {
+
+        return;
+
+      }
+
+
+      if (
         this.resultUrl
       ) {
 
         try {
+
           URL.revokeObjectURL(
             this.resultUrl
           );
+
         } catch (_) {}
+
 
         this.resultUrl =
           null;
+
       }
 
 
@@ -750,31 +1025,44 @@
         null;
 
 
-      this.downloadBtn.removeAttribute(
-        'href'
-      );
+      if (
+        this.downloadBtn
+      ) {
 
-
-      this.downloadBtn.removeAttribute(
-        'download'
-      );
-
-
-      this.downloadBtn.classList.add(
-        'hidden'
-      );
-
-
-      this.statusEl.textContent =
-        t(
-          'image.waitingConvert'
+        this.downloadBtn.removeAttribute(
+          'href'
         );
 
 
-      this.statusEl.classList.remove(
-        'is-ready',
-        'is-error'
-      );
+        this.downloadBtn.removeAttribute(
+          'download'
+        );
+
+
+        this.downloadBtn.classList.add(
+          'hidden'
+        );
+
+      }
+
+
+      if (
+        this.statusEl
+      ) {
+
+        this.statusEl.textContent =
+          t(
+            'image.waitingConvert'
+          );
+
+
+        this.statusEl.classList.remove(
+          'is-ready',
+          'is-error'
+        );
+
+      }
+
     }
 
 
@@ -787,7 +1075,9 @@
       if (
         this.isConverting
       ) {
+
         return;
+
       }
 
 
@@ -811,6 +1101,7 @@
               resolve();
 
               return;
+
             }
 
 
@@ -818,16 +1109,53 @@
               'load',
               resolve,
               {
-                once: true
+                once:
+                  true
               }
             );
+
           }
         );
+
       }
 
 
+      if (
+        !this.naturalW ||
+        !this.naturalH
+      ) {
+
+        this.statusEl.textContent =
+          t(
+            'image.readInfoFailed'
+          );
+
+
+        this.statusEl.classList.remove(
+          'is-ready'
+        );
+
+
+        this.statusEl.classList.add(
+          'is-error'
+        );
+
+
+        return;
+
+      }
+
+
+      // ------------------------------------------------------
+      // Set processing state
+      // ------------------------------------------------------
+
       this.isConverting =
         true;
+
+
+      this.el.dataset.processing =
+        'true';
 
 
       this.convertBtn.disabled =
@@ -842,7 +1170,7 @@
 
       this.statusEl.textContent =
         t(
-          'common.processing'
+          'image.converting'
         );
 
 
@@ -909,6 +1237,7 @@
         canvas.width =
           outW;
 
+
         canvas.height =
           outH;
 
@@ -919,12 +1248,16 @@
           );
 
 
-        if (!ctx) {
+        if (
+          !ctx
+        ) {
+
           throw new Error(
             t(
               'errors.canvasContext'
             )
           );
+
         }
 
 
@@ -947,6 +1280,7 @@
             outW,
             outH
           );
+
         }
 
 
@@ -1033,11 +1367,16 @@
               canvas.toBlob(
                 result => {
 
-                  if (result) {
+                  if (
+                    result
+                  ) {
+
                     resolve(
                       result
                     );
+
                   } else {
+
                     reject(
                       new Error(
                         t(
@@ -1045,6 +1384,7 @@
                         )
                       )
                     );
+
                   }
 
                 },
@@ -1056,8 +1396,21 @@
           );
 
 
+        if (
+          !blob
+        ) {
+
+          throw new Error(
+            t(
+              'errors.createFailed'
+            )
+          );
+
+        }
+
+
         // --------------------------------------------------
-        // Old result URL
+        // Previous result URL
         // --------------------------------------------------
 
         if (
@@ -1065,10 +1418,13 @@
         ) {
 
           try {
+
             URL.revokeObjectURL(
               this.resultUrl
             );
+
           } catch (_) {}
+
         }
 
 
@@ -1089,7 +1445,8 @@
         const ext =
           EXT_BY_FORMAT[
             this.format
-          ];
+          ] ||
+          'png';
 
 
         const filename =
@@ -1112,7 +1469,7 @@
 
 
         // --------------------------------------------------
-        // Ready
+        // Success
         // --------------------------------------------------
 
         this.statusEl.textContent =
@@ -1127,11 +1484,25 @@
           );
 
 
+        this.statusEl.classList.remove(
+          'is-error'
+        );
+
+
         this.statusEl.classList.add(
           'is-ready'
         );
 
-      } catch (err) {
+
+      } catch (
+        err
+      ) {
+
+        console.error(
+          '[Image Convert]',
+          err
+        );
+
 
         const message =
           err &&
@@ -1151,6 +1522,11 @@
           );
 
 
+        this.statusEl.classList.remove(
+          'is-ready'
+        );
+
+
         this.statusEl.classList.add(
           'is-error'
         );
@@ -1161,9 +1537,15 @@
           false;
 
 
+        this.el.dataset.processing =
+          'false';
+
+
         this.convertBtn.disabled =
           false;
+
       }
+
     }
 
 
@@ -1173,18 +1555,36 @@
 
     dispose() {
 
+      this.isConverting =
+        false;
+
+
+      if (
+        this.el
+      ) {
+
+        this.el.dataset.processing =
+          'false';
+
+      }
+
+
       if (
         this.objectUrl
       ) {
 
         try {
+
           URL.revokeObjectURL(
             this.objectUrl
           );
+
         } catch (_) {}
+
 
         this.objectUrl =
           null;
+
       }
 
 
@@ -1193,19 +1593,25 @@
       ) {
 
         try {
+
           URL.revokeObjectURL(
             this.resultUrl
           );
+
         } catch (_) {}
+
 
         this.resultUrl =
           null;
+
       }
 
 
       this.resultBlob =
         null;
+
     }
+
   }
 
 
@@ -1239,15 +1645,6 @@
       !hasReady
     );
 
-
-    /*
-     * อัปเดตภาษาใน jobs
-     */
-    jobs.forEach(
-      job => {
-        job.updateLanguageUI();
-      }
-    );
   }
 
 
@@ -1260,7 +1657,7 @@
   ) {
 
     Array.from(
-      fileList
+      fileList || []
     )
       .filter(
         file =>
@@ -1288,11 +1685,13 @@
           jobsEl.appendChild(
             job.el
           );
+
         }
       );
 
 
     updateBulkUI();
+
   }
 
 
@@ -1308,8 +1707,12 @@
         bulkFormatEl.value;
 
 
-      if (!format) {
+      if (
+        !format
+      ) {
+
         return;
+
       }
 
 
@@ -1332,19 +1735,21 @@
                   button.dataset.format ===
                     format
                 );
+
               }
             );
 
 
           job.updateQualityVisibility();
 
-
           job.markStale();
+
         }
       );
 
 
       updateBulkUI();
+
     }
   );
 
@@ -1359,7 +1764,9 @@
 
       jobs.forEach(
         job => {
+
           job.dispose();
+
         }
       );
 
@@ -1373,6 +1780,7 @@
 
 
       updateBulkUI();
+
     }
   );
 
@@ -1385,8 +1793,12 @@
     'click',
     async () => {
 
-      if (!jobs.length) {
+      if (
+        !jobs.length
+      ) {
+
         return;
+
       }
 
 
@@ -1402,33 +1814,40 @@
 
       try {
 
-        /*
-         * จำกัด concurrency
-         * เพื่อไม่ให้ browser หนักเกินไป
-         */
         const CONCURRENCY =
           3;
 
 
-        let i =
+        let index =
           0;
 
 
         async function worker() {
 
           while (
-            i <
+            index <
             jobs.length
           ) {
 
             const job =
               jobs[
-                i++
+                index++
               ];
 
 
+            if (
+              !job
+            ) {
+
+              continue;
+
+            }
+
+
             await job.convert();
+
           }
+
         }
 
 
@@ -1441,9 +1860,11 @@
                   jobs.length
                 )
             },
-            worker
+            () =>
+              worker()
           )
         );
+
 
       } finally {
 
@@ -1464,7 +1885,9 @@
               !!job.resultBlob
           )
         );
+
       }
+
     }
   );
 
@@ -1484,8 +1907,12 @@
         );
 
 
-      if (!ready.length) {
+      if (
+        !ready.length
+      ) {
+
         return;
+
       }
 
 
@@ -1515,7 +1942,8 @@
             const ext =
               EXT_BY_FORMAT[
                 job.format
-              ];
+              ] ||
+              'png';
 
 
             const base =
@@ -1540,6 +1968,7 @@
 
               name =
                 `${base}-${n++}.${ext}`;
+
             }
 
 
@@ -1552,6 +1981,7 @@
               name,
               job.resultBlob
             );
+
           }
         );
 
@@ -1559,7 +1989,8 @@
         const content =
           await zip.generateAsync(
             {
-              type: 'blob'
+              type:
+                'blob'
             }
           );
 
@@ -1569,10 +2000,13 @@
           'converted-images.zip'
         );
 
-      } catch (err) {
+
+      } catch (
+        err
+      ) {
 
         console.error(
-          'Image convert ZIP failed:',
+          '[Image Convert] ZIP failed:',
           err
         );
 
@@ -1586,7 +2020,9 @@
           t(
             'image.downloadZip'
           );
+
       }
+
     }
   );
 
@@ -1611,7 +2047,9 @@
 
       jobs.forEach(
         job => {
+
           job.dispose();
+
         }
       );
 
@@ -1625,6 +2063,7 @@
 
 
       updateBulkUI();
+
     }
   );
 
@@ -1638,8 +2077,9 @@
     () => {
 
       /*
-       * เปลี่ยนข้อความของปุ่มกลาง
+       * Bulk buttons
        */
+
       if (
         !convertAllBtn.disabled
       ) {
@@ -1648,6 +2088,7 @@
           t(
             'image.convertAll'
           );
+
       }
 
 
@@ -1659,17 +2100,22 @@
           t(
             'image.downloadZip'
           );
+
       }
 
 
       /*
-       * Update existing jobs
+       * Existing jobs
        */
+
       jobs.forEach(
         job => {
+
           job.updateLanguageUI();
+
         }
       );
+
     }
   );
 
