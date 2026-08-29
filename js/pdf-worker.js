@@ -1,4 +1,5 @@
 /* global importScripts, PDFLib, self */
+
 'use strict';
 
 
@@ -31,7 +32,25 @@ const THAI_FONT_MIRRORS = [
 let thaiFontPromise = null;
 
 
+function createWorkerError(
+  errorKey,
+  errorData = {}
+) {
+  const error =
+    new Error(errorKey);
+
+  error.errorKey =
+    errorKey;
+
+  error.errorData =
+    errorData;
+
+  return error;
+}
+
+
 function loadThaiFontBytes() {
+
   if (!thaiFontPromise) {
 
     thaiFontPromise =
@@ -41,20 +60,28 @@ function loadThaiFontBytes() {
 
 
         for (
-          const url of THAI_FONT_MIRRORS
+          const url of
+          THAI_FONT_MIRRORS
         ) {
 
           try {
 
             const res =
-              await fetch(url);
+              await fetch(
+                url
+              );
 
 
             if (!res.ok) {
-              throw new Error(
-                'HTTP ' +
-                res.status
+
+              throw createWorkerError(
+                'pdfWorker.fontHttpFailed',
+                {
+                  status:
+                    res.status
+                }
               );
+
             }
 
 
@@ -66,37 +93,49 @@ function loadThaiFontBytes() {
               !bytes ||
               bytes.byteLength < 1000
             ) {
-              throw new Error(
-                'ไฟล์ฟอนต์ไม่สมบูรณ์'
+
+              throw createWorkerError(
+                'pdfWorker.fontInvalid'
               );
+
             }
 
 
             return bytes;
 
           } catch (err) {
-            lastErr = err;
+
+            lastErr =
+              err;
+
           }
         }
 
 
-        throw new Error(
-          'โหลดฟอนต์ภาษาไทยไม่สำเร็จ: ' +
-          (
-            lastErr &&
-            lastErr.message
-              ? lastErr.message
-              : String(lastErr)
-          )
+        throw createWorkerError(
+          'pdfWorker.fontLoadFailed',
+          {
+            message:
+              lastErr &&
+              lastErr.message
+                ? lastErr.message
+                : String(
+                    lastErr || ''
+                  )
+          }
         );
 
-      })().catch(err => {
+      })()
+        .catch(
+          err => {
 
-        thaiFontPromise = null;
+            thaiFontPromise =
+              null;
 
-        throw err;
+            throw err;
 
-      });
+          }
+        );
   }
 
 
@@ -104,20 +143,28 @@ function loadThaiFontBytes() {
 }
 
 
-async function embedThaiFont(pdfDoc) {
+async function embedThaiFont(
+  pdfDoc
+) {
 
   if (
     typeof pdfDoc.registerFontkit !==
     'function'
   ) {
+
     return null;
+
   }
 
 
-  if (self.fontkit) {
+  if (
+    self.fontkit
+  ) {
+
     pdfDoc.registerFontkit(
       self.fontkit
     );
+
   }
 
 
@@ -128,15 +175,21 @@ async function embedThaiFont(pdfDoc) {
   return pdfDoc.embedFont(
     bytes,
     {
-      subset: true
+      subset:
+        true
     }
   );
 }
 
 
+// ------------------------------------------------------------
 // Preload font
+// ------------------------------------------------------------
+
 loadThaiFontBytes()
-  .catch(() => {});
+  .catch(
+    () => {}
+  );
 
 
 // ============================================================
@@ -147,10 +200,16 @@ function normalizeNumber(
   value,
   fallback
 ) {
-  const number =
-    Number(value);
 
-  return Number.isFinite(number)
+  const number =
+    Number(
+      value
+    );
+
+
+  return Number.isFinite(
+    number
+  )
     ? number
     : fallback;
 }
@@ -161,6 +220,7 @@ function clamp(
   min,
   max
 ) {
+
   return Math.min(
     max,
     Math.max(
@@ -175,21 +235,31 @@ function ensureArrayBuffer(
   value,
   label
 ) {
+
   if (
     value instanceof ArrayBuffer
   ) {
+
     return value;
+
   }
+
 
   if (
     value instanceof Uint8Array
   ) {
+
     return value.buffer;
+
   }
 
-  throw new Error(
-    (label || 'ข้อมูล') +
-    ' ไม่ถูกต้อง'
+
+  throw createWorkerError(
+    'pdfWorker.invalidData',
+    {
+      label:
+        label || 'Data'
+    }
   );
 }
 
@@ -202,11 +272,17 @@ function getImageSize(
   image,
   targetWidth
 ) {
+
   const sourceWidth =
-    Number(image.width) || 1;
+    Number(
+      image.width
+    ) || 1;
+
 
   const sourceHeight =
-    Number(image.height) || 1;
+    Number(
+      image.height
+    ) || 1;
 
 
   const width =
@@ -222,7 +298,9 @@ function getImageSize(
 
 
   return {
+
     width,
+
     height:
       width * ratio
   };
@@ -231,10 +309,6 @@ function getImageSize(
 
 // ============================================================
 // CENTER ROTATED OBJECT
-//
-// pdf-lib uses x/y as the rotation origin.
-// This calculates the origin so the object's visual center
-// remains at the center of the PDF page after rotation.
 // ============================================================
 
 function getCenteredRotatedPosition({
@@ -244,6 +318,7 @@ function getCenteredRotatedPosition({
   objectHeight,
   angle
 }) {
+
   const radians =
     angle *
     Math.PI /
@@ -251,38 +326,51 @@ function getCenteredRotatedPosition({
 
 
   const cos =
-    Math.cos(radians);
+    Math.cos(
+      radians
+    );
+
 
   const sin =
-    Math.sin(radians);
+    Math.sin(
+      radians
+    );
 
 
   const centerX =
-    pageWidth / 2;
+    pageWidth /
+    2;
+
 
   const centerY =
-    pageHeight / 2;
+    pageHeight /
+    2;
 
 
   const rotatedCenterX =
     (
-      objectWidth / 2
+      objectWidth /
+      2
     ) * cos -
     (
-      objectHeight / 2
+      objectHeight /
+      2
     ) * sin;
 
 
   const rotatedCenterY =
     (
-      objectWidth / 2
+      objectWidth /
+      2
     ) * sin +
     (
-      objectHeight / 2
+      objectHeight /
+      2
     ) * cos;
 
 
   return {
+
     x:
       centerX -
       rotatedCenterX,
@@ -309,12 +397,16 @@ const handlers = {
   }) {
 
     if (
-      !Array.isArray(buffers) ||
+      !Array.isArray(
+        buffers
+      ) ||
       !buffers.length
     ) {
-      throw new Error(
-        'ไม่พบไฟล์ PDF สำหรับรวม'
+
+      throw createWorkerError(
+        'pdfWorker.noPdfFiles'
       );
+
     }
 
 
@@ -331,7 +423,7 @@ const handlers = {
       const buffer =
         ensureArrayBuffer(
           buffers[i],
-          `ไฟล์ PDF ลำดับที่ ${i + 1}`
+          'PDF file'
         );
 
 
@@ -350,9 +442,11 @@ const handlers = {
 
       copiedPages.forEach(
         page => {
+
           outDoc.addPage(
             page
           );
+
         }
       );
     }
@@ -363,7 +457,9 @@ const handlers = {
 
 
     return {
+
       bytes,
+
       pageCount:
         outDoc.getPageCount()
     };
@@ -382,17 +478,21 @@ const handlers = {
     const sourceBuffer =
       ensureArrayBuffer(
         buffer,
-        'ไฟล์ PDF'
+        'PDF file'
       );
 
 
     if (
-      !Array.isArray(indices) ||
+      !Array.isArray(
+        indices
+      ) ||
       !indices.length
     ) {
-      throw new Error(
-        'กรุณาเลือกหน้า PDF อย่างน้อย 1 หน้า'
+
+      throw createWorkerError(
+        'pdfWorker.selectAtLeastOnePage'
       );
+
     }
 
 
@@ -408,19 +508,27 @@ const handlers = {
 
     const safeIndices =
       indices
-        .map(Number)
+        .map(
+          Number
+        )
         .filter(
           index =>
-            Number.isInteger(index) &&
+            Number.isInteger(
+              index
+            ) &&
             index >= 0 &&
             index < pageCount
         );
 
 
-    if (!safeIndices.length) {
-      throw new Error(
-        'หมายเลขหน้า PDF ไม่ถูกต้อง'
+    if (
+      !safeIndices.length
+    ) {
+
+      throw createWorkerError(
+        'pdfWorker.invalidPageNumbers'
       );
+
     }
 
 
@@ -437,9 +545,11 @@ const handlers = {
 
     copiedPages.forEach(
       page => {
+
         outDoc.addPage(
           page
         );
+
       }
     );
 
@@ -471,7 +581,7 @@ const handlers = {
     const sourceBuffer =
       ensureArrayBuffer(
         buffer,
-        'ไฟล์ PDF'
+        'PDF file'
       );
 
 
@@ -485,20 +595,23 @@ const handlers = {
       pdfDoc.getPages();
 
 
-    if (!pages.length) {
-      throw new Error(
-        'PDF ไม่มีหน้าให้ใส่ลายน้ำ'
+    if (
+      !pages.length
+    ) {
+
+      throw createWorkerError(
+        'pdfWorker.noPagesForWatermark'
       );
+
     }
 
 
     // --------------------------------------------------------
-    // TEXT SETTINGS
+    // TEXT
     // --------------------------------------------------------
 
     const cleanText =
-      typeof text ===
-      'string'
+      typeof text === 'string'
         ? text.trim()
         : '';
 
@@ -515,7 +628,7 @@ const handlers = {
 
 
     // --------------------------------------------------------
-    // COMMON SETTINGS
+    // COMMON
     // --------------------------------------------------------
 
     const watermarkOpacity =
@@ -551,12 +664,21 @@ const handlers = {
     // PREPARE TEXT
     // --------------------------------------------------------
 
-    let font = null;
-    let textWidth = 0;
-    let textHeight = textSize;
+    let font =
+      null;
 
 
-    if (cleanText) {
+    let textWidth =
+      0;
+
+
+    let textHeight =
+      textSize;
+
+
+    if (
+      cleanText
+    ) {
 
       font =
         await embedThaiFont(
@@ -565,9 +687,11 @@ const handlers = {
 
 
       if (!font) {
-        throw new Error(
-          'ไม่สามารถโหลดฟอนต์สำหรับลายน้ำข้อความได้'
+
+        throw createWorkerError(
+          'pdfWorker.watermarkFontUnavailable'
         );
+
       }
 
 
@@ -582,10 +706,12 @@ const handlers = {
         typeof font.heightAtSize ===
         'function'
       ) {
+
         textHeight =
           font.heightAtSize(
             textSize
           );
+
       }
     }
 
@@ -594,7 +720,8 @@ const handlers = {
     // PREPARE PNG
     // --------------------------------------------------------
 
-    let embeddedImage = null;
+    let embeddedImage =
+      null;
 
 
     if (
@@ -611,7 +738,7 @@ const handlers = {
 
         const imageBytes =
           watermarkImage instanceof
-          Uint8Array
+            Uint8Array
             ? watermarkImage
             : new Uint8Array(
                 watermarkImage
@@ -623,10 +750,10 @@ const handlers = {
             imageBytes
           );
 
-      } catch (err) {
+      } catch (_) {
 
-        throw new Error(
-          'ไฟล์ลายน้ำไม่ใช่ PNG ที่ถูกต้อง'
+        throw createWorkerError(
+          'pdfWorker.invalidWatermarkPng'
         );
 
       }
@@ -641,14 +768,16 @@ const handlers = {
       !cleanText &&
       !embeddedImage
     ) {
-      throw new Error(
-        'กรุณาใส่ข้อความหรือเลือกรูปลายน้ำ PNG'
+
+      throw createWorkerError(
+        'pdfWorker.watermarkMissing'
       );
+
     }
 
 
     // --------------------------------------------------------
-    // DRAW EVERY PAGE
+    // DRAW
     // --------------------------------------------------------
 
     pages.forEach(
@@ -657,7 +786,8 @@ const handlers = {
         const {
           width,
           height
-        } = page.getSize();
+        } =
+          page.getSize();
 
 
         // ====================================================
@@ -672,6 +802,7 @@ const handlers = {
           const position =
             getCenteredRotatedPosition(
               {
+
                 pageWidth:
                   width,
 
@@ -693,6 +824,7 @@ const handlers = {
           page.drawText(
             cleanText,
             {
+
               x:
                 position.x,
 
@@ -727,7 +859,9 @@ const handlers = {
         // PNG
         // ====================================================
 
-        if (embeddedImage) {
+        if (
+          embeddedImage
+        ) {
 
           const dimensions =
             getImageSize(
@@ -739,6 +873,7 @@ const handlers = {
           const drawWidth =
             dimensions.width;
 
+
           const drawHeight =
             dimensions.height;
 
@@ -746,6 +881,7 @@ const handlers = {
           const position =
             getCenteredRotatedPosition(
               {
+
                 pageWidth:
                   width,
 
@@ -767,6 +903,7 @@ const handlers = {
           page.drawImage(
             embeddedImage,
             {
+
               x:
                 position.x,
 
@@ -823,7 +960,7 @@ const handlers = {
     const sourceBuffer =
       ensureArrayBuffer(
         buffer,
-        'ไฟล์ PDF'
+        'PDF file'
       );
 
 
@@ -840,9 +977,11 @@ const handlers = {
 
 
     if (!font) {
-      throw new Error(
-        'ไม่สามารถโหลดฟอนต์สำหรับเลขหน้าได้'
+
+      throw createWorkerError(
+        'pdfWorker.pageNumberFontUnavailable'
       );
+
     }
 
 
@@ -893,7 +1032,10 @@ const handlers = {
 
 
     pages.forEach(
-      (page, index) => {
+      (
+        page,
+        index
+      ) => {
 
         const pageNumber =
           firstPage +
@@ -904,18 +1046,23 @@ const handlers = {
           pageTemplate
             .replace(
               /\{n\}/g,
-              String(pageNumber)
+              String(
+                pageNumber
+              )
             )
             .replace(
               /\{total\}/g,
-              String(total)
+              String(
+                total
+              )
             );
 
 
         const {
           width,
           height
-        } = page.getSize();
+        } =
+          page.getSize();
 
 
         const textWidth =
@@ -973,11 +1120,16 @@ const handlers = {
         page.drawText(
           text,
           {
+
             x,
+
             y,
+
             size:
               pageSize,
+
             font,
+
             color:
               rgb(
                 0.2,
@@ -1017,22 +1169,34 @@ self.onmessage =
       reqId,
       type,
       payload
-    } = data;
+    } =
+      data;
 
 
     const handler =
       handlers[type];
 
 
+    // --------------------------------------------------------
+    // UNKNOWN COMMAND
+    // --------------------------------------------------------
+
     if (!handler) {
 
       self.postMessage({
         reqId,
-        ok: false,
-        error:
-          'ไม่รู้จักคำสั่ง: ' +
+
+        ok:
+          false,
+
+        errorKey:
+          'pdfWorker.unknownCommand',
+
+        errorData: {
           type
+        }
       });
+
 
       return;
     }
@@ -1057,26 +1221,76 @@ self.onmessage =
 
       self.postMessage(
         {
+
           reqId,
-          ok: true,
+
+          ok:
+            true,
+
           result
+
         },
         transfer
       );
 
 
-    } catch (err) {
+    } catch (
+      err
+    ) {
 
+      /*
+       * ถ้าเป็น error ที่เราสร้างเอง
+       * ให้ส่ง key กลับไป
+       */
+      if (
+        err &&
+        err.errorKey
+      ) {
+
+        self.postMessage({
+          reqId,
+
+          ok:
+            false,
+
+          errorKey:
+            err.errorKey,
+
+          errorData:
+            err.errorData || {}
+        });
+
+
+        return;
+      }
+
+
+      /*
+       * Error จาก pdf-lib / browser
+       *
+       * ไม่ส่งข้อความไทยออกจาก Worker
+       * ใช้ generic key แทน
+       */
       self.postMessage({
         reqId,
-        ok: false,
-        error:
-          (
-            err &&
-            err.message
-          ) ||
-          String(err)
-      });
 
+        ok:
+          false,
+
+        errorKey:
+          'pdfWorker.genericError',
+
+        errorData: {
+
+          message:
+            (
+              err &&
+              err.message
+            ) ||
+            String(
+              err
+            )
+        }
+      });
     }
   };
