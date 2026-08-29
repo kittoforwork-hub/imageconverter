@@ -1,287 +1,1865 @@
 (() => {
   'use strict';
+
   const U = window.Utils;
+  const I18n = window.I18n || null;
 
-  const dropzone = document.getElementById('dz-img-crop');
-  const fileInput = document.getElementById('input-img-crop');
-  const jobsEl = document.getElementById('jobs-img-crop');
-  const jobTemplate = document.getElementById('tpl-img-crop');
 
-  const MIN_BOX = 24;
-  let jobSeq = 0;
-  const jobs = []; // CropJob[] — tracked so "clear cache" can revoke every blob URL at once
+  // ============================================================
+  // TRANSLATION HELPER
+  // ============================================================
 
-  const RATIOS = { 'free': null, '1:1': 1, '4:3': 4 / 3, '16:9': 16 / 9 };
+  function t(
+    key,
+    values
+  ) {
+    if (
+      I18n &&
+      typeof I18n.t === 'function'
+    ) {
+      return I18n.t(
+        key,
+        values
+      );
+    }
+
+    return String(key);
+  }
+
+
+  // ============================================================
+  // ELEMENTS
+  // ============================================================
+
+  const dropzone =
+    document.getElementById(
+      'dz-img-crop'
+    );
+
+  const fileInput =
+    document.getElementById(
+      'input-img-crop'
+    );
+
+  const jobsEl =
+    document.getElementById(
+      'jobs-img-crop'
+    );
+
+  const jobTemplate =
+    document.getElementById(
+      'tpl-img-crop'
+    );
+
+
+  // ============================================================
+  // SAFETY CHECK
+  // ============================================================
+
+  if (
+    !dropzone ||
+    !fileInput ||
+    !jobsEl ||
+    !jobTemplate
+  ) {
+    return;
+  }
+
+
+  // ============================================================
+  // CONFIG
+  // ============================================================
+
+  const MIN_BOX =
+    24;
+
+
+  let jobSeq =
+    0;
+
+
+  /*
+   * tracked so clearCache can
+   * revoke every blob URL
+   */
+  const jobs = [];
+
+
+  const RATIOS = {
+    'free': null,
+    '1:1': 1,
+    '4:3': 4 / 3,
+    '16:9': 16 / 9
+  };
+
+
+  // ============================================================
+  // CROP JOB
+  // ============================================================
 
   class CropJob {
-    constructor(file) {
-      this.id = 'crop-' + (++jobSeq);
-      this.file = file;
-      this.ratio = null;
-      this.format = 'image/png';
-      this.box = { left: 0, top: 0, width: 0, height: 0 };
-      this.el = jobTemplate.content.firstElementChild.cloneNode(true);
+
+    constructor(
+      file
+    ) {
+
+      this.id =
+        'crop-' +
+        (++jobSeq);
+
+
+      this.file =
+        file;
+
+
+      this.ratio =
+        null;
+
+
+      this.format =
+        'image/png';
+
+
+      this.box = {
+        left: 0,
+        top: 0,
+        width: 0,
+        height: 0
+      };
+
+
+      this.resultUrl =
+        null;
+
+
+      this.isCropping =
+        false;
+
+
+      this.el =
+        jobTemplate
+          .content
+          .firstElementChild
+          .cloneNode(true);
+
+
       this.buildDom();
     }
 
+
+    // ========================================================
+    // BUILD DOM
+    // ========================================================
+
     buildDom() {
-      const el = this.el;
-      const url = URL.createObjectURL(this.file);
-      this.objectUrl = url;
 
-      this.stage = el.querySelector('.js-crop-stage');
-      this.imgEl = el.querySelector('.js-crop-img');
-      this.boxEl = el.querySelector('.js-crop-box');
-      this.cropdimEl = el.querySelector('.js-cropdim');
-      this.statusEl = el.querySelector('.js-status');
-      this.downloadBtn = el.querySelector('.js-download-btn');
+      const el =
+        this.el;
 
-      el.querySelector('.js-filename').textContent = this.file.name;
-      this.imgEl.src = url;
 
-      this.imgEl.onload = () => {
-        el.querySelector('.js-origdim').textContent = `${this.imgEl.naturalWidth}×${this.imgEl.naturalHeight}`;
-        requestAnimationFrame(() => this.initBox());
-      };
+      const url =
+        URL.createObjectURL(
+          this.file
+        );
 
-      el.querySelector('.js-ratio-group').addEventListener('click', (e) => {
-        const btn = e.target.closest('.seg-btn');
-        if (!btn) return;
-        el.querySelector('.js-ratio-group').querySelectorAll('.seg-btn').forEach(b => b.classList.remove('is-active'));
-        btn.classList.add('is-active');
-        this.ratio = RATIOS[btn.dataset.ratio];
-        this.invalidateResult();
-        this.applyRatioToBox();
-      });
 
-      el.querySelector('.js-format-group').addEventListener('click', (e) => {
-        const btn = e.target.closest('.seg-btn');
-        if (!btn) return;
-        el.querySelector('.js-format-group').querySelectorAll('.seg-btn').forEach(b => b.classList.remove('is-active'));
-        btn.classList.add('is-active');
-        this.format = btn.dataset.format;
-        this.invalidateResult();
-      });
+      this.objectUrl =
+        url;
 
-      el.querySelector('.js-crop-btn').addEventListener('click', () => this.crop());
 
-      el.querySelector('.js-remove-btn').addEventListener('click', () => {
-        URL.revokeObjectURL(this.objectUrl);
-        if (this.resultUrl) URL.revokeObjectURL(this.resultUrl);
-        el.remove();
-        const idx = jobs.indexOf(this);
-        if (idx >= 0) jobs.splice(idx, 1);
-      });
+      // ------------------------------------------------------
+      // Elements
+      // ------------------------------------------------------
+
+      this.stage =
+        el.querySelector(
+          '.js-crop-stage'
+        );
+
+
+      this.imgEl =
+        el.querySelector(
+          '.js-crop-img'
+        );
+
+
+      this.boxEl =
+        el.querySelector(
+          '.js-crop-box'
+        );
+
+
+      this.cropdimEl =
+        el.querySelector(
+          '.js-cropdim'
+        );
+
+
+      this.statusEl =
+        el.querySelector(
+          '.js-status'
+        );
+
+
+      this.downloadBtn =
+        el.querySelector(
+          '.js-download-btn'
+        );
+
+
+      this.cropBtn =
+        el.querySelector(
+          '.js-crop-btn'
+        );
+
+
+      this.removeBtn =
+        el.querySelector(
+          '.js-remove-btn'
+        );
+
+
+      this.ratioGroup =
+        el.querySelector(
+          '.js-ratio-group'
+        );
+
+
+      this.formatGroup =
+        el.querySelector(
+          '.js-format-group'
+        );
+
+
+      // ------------------------------------------------------
+      // File
+      // ------------------------------------------------------
+
+      const filenameEl =
+        el.querySelector(
+          '.js-filename'
+        );
+
+
+      if (filenameEl) {
+
+        filenameEl.textContent =
+          this.file.name;
+      }
+
+
+      this.imgEl.src =
+        url;
+
+
+      // ------------------------------------------------------
+      // Image loaded
+      // ------------------------------------------------------
+
+      this.imgEl.onload =
+        () => {
+
+          const origDimEl =
+            el.querySelector(
+              '.js-origdim'
+            );
+
+
+          if (origDimEl) {
+
+            origDimEl.textContent =
+              `${this.imgEl.naturalWidth}×${this.imgEl.naturalHeight}`;
+          }
+
+
+          requestAnimationFrame(
+            () => {
+              this.initBox();
+            }
+          );
+        };
+
+
+      // ------------------------------------------------------
+      // Ratio controls
+      // ------------------------------------------------------
+
+      this.ratioGroup.addEventListener(
+        'click',
+        event => {
+
+          const btn =
+            event.target.closest(
+              '.seg-btn'
+            );
+
+
+          if (!btn) {
+            return;
+          }
+
+
+          this.ratioGroup
+            .querySelectorAll(
+              '.seg-btn'
+            )
+            .forEach(
+              button => {
+                button.classList.remove(
+                  'is-active'
+                );
+              }
+            );
+
+
+          btn.classList.add(
+            'is-active'
+          );
+
+
+          const ratioKey =
+            btn.dataset.ratio;
+
+
+          this.ratio =
+            Object.prototype.hasOwnProperty.call(
+              RATIOS,
+              ratioKey
+            )
+              ? RATIOS[ratioKey]
+              : null;
+
+
+          this.invalidateResult();
+
+          this.applyRatioToBox();
+        }
+      );
+
+
+      // ------------------------------------------------------
+      // Format controls
+      // ------------------------------------------------------
+
+      this.formatGroup.addEventListener(
+        'click',
+        event => {
+
+          const btn =
+            event.target.closest(
+              '.seg-btn'
+            );
+
+
+          if (!btn) {
+            return;
+          }
+
+
+          this.formatGroup
+            .querySelectorAll(
+              '.seg-btn'
+            )
+            .forEach(
+              button => {
+                button.classList.remove(
+                  'is-active'
+                );
+              }
+            );
+
+
+          btn.classList.add(
+            'is-active'
+          );
+
+
+          this.format =
+            btn.dataset.format;
+
+
+          this.invalidateResult();
+        }
+      );
+
+
+      // ------------------------------------------------------
+      // Crop
+      // ------------------------------------------------------
+
+      this.cropBtn.addEventListener(
+        'click',
+        () => {
+          this.crop();
+        }
+      );
+
+
+      // ------------------------------------------------------
+      // Remove
+      // ------------------------------------------------------
+
+      this.removeBtn.addEventListener(
+        'click',
+        () => {
+
+          this.dispose();
+
+          el.remove();
+
+
+          const idx =
+            jobs.indexOf(
+              this
+            );
+
+
+          if (idx >= 0) {
+
+            jobs.splice(
+              idx,
+              1
+            );
+          }
+        }
+      );
+
+
+      // ------------------------------------------------------
+      // Initial language state
+      // ------------------------------------------------------
+
+      this.updateLanguageUI();
+
+
+      // ------------------------------------------------------
+      // Drag system
+      // ------------------------------------------------------
 
       this.wireDrag();
     }
 
+
+    // ========================================================
+    // LANGUAGE UI
+    // ========================================================
+
+    updateLanguageUI() {
+
+      if (
+        !this.statusEl
+      ) {
+        return;
+      }
+
+
+      if (
+        this.isCropping
+      ) {
+
+        this.statusEl.textContent =
+          t(
+            'common.processing'
+          );
+
+        return;
+      }
+
+
+      if (
+        this.resultUrl
+      ) {
+
+        /*
+         * ดึงขนาด Blob ใหม่ไม่ได้จาก resultUrl โดยตรง
+         * ดังนั้นใช้ resultBlob ถ้ามี
+         */
+        if (
+          this.resultBlob
+        ) {
+
+          this.statusEl.textContent =
+            t(
+              'image.readyDownload',
+              {
+                size:
+                  U.formatBytes(
+                    this.resultBlob.size
+                  )
+              }
+            );
+
+        } else {
+
+          this.statusEl.textContent =
+            t(
+              'image.ready'
+            );
+        }
+
+        return;
+      }
+
+
+      this.statusEl.textContent =
+        t(
+          'image.waitingCrop'
+        );
+    }
+
+
+    // ========================================================
+    // DISPLAY RECT
+    // ========================================================
+
     getDisplayRect() {
-      const stageRect = this.stage.getBoundingClientRect();
-      const imgRect = this.imgEl.getBoundingClientRect();
+
+      const stageRect =
+        this.stage.getBoundingClientRect();
+
+
+      const imgRect =
+        this.imgEl.getBoundingClientRect();
+
+
       return {
-        left: imgRect.left - stageRect.left,
-        top: imgRect.top - stageRect.top,
-        width: imgRect.width,
-        height: imgRect.height
+
+        left:
+          imgRect.left -
+          stageRect.left,
+
+        top:
+          imgRect.top -
+          stageRect.top,
+
+        width:
+          imgRect.width,
+
+        height:
+          imgRect.height
       };
     }
+
+
+    // ========================================================
+    // INITIAL CROP BOX
+    // ========================================================
 
     initBox() {
-      const d = this.getDisplayRect();
-      const w = d.width * 0.7;
-      const h = this.ratio ? w / this.ratio : d.height * 0.7;
+
+      const d =
+        this.getDisplayRect();
+
+
+      if (
+        !d.width ||
+        !d.height
+      ) {
+        return;
+      }
+
+
+      let w =
+        d.width * 0.7;
+
+
+      let h =
+        this.ratio
+          ? w / this.ratio
+          : d.height * 0.7;
+
+
+      /*
+       * ป้องกันกรอบทะลุรูป
+       */
+
+      if (
+        h >
+        d.height
+      ) {
+
+        h =
+          d.height;
+
+        if (this.ratio) {
+
+          w =
+            h *
+            this.ratio;
+
+        }
+      }
+
+
+      if (
+        w >
+        d.width
+      ) {
+
+        w =
+          d.width;
+
+        if (this.ratio) {
+
+          h =
+            w /
+            this.ratio;
+
+        }
+      }
+
+
       this.box = {
-        left: d.left + (d.width - w) / 2,
-        top: d.top + (d.height - h) / 2,
-        width: w,
-        height: h
+
+        left:
+          d.left +
+          (
+            d.width -
+            w
+          ) /
+          2,
+
+        top:
+          d.top +
+          (
+            d.height -
+            h
+          ) /
+          2,
+
+        width:
+          w,
+
+        height:
+          h
       };
+
+
       this.render();
     }
+
+
+    // ========================================================
+    // APPLY RATIO
+    // ========================================================
 
     applyRatioToBox() {
-      if (!this.box.width) return;
-      const d = this.getDisplayRect();
-      if (this.ratio) {
-        let h = this.box.width / this.ratio;
-        if (h > d.height) { h = d.height; this.box.width = h * this.ratio; }
-        this.box.height = h;
-        if (this.box.left + this.box.width > d.left + d.width) this.box.left = d.left + d.width - this.box.width;
-        if (this.box.top + this.box.height > d.top + d.height) this.box.top = d.top + d.height - this.box.height;
+
+      if (
+        !this.box.width
+      ) {
+        return;
       }
+
+
+      const d =
+        this.getDisplayRect();
+
+
+      if (
+        this.ratio
+      ) {
+
+        let h =
+          this.box.width /
+          this.ratio;
+
+
+        let width =
+          this.box.width;
+
+
+        /*
+         * ถ้าสูงเกินรูป
+         */
+        if (
+          h >
+          d.height
+        ) {
+
+          h =
+            d.height;
+
+          width =
+            h *
+            this.ratio;
+        }
+
+
+        /*
+         * ถ้ากว้างเกินรูป
+         */
+        if (
+          width >
+          d.width
+        ) {
+
+          width =
+            d.width;
+
+          h =
+            width /
+            this.ratio;
+        }
+
+
+        this.box.width =
+          width;
+
+
+        this.box.height =
+          h;
+      }
+
+
+      /*
+       * บังคับกรอบให้อยู่ในรูป
+       */
+
+      if (
+        this.box.left +
+          this.box.width >
+        d.left +
+          d.width
+      ) {
+
+        this.box.left =
+          d.left +
+          d.width -
+          this.box.width;
+      }
+
+
+      if (
+        this.box.top +
+          this.box.height >
+        d.top +
+          d.height
+      ) {
+
+        this.box.top =
+          d.top +
+          d.height -
+          this.box.height;
+      }
+
+
+      if (
+        this.box.left <
+        d.left
+      ) {
+
+        this.box.left =
+          d.left;
+      }
+
+
+      if (
+        this.box.top <
+        d.top
+      ) {
+
+        this.box.top =
+          d.top;
+      }
+
+
       this.render();
     }
 
-    render() {
-      this.boxEl.style.left = this.box.left + 'px';
-      this.boxEl.style.top = this.box.top + 'px';
-      this.boxEl.style.width = this.box.width + 'px';
-      this.boxEl.style.height = this.box.height + 'px';
 
-      const d = this.getDisplayRect();
-      if (d.width && this.imgEl.naturalWidth) {
-        const scaleX = this.imgEl.naturalWidth / d.width;
-        const scaleY = this.imgEl.naturalHeight / d.height;
-        const outW = Math.round(this.box.width * scaleX);
-        const outH = Math.round(this.box.height * scaleY);
-        this.cropdimEl.textContent = `${outW}×${outH} px`;
+    // ========================================================
+    // RENDER
+    // ========================================================
+
+    render() {
+
+      this.boxEl.style.left =
+        this.box.left +
+        'px';
+
+
+      this.boxEl.style.top =
+        this.box.top +
+        'px';
+
+
+      this.boxEl.style.width =
+        this.box.width +
+        'px';
+
+
+      this.boxEl.style.height =
+        this.box.height +
+        'px';
+
+
+      const d =
+        this.getDisplayRect();
+
+
+      if (
+        d.width &&
+        this.imgEl.naturalWidth
+      ) {
+
+        const scaleX =
+          this.imgEl.naturalWidth /
+          d.width;
+
+
+        const scaleY =
+          this.imgEl.naturalHeight /
+          d.height;
+
+
+        const outW =
+          Math.round(
+            this.box.width *
+            scaleX
+          );
+
+
+        const outH =
+          Math.round(
+            this.box.height *
+            scaleY
+          );
+
+
+        this.cropdimEl.textContent =
+          `${outW}×${outH} px`;
       }
     }
+
+
+    // ========================================================
+    // POINTER DRAG
+    // ========================================================
 
     wireDrag() {
-      const stage = this.stage;
-      const boxEl = this.boxEl;
-      let mode = null; // 'move' | 'nw' | 'ne' | 'sw' | 'se'
-      let startPtr = { x: 0, y: 0 };
-      let startBox = null;
-      let anchor = null;
 
-      const toStageCoords = (e) => {
-        const r = stage.getBoundingClientRect();
-        return { x: e.clientX - r.left, y: e.clientY - r.top };
+      const stage =
+        this.stage;
+
+
+      const boxEl =
+        this.boxEl;
+
+
+      let mode =
+        null;
+
+
+      let startPtr = {
+        x: 0,
+        y: 0
       };
 
-      const onDown = (e, m) => {
-        mode = m;
-        const p = toStageCoords(e);
-        startPtr = p;
-        startBox = { ...this.box };
-        if (m !== 'move') {
-          const opp = { nw: 'se', ne: 'sw', sw: 'ne', se: 'nw' }[m];
-          anchor = {
-            x: opp.includes('e') ? startBox.left + startBox.width : startBox.left,
-            y: opp.includes('s') ? startBox.top + startBox.height : startBox.top
+
+      let startBox =
+        null;
+
+
+      let anchor =
+        null;
+
+
+      const toStageCoords =
+        event => {
+
+          const r =
+            stage.getBoundingClientRect();
+
+
+          return {
+
+            x:
+              event.clientX -
+              r.left,
+
+            y:
+              event.clientY -
+              r.top
           };
+        };
+
+
+      const onDown =
+        (
+          event,
+          m
+        ) => {
+
+          mode =
+            m;
+
+
+          const p =
+            toStageCoords(
+              event
+            );
+
+
+          startPtr =
+            p;
+
+
+          startBox = {
+            ...this.box
+          };
+
+
+          if (
+            m !== 'move'
+          ) {
+
+            const opposite = {
+              nw: 'se',
+              ne: 'sw',
+              sw: 'ne',
+              se: 'nw'
+            }[m];
+
+
+            anchor = {
+
+              x:
+                opposite.includes(
+                  'e'
+                )
+                  ? startBox.left +
+                    startBox.width
+                  : startBox.left,
+
+              y:
+                opposite.includes(
+                  's'
+                )
+                  ? startBox.top +
+                    startBox.height
+                  : startBox.top
+            };
+          }
+
+
+          event.preventDefault();
+          event.stopPropagation();
+
+
+          window.addEventListener(
+            'pointermove',
+            onMove
+          );
+
+
+          window.addEventListener(
+            'pointerup',
+            onUp
+          );
+        };
+
+
+      const onMove =
+        event => {
+
+          if (!mode) {
+            return;
+          }
+
+
+          const d =
+            this.getDisplayRect();
+
+
+          const p =
+            toStageCoords(
+              event
+            );
+
+
+          const curX =
+            Math.min(
+              Math.max(
+                p.x,
+                d.left
+              ),
+              d.left +
+                d.width
+            );
+
+
+          const curY =
+            Math.min(
+              Math.max(
+                p.y,
+                d.top
+              ),
+              d.top +
+                d.height
+            );
+
+
+          // --------------------------------------------------
+          // MOVE
+          // --------------------------------------------------
+
+          if (
+            mode === 'move'
+          ) {
+
+            const dx =
+              p.x -
+              startPtr.x;
+
+
+            const dy =
+              p.y -
+              startPtr.y;
+
+
+            let left =
+              startBox.left +
+              dx;
+
+
+            let top =
+              startBox.top +
+              dy;
+
+
+            left =
+              Math.min(
+                Math.max(
+                  left,
+                  d.left
+                ),
+                d.left +
+                  d.width -
+                  startBox.width
+              );
+
+
+            top =
+              Math.min(
+                Math.max(
+                  top,
+                  d.top
+                ),
+                d.top +
+                  d.height -
+                  startBox.height
+              );
+
+
+            this.box = {
+
+              left,
+
+              top,
+
+              width:
+                startBox.width,
+
+              height:
+                startBox.height
+            };
+
+          } else {
+
+            // ----------------------------------------------
+            // RESIZE
+            // ----------------------------------------------
+
+            let width =
+              Math.abs(
+                curX -
+                anchor.x
+              );
+
+
+            let height =
+              Math.abs(
+                curY -
+                anchor.y
+              );
+
+
+            // ----------------------------------------------
+            // Aspect ratio
+            // ----------------------------------------------
+
+            if (
+              this.ratio
+            ) {
+
+              /*
+               * ใช้ width เป็นตัวหลัก
+               */
+              height =
+                width /
+                this.ratio;
+            }
+
+
+            width =
+              Math.max(
+                width,
+                MIN_BOX
+              );
+
+
+            height =
+              Math.max(
+                height,
+                MIN_BOX
+              );
+
+
+            let left =
+              curX <
+              anchor.x
+                ? anchor.x -
+                  width
+                : anchor.x;
+
+
+            let top =
+              curY <
+              anchor.y
+                ? anchor.y -
+                  height
+                : anchor.y;
+
+
+            // ----------------------------------------------
+            // Left boundary
+            // ----------------------------------------------
+
+            if (
+              left <
+              d.left
+            ) {
+
+              width -=
+                d.left -
+                left;
+
+
+              left =
+                d.left;
+
+
+              if (
+                this.ratio
+              ) {
+
+                height =
+                  width /
+                  this.ratio;
+              }
+            }
+
+
+            // ----------------------------------------------
+            // Top boundary
+            // ----------------------------------------------
+
+            if (
+              top <
+              d.top
+            ) {
+
+              height -=
+                d.top -
+                top;
+
+
+              top =
+                d.top;
+
+
+              if (
+                this.ratio
+              ) {
+
+                width =
+                  height *
+                  this.ratio;
+              }
+            }
+
+
+            // ----------------------------------------------
+            // Right boundary
+            // ----------------------------------------------
+
+            if (
+              left +
+                width >
+              d.left +
+                d.width
+            ) {
+
+              width =
+                d.left +
+                d.width -
+                left;
+
+
+              if (
+                this.ratio
+              ) {
+
+                height =
+                  width /
+                  this.ratio;
+              }
+            }
+
+
+            // ----------------------------------------------
+            // Bottom boundary
+            // ----------------------------------------------
+
+            if (
+              top +
+                height >
+              d.top +
+                d.height
+            ) {
+
+              height =
+                d.top +
+                d.height -
+                top;
+
+
+              if (
+                this.ratio
+              ) {
+
+                width =
+                  height *
+                  this.ratio;
+              }
+            }
+
+
+            /*
+             * ป้องกันกรอบเป็นค่าติดลบ
+             */
+            width =
+              Math.max(
+                width,
+                MIN_BOX
+              );
+
+
+            height =
+              Math.max(
+                height,
+                MIN_BOX
+              );
+
+
+            this.box = {
+
+              left,
+
+              top,
+
+              width,
+
+              height
+            };
+          }
+
+
+          this.invalidateResult();
+
+          this.render();
+        };
+
+
+      const onUp =
+        () => {
+
+          mode =
+            null;
+
+
+          window.removeEventListener(
+            'pointermove',
+            onMove
+          );
+
+
+          window.removeEventListener(
+            'pointerup',
+            onUp
+          );
+        };
+
+
+      boxEl.addEventListener(
+        'pointerdown',
+        event => {
+
+          const handle =
+            event.target.closest(
+              '.crop-handle'
+            );
+
+
+          onDown(
+            event,
+            handle
+              ? handle.dataset.dir
+              : 'move'
+          );
         }
-        e.preventDefault();
-        e.stopPropagation();
-        window.addEventListener('pointermove', onMove);
-        window.addEventListener('pointerup', onUp);
-      };
-
-      const onMove = (e) => {
-        if (!mode) return;
-        const d = this.getDisplayRect();
-        const p = toStageCoords(e);
-        const curX = Math.min(Math.max(p.x, d.left), d.left + d.width);
-        const curY = Math.min(Math.max(p.y, d.top), d.top + d.height);
-
-        if (mode === 'move') {
-          const dx = p.x - startPtr.x;
-          const dy = p.y - startPtr.y;
-          let left = startBox.left + dx;
-          let top = startBox.top + dy;
-          left = Math.min(Math.max(left, d.left), d.left + d.width - startBox.width);
-          top = Math.min(Math.max(top, d.top), d.top + d.height - startBox.height);
-          this.box = { left, top, width: startBox.width, height: startBox.height };
-        } else {
-          let width = Math.abs(curX - anchor.x);
-          let height = Math.abs(curY - anchor.y);
-          if (this.ratio) height = width / this.ratio;
-          width = Math.max(width, MIN_BOX);
-          height = Math.max(height, MIN_BOX);
-          let left = curX < anchor.x ? anchor.x - width : anchor.x;
-          let top = curY < anchor.y ? anchor.y - height : anchor.y;
-
-          if (left < d.left) { width -= (d.left - left); left = d.left; if (this.ratio) height = width / this.ratio; }
-          if (top < d.top) { height -= (d.top - top); top = d.top; if (this.ratio) width = height * this.ratio; }
-          if (left + width > d.left + d.width) width = d.left + d.width - left;
-          if (top + height > d.top + d.height) height = d.top + d.height - top;
-
-          this.box = { left, top, width: Math.max(width, MIN_BOX), height: Math.max(height, MIN_BOX) };
-        }
-        this.render();
-      };
-
-      const onUp = () => {
-        mode = null;
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-      };
-
-      boxEl.addEventListener('pointerdown', (e) => {
-        const handle = e.target.closest('.crop-handle');
-        onDown(e, handle ? handle.dataset.dir : 'move');
-      });
+      );
     }
+
+
+    // ========================================================
+    // INVALIDATE RESULT
+    // ========================================================
 
     invalidateResult() {
-      if (this.resultUrl) {
-        URL.revokeObjectURL(this.resultUrl);
-        this.resultUrl = null;
+
+      if (
+        this.resultUrl
+      ) {
+
+        try {
+
+          URL.revokeObjectURL(
+            this.resultUrl
+          );
+
+        } catch (_) {}
+
+
+        this.resultUrl =
+          null;
       }
-      this.downloadBtn.removeAttribute('href');
-      this.downloadBtn.classList.add('hidden');
-      this.statusEl.textContent = 'พร้อมตัด';
-      this.statusEl.classList.remove('is-ready', 'is-error');
+
+
+      this.resultBlob =
+        null;
+
+
+      this.downloadBtn.removeAttribute(
+        'href'
+      );
+
+
+      this.downloadBtn.removeAttribute(
+        'download'
+      );
+
+
+      this.downloadBtn.classList.add(
+        'hidden'
+      );
+
+
+      this.statusEl.classList.remove(
+        'is-ready',
+        'is-error'
+      );
+
+
+      this.updateLanguageUI();
     }
+
+
+    // ========================================================
+    // CROP
+    // ========================================================
 
     async crop() {
-      if (!this.imgEl.naturalWidth || !this.imgEl.naturalHeight) return;
 
-      const btn = this.el.querySelector('.js-crop-btn');
-      btn.disabled = true;
-      this.statusEl.classList.remove('is-ready', 'is-error');
-      this.statusEl.textContent = 'กำลังตัด…';
+      if (
+        !this.imgEl.naturalWidth ||
+        !this.imgEl.naturalHeight
+      ) {
+        return;
+      }
+
+
+      if (
+        this.isCropping
+      ) {
+        return;
+      }
+
+
+      this.isCropping =
+        true;
+
+
+      this.cropBtn.disabled =
+        true;
+
+
+      this.statusEl.classList.remove(
+        'is-ready',
+        'is-error'
+      );
+
+
+      this.statusEl.textContent =
+        t(
+          'image.cropping'
+        );
+
 
       try {
-        const d = this.getDisplayRect();
-      const scaleX = this.imgEl.naturalWidth / d.width;
-      const scaleY = this.imgEl.naturalHeight / d.height;
-      const sx = (this.box.left - d.left) * scaleX;
-      const sy = (this.box.top - d.top) * scaleY;
-      const sw = this.box.width * scaleX;
-      const sh = this.box.height * scaleY;
 
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(sw));
-      canvas.height = Math.max(1, Math.round(sh));
-      const ctx = canvas.getContext('2d');
-      if (this.format === 'image/jpeg') {
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-      ctx.drawImage(this.imgEl, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+        const d =
+          this.getDisplayRect();
 
-        const blob = await new Promise((resolve) => {
-          canvas.toBlob(resolve, this.format, this.format === 'image/jpeg' ? 0.92 : undefined);
-        });
-        if (!blob) throw new Error('สร้างไฟล์ไม่สำเร็จ');
 
-        if (this.resultUrl) URL.revokeObjectURL(this.resultUrl);
-        this.resultUrl = URL.createObjectURL(blob);
-        const ext = this.format === 'image/png' ? 'png' : 'jpg';
-        this.downloadBtn.href = this.resultUrl;
-        this.downloadBtn.download = `${U.baseName(this.file.name)}-cropped.${ext}`;
-        this.downloadBtn.classList.remove('hidden');
-        this.statusEl.textContent = `พร้อมดาวน์โหลด · ${U.formatBytes(blob.size)}`;
-        this.statusEl.classList.add('is-ready');
+        if (
+          !d.width ||
+          !d.height
+        ) {
+
+          throw new Error(
+            t(
+              'errors.invalidImageDimensions'
+            )
+          );
+        }
+
+
+        const scaleX =
+          this.imgEl.naturalWidth /
+          d.width;
+
+
+        const scaleY =
+          this.imgEl.naturalHeight /
+          d.height;
+
+
+        const sx =
+          (
+            this.box.left -
+            d.left
+          ) *
+          scaleX;
+
+
+        const sy =
+          (
+            this.box.top -
+            d.top
+          ) *
+          scaleY;
+
+
+        const sw =
+          this.box.width *
+          scaleX;
+
+
+        const sh =
+          this.box.height *
+          scaleY;
+
+
+        // --------------------------------------------------
+        // Canvas
+        // --------------------------------------------------
+
+        const canvas =
+          document.createElement(
+            'canvas'
+          );
+
+
+        canvas.width =
+          Math.max(
+            1,
+            Math.round(sw)
+          );
+
+
+        canvas.height =
+          Math.max(
+            1,
+            Math.round(sh)
+          );
+
+
+        const ctx =
+          canvas.getContext(
+            '2d'
+          );
+
+
+        if (!ctx) {
+
+          throw new Error(
+            t(
+              'errors.canvasContext'
+            )
+          );
+        }
+
+
+        // --------------------------------------------------
+        // JPEG background
+        // --------------------------------------------------
+
+        if (
+          this.format ===
+          'image/jpeg'
+        ) {
+
+          ctx.fillStyle =
+            '#FFFFFF';
+
+
+          ctx.fillRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          );
+        }
+
+
+        // --------------------------------------------------
+        // Draw
+        // --------------------------------------------------
+
+        ctx.drawImage(
+          this.imgEl,
+          sx,
+          sy,
+          sw,
+          sh,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+
+
+        // --------------------------------------------------
+        // Encode
+        // --------------------------------------------------
+
+        const blob =
+          await new Promise(
+            (
+              resolve,
+              reject
+            ) => {
+
+              canvas.toBlob(
+                result => {
+
+                  if (
+                    result
+                  ) {
+
+                    resolve(
+                      result
+                    );
+
+                  } else {
+
+                    reject(
+                      new Error(
+                        t(
+                          'errors.createFailed'
+                        )
+                      )
+                    );
+                  }
+
+                },
+                this.format,
+                this.format ===
+                  'image/jpeg'
+                  ? 0.92
+                  : undefined
+              );
+
+            }
+          );
+
+
+        if (!blob) {
+
+          throw new Error(
+            t(
+              'errors.createFailed'
+            )
+          );
+        }
+
+
+        // --------------------------------------------------
+        // Cleanup previous result
+        // --------------------------------------------------
+
+        if (
+          this.resultUrl
+        ) {
+
+          try {
+
+            URL.revokeObjectURL(
+              this.resultUrl
+            );
+
+          } catch (_) {}
+        }
+
+
+        // --------------------------------------------------
+        // Store
+        // --------------------------------------------------
+
+        this.resultBlob =
+          blob;
+
+
+        this.resultUrl =
+          URL.createObjectURL(
+            blob
+          );
+
+
+        const ext =
+          this.format ===
+          'image/png'
+            ? 'png'
+            : 'jpg';
+
+
+        const filename =
+          `${U.baseName(
+            this.file.name
+          )}-cropped.${ext}`;
+
+
+        this.downloadBtn.href =
+          this.resultUrl;
+
+
+        this.downloadBtn.download =
+          filename;
+
+
+        this.downloadBtn.classList.remove(
+          'hidden'
+        );
+
+
+        // --------------------------------------------------
+        // Success
+        // --------------------------------------------------
+
+        this.statusEl.textContent =
+          t(
+            'image.readyDownload',
+            {
+              size:
+                U.formatBytes(
+                  blob.size
+                )
+            }
+          );
+
+
+        this.statusEl.classList.add(
+          'is-ready'
+        );
+
       } catch (err) {
-        this.statusEl.textContent = 'ตัดไม่สำเร็จ: ' + (err?.message || err);
-        this.statusEl.classList.add('is-error');
+
+        const message =
+          err &&
+          err.message
+            ? err.message
+            : t(
+                'errors.processingFailed'
+              );
+
+
+        this.statusEl.textContent =
+          t(
+            'image.croppingFailed',
+            {
+              message
+            }
+          );
+
+
+        this.statusEl.classList.add(
+          'is-error'
+        );
+
       } finally {
-        btn.disabled = false;
+
+        this.isCropping =
+          false;
+
+
+        this.cropBtn.disabled =
+          false;
       }
     }
+
+
+    // ========================================================
+    // DISPOSE
+    // ========================================================
+
+    dispose() {
+
+      if (
+        this.objectUrl
+      ) {
+
+        try {
+
+          URL.revokeObjectURL(
+            this.objectUrl
+          );
+
+        } catch (_) {}
+
+
+        this.objectUrl =
+          null;
+      }
+
+
+      if (
+        this.resultUrl
+      ) {
+
+        try {
+
+          URL.revokeObjectURL(
+            this.resultUrl
+          );
+
+        } catch (_) {}
+
+
+        this.resultUrl =
+          null;
+      }
+
+
+      this.resultBlob =
+        null;
+    }
+
   }
 
-  function addFiles(fileList) {
-    Array.from(fileList).filter(f => f.type.startsWith('image/')).forEach(file => {
-      const job = new CropJob(file);
-      jobs.push(job);
-      jobsEl.appendChild(job.el);
-    });
+
+  // ============================================================
+  // ADD FILES
+  // ============================================================
+
+  function addFiles(
+    fileList
+  ) {
+
+    Array.from(
+      fileList
+    )
+      .filter(
+        file =>
+          file &&
+          typeof file.type ===
+            'string' &&
+          file.type.startsWith(
+            'image/'
+          )
+      )
+      .forEach(
+        file => {
+
+          const job =
+            new CropJob(
+              file
+            );
+
+
+          jobs.push(
+            job
+          );
+
+
+          jobsEl.appendChild(
+            job.el
+          );
+        }
+      );
   }
 
-  U.setupDropzone(dropzone, fileInput, addFiles);
 
-  U.onClearCache(() => {
-    jobs.forEach(job => {
-      URL.revokeObjectURL(job.objectUrl);
-      if (job.resultUrl) URL.revokeObjectURL(job.resultUrl);
-    });
-    jobs.length = 0;
-    jobsEl.innerHTML = '';
-  });
+  // ============================================================
+  // DROPZONE
+  // ============================================================
+
+  U.setupDropzone(
+    dropzone,
+    fileInput,
+    addFiles
+  );
+
+
+  // ============================================================
+  // CLEAR CACHE
+  // ============================================================
+
+  U.onClearCache(
+    () => {
+
+      jobs.forEach(
+        job => {
+          job.dispose();
+        }
+      );
+
+
+      jobs.length =
+        0;
+
+
+      jobsEl.innerHTML =
+        '';
+    }
+  );
+
+
+  // ============================================================
+  // LANGUAGE CHANGE
+  // ============================================================
+
+  document.addEventListener(
+    'languagechange',
+    () => {
+
+      jobs.forEach(
+        job => {
+          job.updateLanguageUI();
+        }
+      );
+    }
+  );
+
 })();
