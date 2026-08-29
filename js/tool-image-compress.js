@@ -1,4 +1,4 @@
-/* global window, document, URL, JSZip, requestAnimationFrame */
+/* global window, document, URL, JSZip */
 
 (() => {
   'use strict';
@@ -33,6 +33,7 @@
         key,
         values
       );
+
     }
 
     return String(
@@ -47,81 +48,74 @@
 
   const dropzone =
     document.getElementById(
-      'dz-img-compress'
+      'dz-img-convert'
     );
 
   const fileInput =
     document.getElementById(
-      'input-img-compress'
+      'input-img-convert'
     );
 
   const bulkbar =
     document.getElementById(
-      'bulk-img-compress'
+      'bulk-img-convert'
     );
 
   const countEl =
     document.getElementById(
-      'count-img-compress'
+      'count-img-convert'
     );
 
-  const qualityEl =
+  const bulkFormatEl =
     document.getElementById(
-      'quality-img-compress'
-    );
-
-  const maxSizeEl =
-    document.getElementById(
-      'maxsize-img-compress'
-    );
-
-  const formatEl =
-    document.getElementById(
-      'format-img-compress'
+      'bulkFormat-img-convert'
     );
 
   const clearAllBtn =
     document.getElementById(
-      'clearAll-img-compress'
+      'clearAll-img-convert'
     );
 
-  const compressAllBtn =
+  const convertAllBtn =
     document.getElementById(
-      'compressAll-img-compress'
+      'convertAll-img-convert'
     );
 
   const downloadZipBtn =
     document.getElementById(
-      'downloadZip-img-compress'
+      'downloadZip-img-convert'
     );
 
   const jobsEl =
     document.getElementById(
-      'jobs-img-compress'
+      'jobs-img-convert'
     );
 
   const jobTemplate =
     document.getElementById(
-      'tpl-img-compress'
+      'tpl-img-convert'
     );
 
 
   // ============================================================
-  // VALIDATION
+  // SAFETY CHECK
   // ============================================================
 
   if (
     !dropzone ||
     !fileInput ||
+    !bulkbar ||
+    !countEl ||
+    !bulkFormatEl ||
+    !clearAllBtn ||
+    !convertAllBtn ||
+    !downloadZipBtn ||
     !jobsEl ||
     !jobTemplate
   ) {
 
-    console.warn(
-      '[Image Compress] Required elements not found.'
-    );
-
     return;
+
   }
 
 
@@ -132,13 +126,10 @@
   let jobSeq =
     0;
 
+
   const jobs =
     [];
 
-
-  // ============================================================
-  // CONSTANTS
-  // ============================================================
 
   const EXT_BY_FORMAT = {
 
@@ -154,501 +145,18 @@
   };
 
 
-  const ALLOWED_FORMATS = [
-
-    'image/jpeg',
-
-    'image/png',
-
-    'image/webp'
-
-  ];
-
-
-  const MAX_DIMENSION_LIMIT =
-    20000;
-
-
-  const CONCURRENCY =
-    3;
-
-
-  const MAX_CANVAS_PIXELS =
-    100000000;
-
-
   // ============================================================
-  // HELPERS
+  // CONVERT JOB
   // ============================================================
 
-  function getQuality() {
-
-    if (
-      !qualityEl
-    ) {
-
-      return 0.85;
-
-    }
-
-
-    const value =
-      parseFloat(
-        qualityEl.value
-      );
-
-
-    if (
-      !Number.isFinite(
-        value
-      )
-    ) {
-
-      return 0.85;
-
-    }
-
-
-    return Math.min(
-      1,
-      Math.max(
-        0.05,
-        value
-      )
-    );
-  }
-
-
-  function getMaxSize() {
-
-    if (
-      !maxSizeEl
-    ) {
-
-      return 0;
-
-    }
-
-
-    const value =
-      parseInt(
-        maxSizeEl.value,
-        10
-      );
-
-
-    if (
-      !Number.isFinite(
-        value
-      ) ||
-      value <= 0
-    ) {
-
-      return 0;
-
-    }
-
-
-    return Math.min(
-      MAX_DIMENSION_LIMIT,
-      value
-    );
-  }
-
-
-  function getFormat() {
-
-    const value =
-      formatEl
-        ? formatEl.value
-        : 'image/jpeg';
-
-
-    if (
-      !ALLOWED_FORMATS.includes(
-        value
-      )
-    ) {
-
-      return 'image/jpeg';
-
-    }
-
-
-    return value;
-  }
-
-
-  function getOutputDimensions(
-    naturalW,
-    naturalH,
-    maxSize
-  ) {
-
-    if (
-      !naturalW ||
-      !naturalH
-    ) {
-
-      return {
-
-        width:
-          1,
-
-        height:
-          1
-
-      };
-    }
-
-
-    if (
-      !maxSize ||
-      Math.max(
-        naturalW,
-        naturalH
-      ) <= maxSize
-    ) {
-
-      return {
-
-        width:
-          Math.max(
-            1,
-            Math.round(
-              naturalW
-            )
-          ),
-
-        height:
-          Math.max(
-            1,
-            Math.round(
-              naturalH
-            )
-          )
-
-      };
-    }
-
-
-    const scale =
-      maxSize /
-      Math.max(
-        naturalW,
-        naturalH
-      );
-
-
-    const width =
-      Math.max(
-        1,
-        Math.round(
-          naturalW *
-          scale
-        )
-      );
-
-
-    const height =
-      Math.max(
-        1,
-        Math.round(
-          naturalH *
-          scale
-        )
-      );
-
-
-    return {
-
-      width,
-
-      height
-
-    };
-  }
-
-
-  function fitCanvasDimensions(
-    width,
-    height
-  ) {
-
-    let outW =
-      width;
-
-    let outH =
-      height;
-
-
-    const pixels =
-      outW *
-      outH;
-
-
-    if (
-      pixels <=
-      MAX_CANVAS_PIXELS
-    ) {
-
-      return {
-
-        width:
-          outW,
-
-        height:
-          outH
-
-      };
-    }
-
-
-    const scale =
-      Math.sqrt(
-        MAX_CANVAS_PIXELS /
-        pixels
-      );
-
-
-    outW =
-      Math.max(
-        1,
-        Math.floor(
-          outW *
-          scale
-        )
-      );
-
-
-    outH =
-      Math.max(
-        1,
-        Math.floor(
-          outH *
-          scale
-        )
-      );
-
-
-    return {
-
-      width:
-        outW,
-
-      height:
-        outH
-
-    };
-  }
-
-
-  function calculateSaving(
-    originalSize,
-    newSize
-  ) {
-
-    if (
-      !Number.isFinite(
-        originalSize
-      ) ||
-      originalSize <= 0 ||
-      !Number.isFinite(
-        newSize
-      ) ||
-      newSize < 0
-    ) {
-
-      return {
-
-        percent:
-          0,
-
-        bytes:
-          0,
-
-        isSmaller:
-          false
-
-      };
-    }
-
-
-    const bytes =
-      originalSize -
-      newSize;
-
-
-    const percent =
-      (
-        bytes /
-        originalSize
-      ) *
-      100;
-
-
-    return {
-
-      percent,
-
-      bytes,
-
-      isSmaller:
-        newSize <
-        originalSize
-
-    };
-  }
-
-
-  function formatSaving(
-    originalSize,
-    newSize
-  ) {
-
-    if (
-      !Number.isFinite(
-        originalSize
-      ) ||
-      originalSize <= 0
-    ) {
-
-      return '—';
-
-    }
-
-
-    const result =
-      calculateSaving(
-        originalSize,
-        newSize
-      );
-
-
-    if (
-      result.isSmaller
-    ) {
-
-      return t(
-        'image.savingSmaller',
-        {
-
-          percent:
-            result.percent.toFixed(1),
-
-          size:
-            U.formatBytes(
-              result.bytes
-            )
-
-        }
-      );
-
-    }
-
-
-    if (
-      newSize >
-      originalSize
-    ) {
-
-      const increase =
-        (
-          (
-            newSize -
-            originalSize
-          ) /
-          originalSize
-        ) *
-        100;
-
-
-      return t(
-        'image.savingLarger',
-        {
-
-          percent:
-            increase.toFixed(1)
-
-        }
-      );
-
-    }
-
-
-    return t(
-      'image.savingSame'
-    );
-  }
-
-
-  function revokeUrl(
-    url
-  ) {
-
-    if (
-      !url
-    ) {
-
-      return;
-
-    }
-
-
-    try {
-
-      URL.revokeObjectURL(
-        url
-      );
-
-    } catch (_) {}
-
-  }
-
-
-  function setProgress(
-    job,
-    value
-  ) {
-
-    if (
-      !job.progressEl
-    ) {
-
-      return;
-
-    }
-
-
-    const percent =
-      Math.min(
-        100,
-        Math.max(
-          0,
-          Number(
-            value
-          ) || 0
-        )
-      );
-
-
-    job.progressEl.style.width =
-      `${percent}%`;
-  }
-
-
-  // ============================================================
-  // COMPRESS JOB
-  // ============================================================
-
-  class CompressJob {
+  class ConvertJob {
 
     constructor(
       file
     ) {
 
       this.id =
-        'compress-' +
+        'conv-' +
         (++jobSeq);
 
 
@@ -657,15 +165,23 @@
 
 
       this.format =
-        getFormat();
+        'image/png';
 
 
-      this.quality =
-        getQuality();
+      this.rotation =
+        0;
 
 
-      this.maxSize =
-        getMaxSize();
+      this.flipH =
+        false;
+
+
+      this.flipV =
+        false;
+
+
+      this.aspectLocked =
+        true;
 
 
       this.naturalW =
@@ -684,14 +200,13 @@
         null;
 
 
-      this.sourceUrl =
-        null;
+      this.isConverting =
+        false;
 
 
       /*
        * เก็บ key/params ของ error ล่าสุดไว้
        * เพื่อให้แปลภาษาใหม่ได้ตอน languagechange
-       * แทนที่จะค้างข้อความ error ภาษาเดิม
        */
       this.errorKey =
         null;
@@ -705,10 +220,6 @@
         false;
 
 
-      this.isProcessing =
-        false;
-
-
       this.el =
         jobTemplate
           .content
@@ -719,11 +230,12 @@
 
 
       this.buildDom();
+
     }
 
 
     // ========================================================
-    // DOM
+    // BUILD DOM
     // ========================================================
 
     buildDom() {
@@ -732,15 +244,55 @@
         this.el;
 
 
-      this.sourceUrl =
+      const url =
         URL.createObjectURL(
           this.file
         );
 
 
-      this.previewImg =
+      this.objectUrl =
+        url;
+
+
+      this.thumbImg =
         el.querySelector(
-          '.js-preview'
+          '.ticket-thumb img'
+        );
+
+
+      this.widthInput =
+        el.querySelector(
+          '.js-width'
+        );
+
+
+      this.heightInput =
+        el.querySelector(
+          '.js-height'
+        );
+
+
+      this.lockBtn =
+        el.querySelector(
+          '.js-lock'
+        );
+
+
+      this.qualityRow =
+        el.querySelector(
+          '.js-quality-row'
+        );
+
+
+      this.qualityInput =
+        el.querySelector(
+          '.js-quality'
+        );
+
+
+      this.qualityVal =
+        el.querySelector(
+          '.js-quality-val'
         );
 
 
@@ -750,9 +302,9 @@
         );
 
 
-      this.compressBtn =
+      this.convertBtn =
         el.querySelector(
-          '.js-compress-btn'
+          '.js-convert-btn'
         );
 
 
@@ -762,63 +314,61 @@
         );
 
 
-      this.progressEl =
+      this.formatGroup =
         el.querySelector(
-          '.js-progress'
+          '.js-format-group'
         );
 
 
-      this.newDimEl =
+      this.rotateGroup =
         el.querySelector(
-          '.js-newdim'
+          '.js-rotate-group'
         );
 
 
-      this.newSizeEl =
-        el.querySelector(
-          '.js-newsize'
-        );
+      // ------------------------------------------------------
+      // File info
+      // ------------------------------------------------------
 
-
-      this.savingEl =
-        el.querySelector(
-          '.js-saving'
-        );
-
-
-      this.filenameEl =
+      const filenameEl =
         el.querySelector(
           '.js-filename'
         );
 
 
-      this.origDimEl =
-        el.querySelector(
-          '.js-origdim'
-        );
-
-
-      this.origSizeEl =
+      const originalSizeEl =
         el.querySelector(
           '.js-origsize'
         );
 
 
+      const originalExtEl =
+        el.querySelector(
+          '.js-origext'
+        );
+
+
+      const originalDimEl =
+        el.querySelector(
+          '.js-origdim'
+        );
+
+
       if (
-        this.filenameEl
+        filenameEl
       ) {
 
-        this.filenameEl.textContent =
+        filenameEl.textContent =
           this.file.name;
 
       }
 
 
       if (
-        this.origSizeEl
+        originalSizeEl
       ) {
 
-        this.origSizeEl.textContent =
+        originalSizeEl.textContent =
           U.formatBytes(
             this.file.size
           );
@@ -827,91 +377,87 @@
 
 
       if (
-        this.origDimEl
+        originalExtEl
       ) {
 
-        this.origDimEl.textContent =
-          t(
-            'image.reading'
+        originalExtEl.textContent =
+          U.extOf(
+            this.file.name
           );
 
       }
 
 
-      if (
-        this.newDimEl
-      ) {
+      // ------------------------------------------------------
+      // Processing state for app.js
+      // ------------------------------------------------------
 
-        this.newDimEl.textContent =
-          '—';
-
-      }
-
-
-      if (
-        this.newSizeEl
-      ) {
-
-        this.newSizeEl.textContent =
-          '—';
-
-      }
-
-
-      if (
-        this.savingEl
-      ) {
-
-        this.savingEl.textContent =
-          '—';
-
-      }
-
-
-      setProgress(
-        this,
-        0
-      );
-
-
-      /*
-       * สำคัญสำหรับ app.js
-       */
       this.el.dataset.processing =
         'false';
 
 
-      this.previewImg.src =
-        this.sourceUrl;
+      // ------------------------------------------------------
+      // Image
+      // ------------------------------------------------------
+
+      this.thumbImg.src =
+        url;
 
 
-      this.previewImg.onload =
+      this.thumbImg.onload =
         () => {
 
           this.naturalW =
-            this.previewImg.naturalWidth;
+            this.thumbImg.naturalWidth;
 
 
           this.naturalH =
-            this.previewImg.naturalHeight;
+            this.thumbImg.naturalHeight;
 
 
           if (
-            this.origDimEl
+            originalDimEl
           ) {
 
-            this.origDimEl.textContent =
+            originalDimEl.textContent =
               `${this.naturalW}×${this.naturalH}`;
 
           }
 
 
-          this.updatePreviewInfo();
+          /*
+           * ตั้งค่า default dimensions
+           */
+          if (
+            this.naturalW &&
+            this.naturalH
+          ) {
+
+            if (
+              !this.widthInput.value
+            ) {
+
+              this.widthInput.value =
+                this.naturalW;
+
+            }
+
+
+            if (
+              !this.heightInput.value
+            ) {
+
+              this.heightInput.value =
+                this.naturalH;
+
+            }
+
+          }
 
         };
 
 
-      this.previewImg.onerror =
+      this.thumbImg.onerror =
         () => {
 
           this.imageReadFailed =
@@ -919,10 +465,10 @@
 
 
           if (
-            this.origDimEl
+            originalDimEl
           ) {
 
-            this.origDimEl.textContent =
+            originalDimEl.textContent =
               t(
                 'image.readFailed'
               );
@@ -960,10 +506,10 @@
 
 
           if (
-            this.compressBtn
+            this.convertBtn
           ) {
 
-            this.compressBtn.disabled =
+            this.convertBtn.disabled =
               true;
 
           }
@@ -971,21 +517,334 @@
         };
 
 
-      if (
-        this.compressBtn
-      ) {
+      // ------------------------------------------------------
+      // Initial UI
+      // ------------------------------------------------------
 
-        this.compressBtn.addEventListener(
-          'click',
-          () => {
+      this.updateQualityVisibility();
 
-            this.compress();
+      this.updateLanguageUI();
+
+
+      // ------------------------------------------------------
+      // Format
+      // ------------------------------------------------------
+
+      this.formatGroup.addEventListener(
+        'click',
+        event => {
+
+          const btn =
+            event.target.closest(
+              '.seg-btn'
+            );
+
+
+          if (
+            !btn
+          ) {
+
+            return;
 
           }
-        );
 
-      }
 
+          this.formatGroup
+            .querySelectorAll(
+              '.seg-btn'
+            )
+            .forEach(
+              button =>
+                button.classList.remove(
+                  'is-active'
+                )
+            );
+
+
+          btn.classList.add(
+            'is-active'
+          );
+
+
+          this.format =
+            btn.dataset.format;
+
+
+          this.updateQualityVisibility();
+
+          this.markStale();
+
+        }
+      );
+
+
+      // ------------------------------------------------------
+      // Rotate / Flip
+      // ------------------------------------------------------
+
+      this.rotateGroup.addEventListener(
+        'click',
+        event => {
+
+          const btn =
+            event.target.closest(
+              '.seg-btn'
+            );
+
+
+          if (
+            !btn
+          ) {
+
+            return;
+
+          }
+
+
+          const action =
+            btn.dataset.action;
+
+
+          if (
+            action ===
+            'rotate-left'
+          ) {
+
+            this.rotation =
+              (
+                this.rotation +
+                270
+              ) %
+              360;
+
+          } else if (
+            action ===
+            'rotate-right'
+          ) {
+
+            this.rotation =
+              (
+                this.rotation +
+                90
+              ) %
+              360;
+
+          } else if (
+            action ===
+            'flip-h'
+          ) {
+
+            this.flipH =
+              !this.flipH;
+
+          } else if (
+            action ===
+            'flip-v'
+          ) {
+
+            this.flipV =
+              !this.flipV;
+
+          }
+
+
+          btn.classList.toggle(
+            'is-active',
+            (
+              action ===
+                'flip-h' &&
+              this.flipH
+            ) ||
+            (
+              action ===
+                'flip-v' &&
+              this.flipV
+            )
+          );
+
+
+          this.markStale();
+
+        }
+      );
+
+
+      // ------------------------------------------------------
+      // Aspect lock
+      // ------------------------------------------------------
+
+      this.lockBtn.addEventListener(
+        'click',
+        () => {
+
+          this.aspectLocked =
+            !this.aspectLocked;
+
+
+          this.lockBtn.classList.toggle(
+            'is-locked',
+            this.aspectLocked
+          );
+
+        }
+      );
+
+
+      // ------------------------------------------------------
+      // Width
+      // ------------------------------------------------------
+
+      this.widthInput.addEventListener(
+        'input',
+        () => {
+
+          if (
+            this.aspectLocked &&
+            this.widthInput.value &&
+            this.naturalW
+          ) {
+
+            const ratio =
+              this.naturalH /
+              this.naturalW;
+
+
+            const width =
+              parseFloat(
+                this.widthInput.value
+              );
+
+
+            if (
+              Number.isFinite(
+                width
+              )
+            ) {
+
+              this.heightInput.value =
+                Math.max(
+                  1,
+                  Math.round(
+                    width *
+                    ratio
+                  )
+                );
+
+            }
+
+          }
+
+
+          this.markStale();
+
+        }
+      );
+
+
+      // ------------------------------------------------------
+      // Height
+      // ------------------------------------------------------
+
+      this.heightInput.addEventListener(
+        'input',
+        () => {
+
+          if (
+            this.aspectLocked &&
+            this.heightInput.value &&
+            this.naturalH
+          ) {
+
+            const ratio =
+              this.naturalW /
+              this.naturalH;
+
+
+            const height =
+              parseFloat(
+                this.heightInput.value
+              );
+
+
+            if (
+              Number.isFinite(
+                height
+              )
+            ) {
+
+              this.widthInput.value =
+                Math.max(
+                  1,
+                  Math.round(
+                    height *
+                    ratio
+                  )
+                );
+
+            }
+
+          }
+
+
+          this.markStale();
+
+        }
+      );
+
+
+      // ------------------------------------------------------
+      // Quality
+      // ------------------------------------------------------
+
+      this.qualityInput.addEventListener(
+        'input',
+        () => {
+
+          const value =
+            parseFloat(
+              this.qualityInput.value
+            );
+
+
+          const percent =
+            Number.isFinite(
+              value
+            )
+              ? Math.round(
+                  value *
+                  100
+                )
+              : 0;
+
+
+          this.qualityVal.textContent =
+            percent +
+            '%';
+
+
+          this.markStale();
+
+        }
+      );
+
+
+      // ------------------------------------------------------
+      // Convert
+      // ------------------------------------------------------
+
+      this.convertBtn.addEventListener(
+        'click',
+        () => {
+
+          this.convert();
+
+        }
+      );
+
+
+      // ------------------------------------------------------
+      // Remove
+      // ------------------------------------------------------
 
       const removeBtn =
         el.querySelector(
@@ -1007,18 +866,19 @@
             el.remove();
 
 
-            const index =
+            const idx =
               jobs.indexOf(
                 this
               );
 
 
             if (
-              index >= 0
+              idx >=
+              0
             ) {
 
               jobs.splice(
-                index,
+                idx,
                 1
               );
 
@@ -1032,8 +892,6 @@
 
       }
 
-
-      this.updateLanguageUI();
     }
 
 
@@ -1044,7 +902,7 @@
     updateLanguageUI() {
 
       if (
-        this.isProcessing
+        !this.statusEl
       ) {
 
         return;
@@ -1053,61 +911,42 @@
 
 
       /*
-       * Result exists
+       * กำลังแปลง
+       *
+       * ไม่แก้ข้อความตรงนี้ เพราะ convert()
+       * จะดูแลข้อความ dynamic เอง
+       */
+      if (
+        this.isConverting
+      ) {
+
+        this.statusEl.textContent =
+          t(
+            'image.converting'
+          );
+
+        return;
+
+      }
+
+
+      /*
+       * มีผลลัพธ์แล้ว
        */
       if (
         this.resultBlob
       ) {
 
-        const saving =
-          calculateSaving(
-            this.file.size,
-            this.resultBlob.size
+        this.statusEl.textContent =
+          t(
+            'image.readyDownload',
+            {
+              size:
+                U.formatBytes(
+                  this.resultBlob.size
+                )
+            }
           );
-
-
-        if (
-          saving.isSmaller
-        ) {
-
-          this.statusEl.textContent =
-            t(
-              'image.readySavedPercent',
-              {
-
-                percent:
-                  saving.percent.toFixed(
-                    1
-                  )
-
-              }
-            );
-
-        } else if (
-          this.resultBlob.size >
-          this.file.size
-        ) {
-
-          this.statusEl.textContent =
-            t(
-              'image.readyFileLarger'
-            );
-
-        } else {
-
-          this.statusEl.textContent =
-            t(
-              'image.readyDownload',
-              {
-
-                size:
-                  U.formatBytes(
-                    this.resultBlob.size
-                  )
-
-              }
-            );
-        }
 
 
         this.statusEl.classList.remove(
@@ -1121,16 +960,15 @@
 
 
         return;
+
       }
 
 
       /*
-       * ถ้ากำลังอยู่ในสถานะ error
-       * ให้แปล error เดิมใหม่ด้วย key/params ที่เก็บไว้
-       * แทนที่จะปล่อยข้อความค้างเป็นภาษาเดิม
+       * ถ้า error อยู่
+       * แปล error เดิมใหม่ด้วย key/params ที่เก็บไว้
        */
       if (
-        this.statusEl &&
         this.statusEl.classList.contains(
           'is-error'
         )
@@ -1149,72 +987,30 @@
 
         }
 
-
-        if (
-          this.origDimEl &&
-          this.imageReadFailed
-        ) {
-
-          this.origDimEl.textContent =
-            t(
-              'image.readFailed'
-            );
-
-        }
-
-
         return;
 
       }
 
 
       /*
-       * Waiting
+       * รอแปลง
        */
-      if (
-        this.statusEl
-      ) {
-
-        this.statusEl.textContent =
-          t(
-            'image.waitingCompress'
-          );
-
-
-        this.statusEl.classList.remove(
-          'is-ready'
+      this.statusEl.textContent =
+        t(
+          'image.waitingConvert'
         );
-
-      }
-
-
-      /*
-       * Original image metadata
-       */
-      if (
-        this.origDimEl &&
-        !this.naturalW
-      ) {
-
-        this.origDimEl.textContent =
-          t(
-            'image.reading'
-          );
-
-      }
 
     }
 
 
     // ========================================================
-    // PREVIEW INFO
+    // QUALITY VISIBILITY
     // ========================================================
 
-    updatePreviewInfo() {
+    updateQualityVisibility() {
 
       if (
-        !this.naturalW ||
-        !this.naturalH
+        !this.qualityRow
       ) {
 
         return;
@@ -1222,92 +1018,11 @@
       }
 
 
-      const dimensions =
-        getOutputDimensions(
-          this.naturalW,
-          this.naturalH,
-          this.maxSize
-        );
-
-
-      const safeDimensions =
-        fitCanvasDimensions(
-          dimensions.width,
-          dimensions.height
-        );
-
-
-      if (
-        this.newDimEl
-      ) {
-
-        this.newDimEl.textContent =
-          `${safeDimensions.width}×${safeDimensions.height}`;
-
-      }
-
-    }
-
-
-    // ========================================================
-    // UPDATE OPTIONS
-    // ========================================================
-
-    updateOptionsFromGlobal(
-      invalidate = true
-    ) {
-
-      const nextFormat =
-        getFormat();
-
-
-      const nextQuality =
-        getQuality();
-
-
-      const nextMaxSize =
-        getMaxSize();
-
-
-      const changed =
-        nextFormat !==
-          this.format ||
-        nextQuality !==
-          this.quality ||
-        nextMaxSize !==
-          this.maxSize;
-
-
-      this.format =
-        nextFormat;
-
-
-      this.quality =
-        nextQuality;
-
-
-      this.maxSize =
-        nextMaxSize;
-
-
-      if (
-        this.naturalW &&
-        this.naturalH
-      ) {
-
-        this.updatePreviewInfo();
-
-      }
-
-
-      if (
-        invalidate &&
-        changed
-      ) {
-
-        this.markStale();
-
-      }
+      this.qualityRow.classList.toggle(
+        'hidden',
+        this.format ===
+          'image/png'
+      );
 
     }
 
@@ -1319,7 +1034,7 @@
     markStale() {
 
       if (
-        this.isProcessing
+        this.isConverting
       ) {
 
         return;
@@ -1331,9 +1046,13 @@
         this.resultUrl
       ) {
 
-        revokeUrl(
-          this.resultUrl
-        );
+        try {
+
+          URL.revokeObjectURL(
+            this.resultUrl
+          );
+
+        } catch (_) {}
 
 
         this.resultUrl =
@@ -1367,32 +1086,6 @@
       }
 
 
-      setProgress(
-        this,
-        0
-      );
-
-
-      if (
-        this.newSizeEl
-      ) {
-
-        this.newSizeEl.textContent =
-          '—';
-
-      }
-
-
-      if (
-        this.savingEl
-      ) {
-
-        this.savingEl.textContent =
-          '—';
-
-      }
-
-
       this.errorKey =
         null;
 
@@ -1409,7 +1102,7 @@
 
         this.statusEl.textContent =
           t(
-            'image.waitingCompress'
+            'image.waitingConvert'
           );
 
 
@@ -1424,13 +1117,13 @@
 
 
     // ========================================================
-    // COMPRESS
+    // CONVERT
     // ========================================================
 
-    async compress() {
+    async convert() {
 
       if (
-        this.isProcessing
+        this.isConverting
       ) {
 
         return;
@@ -1438,9 +1131,9 @@
       }
 
 
-      /*
-       * Wait for image
-       */
+      // ------------------------------------------------------
+      // Wait for image metadata
+      // ------------------------------------------------------
 
       if (
         !this.naturalW ||
@@ -1462,17 +1155,9 @@
             }
 
 
-            const onLoad =
-              () => {
-
-                resolve();
-
-              };
-
-
-            this.previewImg.addEventListener(
+            this.thumbImg.addEventListener(
               'load',
-              onLoad,
+              resolve,
               {
                 once:
                   true
@@ -1490,33 +1175,27 @@
         !this.naturalH
       ) {
 
-        if (
-          this.statusEl
-        ) {
+        this.errorKey =
+          'image.readInfoFailed';
 
-          this.errorKey =
-            'image.readInfoFailed';
-
-          this.errorParams =
-            null;
+        this.errorParams =
+          null;
 
 
-          this.statusEl.textContent =
-            t(
-              this.errorKey
-            );
-
-
-          this.statusEl.classList.remove(
-            'is-ready'
+        this.statusEl.textContent =
+          t(
+            this.errorKey
           );
 
 
-          this.statusEl.classList.add(
-            'is-error'
-          );
+        this.statusEl.classList.remove(
+          'is-ready'
+        );
 
-        }
+
+        this.statusEl.classList.add(
+          'is-error'
+        );
 
 
         return;
@@ -1524,12 +1203,11 @@
       }
 
 
-      this.updateOptionsFromGlobal(
-        false
-      );
+      // ------------------------------------------------------
+      // Set processing state
+      // ------------------------------------------------------
 
-
-      this.isProcessing =
+      this.isConverting =
         true;
 
 
@@ -1537,7 +1215,7 @@
         'true';
 
 
-      this.compressBtn.disabled =
+      this.convertBtn.disabled =
         true;
 
 
@@ -1549,100 +1227,81 @@
 
       this.statusEl.textContent =
         t(
-          'image.compressing'
+          'image.converting'
         );
-
-
-      setProgress(
-        this,
-        8
-      );
-
-
-      await new Promise(
-        resolve =>
-          requestAnimationFrame(
-            resolve
-          )
-      );
-
-
-      let canvas =
-        null;
 
 
       try {
 
-        // ----------------------------------------------------
-        // Calculate dimensions
-        // ----------------------------------------------------
+        // --------------------------------------------------
+        // Rotation
+        // --------------------------------------------------
 
-        let dimensions =
-          getOutputDimensions(
-            this.naturalW,
-            this.naturalH,
-            this.maxSize
+        const rotSwaps =
+          this.rotation %
+            180 !==
+          0;
+
+
+        const rotW =
+          rotSwaps
+            ? this.naturalH
+            : this.naturalW;
+
+
+        const rotH =
+          rotSwaps
+            ? this.naturalW
+            : this.naturalH;
+
+
+        // --------------------------------------------------
+        // Output dimensions
+        // --------------------------------------------------
+
+        const outW =
+          Math.max(
+            1,
+            parseInt(
+              this.widthInput.value,
+              10
+            ) ||
+            rotW
           );
 
 
-        dimensions =
-          fitCanvasDimensions(
-            dimensions.width,
-            dimensions.height
+        const outH =
+          Math.max(
+            1,
+            parseInt(
+              this.heightInput.value,
+              10
+            ) ||
+            rotH
           );
 
 
-        if (
-          dimensions.width <= 0 ||
-          dimensions.height <= 0
-        ) {
+        // --------------------------------------------------
+        // Canvas
+        // --------------------------------------------------
 
-          throw new Error(
-            t(
-              'errors.invalidImageDimensions'
-            )
-          );
-
-        }
-
-
-        if (
-          this.newDimEl
-        ) {
-
-          this.newDimEl.textContent =
-            `${dimensions.width}×${dimensions.height}`;
-
-        }
-
-
-        setProgress(
-          this,
-          25
-        );
-
-
-        canvas =
+        const canvas =
           document.createElement(
             'canvas'
           );
 
 
         canvas.width =
-          dimensions.width;
+          outW;
 
 
         canvas.height =
-          dimensions.height;
+          outH;
 
 
         const ctx =
           canvas.getContext(
-            '2d',
-            {
-              alpha:
-                true
-            }
+            '2d'
           );
 
 
@@ -1659,9 +1318,9 @@
         }
 
 
-        // ----------------------------------------------------
-        // JPG background
-        // ----------------------------------------------------
+        // --------------------------------------------------
+        // JPEG background
+        // --------------------------------------------------
 
         if (
           this.format ===
@@ -1675,47 +1334,84 @@
           ctx.fillRect(
             0,
             0,
-            dimensions.width,
-            dimensions.height
+            outW,
+            outH
           );
 
         }
 
 
-        ctx.imageSmoothingEnabled =
-          true;
+        // --------------------------------------------------
+        // Draw dimensions
+        // --------------------------------------------------
+
+        const dw =
+          rotSwaps
+            ? outH
+            : outW;
 
 
-        ctx.imageSmoothingQuality =
-          'high';
+        const dh =
+          rotSwaps
+            ? outW
+            : outH;
 
 
-        setProgress(
-          this,
-          42
+        // --------------------------------------------------
+        // Transform
+        // --------------------------------------------------
+
+        ctx.save();
+
+
+        ctx.translate(
+          outW / 2,
+          outH / 2
+        );
+
+
+        ctx.rotate(
+          (
+            this.rotation *
+            Math.PI
+          ) /
+          180
+        );
+
+
+        ctx.scale(
+          this.flipH
+            ? -1
+            : 1,
+          this.flipV
+            ? -1
+            : 1
         );
 
 
         ctx.drawImage(
-          this.previewImg,
-          0,
-          0,
-          dimensions.width,
-          dimensions.height
+          this.thumbImg,
+          -dw / 2,
+          -dh / 2,
+          dw,
+          dh
         );
 
 
-        setProgress(
-          this,
-          68
-        );
+        ctx.restore();
 
+
+        // --------------------------------------------------
+        // Encode
+        // --------------------------------------------------
 
         const quality =
           this.format ===
-            'image/png'
+          'image/png'
             ? undefined
-            : this.quality;
+            : parseFloat(
+                this.qualityInput.value
+              );
 
 
         const blob =
@@ -1770,22 +1466,28 @@
         }
 
 
-        setProgress(
-          this,
-          82
-        );
-
+        // --------------------------------------------------
+        // Previous result URL
+        // --------------------------------------------------
 
         if (
           this.resultUrl
         ) {
 
-          revokeUrl(
-            this.resultUrl
-          );
+          try {
+
+            URL.revokeObjectURL(
+              this.resultUrl
+            );
+
+          } catch (_) {}
 
         }
 
+
+        // --------------------------------------------------
+        // Store result
+        // --------------------------------------------------
 
         this.resultBlob =
           blob;
@@ -1801,115 +1503,42 @@
           EXT_BY_FORMAT[
             this.format
           ] ||
-          'jpg';
+          'png';
 
 
-        const outputName =
+        const filename =
           `${U.baseName(
             this.file.name
           )}.${ext}`;
 
 
-        if (
-          this.downloadBtn
-        ) {
-
-          this.downloadBtn.href =
-            this.resultUrl;
+        this.downloadBtn.href =
+          this.resultUrl;
 
 
-          this.downloadBtn.download =
-            outputName;
+        this.downloadBtn.download =
+          filename;
 
 
-          this.downloadBtn.classList.remove(
-            'hidden'
-          );
-
-        }
-
-
-        if (
-          this.newSizeEl
-        ) {
-
-          this.newSizeEl.textContent =
-            U.formatBytes(
-              blob.size
-            );
-
-        }
-
-
-        if (
-          this.savingEl
-        ) {
-
-          this.savingEl.textContent =
-            formatSaving(
-              this.file.size,
-              blob.size
-            );
-
-        }
-
-
-        setProgress(
-          this,
-          100
+        this.downloadBtn.classList.remove(
+          'hidden'
         );
 
 
-        const saving =
-          calculateSaving(
-            this.file.size,
-            blob.size
+        // --------------------------------------------------
+        // Success
+        // --------------------------------------------------
+
+        this.statusEl.textContent =
+          t(
+            'image.readyDownload',
+            {
+              size:
+                U.formatBytes(
+                  blob.size
+                )
+            }
           );
-
-
-        // ----------------------------------------------------
-        // Success status
-        // ----------------------------------------------------
-
-        if (
-          saving.isSmaller
-        ) {
-
-          this.statusEl.textContent =
-            t(
-              'image.readySavedPercent',
-              {
-                percent:
-                  saving.percent.toFixed(
-                    1
-                  )
-              }
-            );
-
-        } else if (
-          blob.size >
-          this.file.size
-        ) {
-
-          this.statusEl.textContent =
-            t(
-              'image.readyFileLarger'
-            );
-
-        } else {
-
-          this.statusEl.textContent =
-            t(
-              'image.readyDownload',
-              {
-                size:
-                  U.formatBytes(
-                    blob.size
-                  )
-              }
-            );
-
-        }
 
 
         this.statusEl.classList.remove(
@@ -1923,44 +1552,30 @@
 
 
       } catch (
-        error
+        err
       ) {
 
         console.error(
-          '[Image Compress]',
-          error
+          '[Image Convert]',
+          err
         );
 
 
-        setProgress(
-          this,
-          0
-        );
-
-
-        if (
-          this.downloadBtn
-        ) {
-
-          this.downloadBtn.classList.add(
-            'hidden'
-          );
-
-        }
+        const message =
+          err &&
+          err.message
+            ? err.message
+            : t(
+                'errors.processingFailed'
+              );
 
 
         this.errorKey =
-          'image.compressionFailed';
+          'image.conversionFailed';
 
         this.errorParams =
           {
-            message:
-              error &&
-              error.message
-                ? error.message
-                : t(
-                    'errors.somethingWentWrong'
-                  )
+            message
           };
 
 
@@ -1982,34 +1597,16 @@
 
       } finally {
 
-        if (
-          canvas
-        ) {
-
-          canvas.width =
-            1;
-
-
-          canvas.height =
-            1;
-
-
-          canvas =
-            null;
-
-        }
-
-
-        this.isProcessing =
-          false;
-
-
-        this.compressBtn.disabled =
+        this.isConverting =
           false;
 
 
         this.el.dataset.processing =
           'false';
+
+
+        this.convertBtn.disabled =
+          false;
 
       }
 
@@ -2022,13 +1619,35 @@
 
     dispose() {
 
+      this.isConverting =
+        false;
+
+
       if (
-        this.sourceUrl
+        this.el
       ) {
 
-        revokeUrl(
-          this.sourceUrl
-        );
+        this.el.dataset.processing =
+          'false';
+
+      }
+
+
+      if (
+        this.objectUrl
+      ) {
+
+        try {
+
+          URL.revokeObjectURL(
+            this.objectUrl
+          );
+
+        } catch (_) {}
+
+
+        this.objectUrl =
+          null;
 
       }
 
@@ -2037,31 +1656,23 @@
         this.resultUrl
       ) {
 
-        revokeUrl(
-          this.resultUrl
-        );
+        try {
+
+          URL.revokeObjectURL(
+            this.resultUrl
+          );
+
+        } catch (_) {}
+
+
+        this.resultUrl =
+          null;
 
       }
 
 
-      this.sourceUrl =
-        null;
-
-
-      this.resultUrl =
-        null;
-
-
       this.resultBlob =
         null;
-
-
-      this.isProcessing =
-        false;
-
-
-      this.el.dataset.processing =
-        'false';
 
     }
 
@@ -2074,28 +1685,16 @@
 
   function updateBulkUI() {
 
-    if (
-      countEl
-    ) {
-
-      countEl.textContent =
-        String(
-          jobs.length
-        );
-
-    }
-
-
-    if (
-      bulkbar
-    ) {
-
-      bulkbar.classList.toggle(
-        'hidden',
-        jobs.length === 0
+    countEl.textContent =
+      String(
+        jobs.length
       );
 
-    }
+
+    bulkbar.classList.toggle(
+      'hidden',
+      jobs.length === 0
+    );
 
 
     const hasReady =
@@ -2105,16 +1704,10 @@
       );
 
 
-    if (
-      downloadZipBtn
-    ) {
-
-      downloadZipBtn.classList.toggle(
-        'hidden',
-        !hasReady
-      );
-
-    }
+    downloadZipBtn.classList.toggle(
+      'hidden',
+      !hasReady
+    );
 
   }
 
@@ -2127,25 +1720,23 @@
     fileList
   ) {
 
-    const files =
-      Array.from(
-        fileList || []
-      );
-
-
-    files
+    Array.from(
+      fileList || []
+    )
       .filter(
         file =>
           file &&
-          ALLOWED_FORMATS.includes(
-            file.type
+          typeof file.type ===
+            'string' &&
+          file.type.startsWith(
+            'image/'
           )
       )
       .forEach(
         file => {
 
           const job =
-            new CompressJob(
+            new ConvertJob(
               file
             );
 
@@ -2169,399 +1760,376 @@
 
 
   // ============================================================
-  // REFRESH GLOBAL SETTINGS
+  // BULK FORMAT
   // ============================================================
 
-  function refreshAllJobs() {
+  bulkFormatEl.addEventListener(
+    'change',
+    () => {
 
-    jobs.forEach(
-      job => {
+      const format =
+        bulkFormatEl.value;
 
-        job.updateOptionsFromGlobal(
-          true
-        );
+
+      if (
+        !format
+      ) {
+
+        return;
 
       }
-    );
 
 
-    updateBulkUI();
+      jobs.forEach(
+        job => {
 
-  }
-
-
-  if (
-    qualityEl
-  ) {
-
-    qualityEl.addEventListener(
-      'change',
-      refreshAllJobs
-    );
-
-  }
+          job.format =
+            format;
 
 
-  if (
-    maxSizeEl
-  ) {
+          job.formatGroup
+            .querySelectorAll(
+              '.seg-btn'
+            )
+            .forEach(
+              button => {
 
-    maxSizeEl.addEventListener(
-      'change',
-      refreshAllJobs
-    );
+                button.classList.toggle(
+                  'is-active',
+                  button.dataset.format ===
+                    format
+                );
 
-  }
+              }
+            );
 
 
-  if (
-    formatEl
-  ) {
+          job.updateQualityVisibility();
 
-    formatEl.addEventListener(
-      'change',
-      refreshAllJobs
-    );
+          job.markStale();
 
-  }
+        }
+      );
+
+
+      updateBulkUI();
+
+    }
+  );
 
 
   // ============================================================
   // CLEAR ALL
   // ============================================================
 
-  if (
-    clearAllBtn
-  ) {
+  clearAllBtn.addEventListener(
+    'click',
+    () => {
 
-    clearAllBtn.addEventListener(
-      'click',
-      () => {
+      jobs.forEach(
+        job => {
 
-        jobs.forEach(
-          job =>
-            job.dispose()
+          job.dispose();
+
+        }
+      );
+
+
+      jobs.length =
+        0;
+
+
+      jobsEl.innerHTML =
+        '';
+
+
+      updateBulkUI();
+
+    }
+  );
+
+
+  // ============================================================
+  // CONVERT ALL
+  // ============================================================
+
+  convertAllBtn.addEventListener(
+    'click',
+    async () => {
+
+      if (
+        !jobs.length
+      ) {
+
+        return;
+
+      }
+
+
+      convertAllBtn.disabled =
+        true;
+
+
+      convertAllBtn.textContent =
+        t(
+          'image.convertingAll'
         );
 
 
-        jobs.length =
+      try {
+
+        const CONCURRENCY =
+          3;
+
+
+        let index =
           0;
 
 
-        jobsEl.innerHTML =
-          '';
+        async function worker() {
+
+          while (
+            index <
+            jobs.length
+          ) {
+
+            const job =
+              jobs[
+                index++
+              ];
 
 
-        updateBulkUI();
-
-      }
-    );
-
-  }
-
-
-  // ============================================================
-  // COMPRESS ALL
-  // ============================================================
-
-  if (
-    compressAllBtn
-  ) {
-
-    compressAllBtn.addEventListener(
-      'click',
-      async () => {
-
-        if (
-          !jobs.length
-        ) {
-
-          return;
-
-        }
-
-
-        refreshAllJobs();
-
-
-        compressAllBtn.disabled =
-          true;
-
-
-        compressAllBtn.textContent =
-          t(
-            'image.compressingAll'
-          );
-
-
-        try {
-
-          let index =
-            0;
-
-
-          async function worker() {
-
-            while (
-              index <
-              jobs.length
+            if (
+              !job
             ) {
 
-              const job =
-                jobs[index++];
-
-
-              if (
-                !job ||
-                job.isProcessing
-              ) {
-
-                continue;
-
-              }
-
-
-              await job.compress();
+              continue;
 
             }
 
+
+            await job.convert();
+
           }
-
-
-          const workerCount =
-            Math.min(
-              CONCURRENCY,
-              jobs.length
-            );
-
-
-          await Promise.all(
-            Array.from(
-              {
-                length:
-                  workerCount
-              },
-              () =>
-                worker()
-            )
-          );
-
-
-        } finally {
-
-          compressAllBtn.disabled =
-            false;
-
-
-          compressAllBtn.textContent =
-            t(
-              'image.compressAll'
-            );
-
-
-          updateBulkUI();
 
         }
 
-      }
-    );
 
-  }
+        await Promise.all(
+          Array.from(
+            {
+              length:
+                Math.min(
+                  CONCURRENCY,
+                  jobs.length
+                )
+            },
+            () =>
+              worker()
+          )
+        );
+
+
+      } finally {
+
+        convertAllBtn.disabled =
+          false;
+
+
+        convertAllBtn.textContent =
+          t(
+            'image.convertAll'
+          );
+
+
+        downloadZipBtn.classList.toggle(
+          'hidden',
+          !jobs.some(
+            job =>
+              !!job.resultBlob
+          )
+        );
+
+      }
+
+    }
+  );
 
 
   // ============================================================
   // DOWNLOAD ZIP
   // ============================================================
 
-  if (
-    downloadZipBtn
-  ) {
+  downloadZipBtn.addEventListener(
+    'click',
+    async () => {
 
-    downloadZipBtn.addEventListener(
-      'click',
-      async () => {
-
-        const ready =
-          jobs.filter(
-            job =>
-              !!job.resultBlob
-          );
+      const ready =
+        jobs.filter(
+          job =>
+            !!job.resultBlob
+        );
 
 
-        if (
-          !ready.length
-        ) {
+      if (
+        !ready.length
+      ) {
 
-          return;
+        return;
 
-        }
-
-
-        downloadZipBtn.disabled =
-          true;
+      }
 
 
-        downloadZipBtn.textContent =
-          t(
-            'image.compressingZip'
-          );
+      downloadZipBtn.disabled =
+        true;
 
 
-        try {
-
-          const zip =
-            new JSZip();
-
-
-          const usedNames =
-            new Set();
+      downloadZipBtn.textContent =
+        t(
+          'image.compressingZip'
+        );
 
 
-          ready.forEach(
-            job => {
+      try {
 
-              const ext =
-                EXT_BY_FORMAT[
-                  job.format
-                ] ||
-                'jpg';
+        const zip =
+          new JSZip();
 
 
-              const base =
-                U.baseName(
-                  job.file.name
-                );
+        const usedNames =
+          new Set();
 
 
-              let name =
-                `${base}.${ext}`;
+        ready.forEach(
+          job => {
+
+            const ext =
+              EXT_BY_FORMAT[
+                job.format
+              ] ||
+              'png';
 
 
-              let n =
-                2;
+            const base =
+              U.baseName(
+                job.file.name
+              );
 
 
-              while (
-                usedNames.has(
-                  name
-                )
-              ) {
-
-                name =
-                  `${base}-${n++}.${ext}`;
-
-              }
+            let name =
+              `${base}.${ext}`;
 
 
-              usedNames.add(
+            let n =
+              2;
+
+
+            while (
+              usedNames.has(
                 name
-              );
+              )
+            ) {
+
+              name =
+                `${base}-${n++}.${ext}`;
+
+            }
 
 
-              zip.file(
-                name,
-                job.resultBlob
-              );
+            usedNames.add(
+              name
+            );
 
+
+            zip.file(
+              name,
+              job.resultBlob
+            );
+
+          }
+        );
+
+
+        const content =
+          await zip.generateAsync(
+            {
+              type:
+                'blob'
             }
           );
 
 
-          const content =
-            await zip.generateAsync(
-              {
-                type:
-                  'blob'
-              }
-            );
+        U.downloadBlob(
+          content,
+          'converted-images.zip'
+        );
 
 
-          U.downloadBlob(
-            content,
-            'compressed-images.zip'
+      } catch (
+        err
+      ) {
+
+        console.error(
+          '[Image Convert] ZIP failed:',
+          err
+        );
+
+      } finally {
+
+        downloadZipBtn.disabled =
+          false;
+
+
+        downloadZipBtn.textContent =
+          t(
+            'image.downloadZip'
           );
-
-
-        } catch (
-          error
-        ) {
-
-          console.error(
-            '[Image Compress] ZIP failed:',
-            error
-          );
-
-        } finally {
-
-          downloadZipBtn.disabled =
-            false;
-
-
-          downloadZipBtn.textContent =
-            t(
-              'image.downloadZip'
-            );
-
-        }
 
       }
-    );
 
-  }
+    }
+  );
 
 
   // ============================================================
   // DROPZONE
   // ============================================================
 
-  if (
-    U &&
-    typeof U.setupDropzone ===
-      'function'
-  ) {
-
-    U.setupDropzone(
-      dropzone,
-      fileInput,
-      addFiles
-    );
-
-  }
+  U.setupDropzone(
+    dropzone,
+    fileInput,
+    addFiles
+  );
 
 
   // ============================================================
   // CLEAR CACHE
   // ============================================================
 
-  if (
-    U &&
-    typeof U.onClearCache ===
-      'function'
-  ) {
+  U.onClearCache(
+    () => {
 
-    U.onClearCache(
-      () => {
+      jobs.forEach(
+        job => {
 
-        jobs.forEach(
-          job =>
-            job.dispose()
-        );
+          job.dispose();
+
+        }
+      );
 
 
-        jobs.length =
-          0;
+      jobs.length =
+        0;
 
 
-        jobsEl.innerHTML =
-          '';
+      jobsEl.innerHTML =
+        '';
 
 
-        updateBulkUI();
+      updateBulkUI();
 
-      }
-    );
-
-  }
+    }
+  );
 
 
   // ============================================================
@@ -2577,20 +2145,18 @@
        */
 
       if (
-        compressAllBtn &&
-        !compressAllBtn.disabled
+        !convertAllBtn.disabled
       ) {
 
-        compressAllBtn.textContent =
+        convertAllBtn.textContent =
           t(
-            'image.compressAll'
+            'image.convertAll'
           );
 
       }
 
 
       if (
-        downloadZipBtn &&
         !downloadZipBtn.disabled
       ) {
 
@@ -2603,25 +2169,13 @@
 
 
       /*
-       * Labels inside current jobs
+       * Existing jobs
        */
 
       jobs.forEach(
         job => {
 
           job.updateLanguageUI();
-
-          if (
-            job.origDimEl &&
-            !job.naturalW
-          ) {
-
-            job.origDimEl.textContent =
-              t(
-                'image.reading'
-              );
-
-          }
 
         }
       );
