@@ -1,4 +1,4 @@
-/* global window, document, URL, JSZip */
+/* global window, document, URL, JSZip, requestAnimationFrame */
 
 (() => {
   'use strict';
@@ -33,7 +33,6 @@
         key,
         values
       );
-
     }
 
     return String(
@@ -48,74 +47,81 @@
 
   const dropzone =
     document.getElementById(
-      'dz-img-convert'
+      'dz-img-compress'
     );
 
   const fileInput =
     document.getElementById(
-      'input-img-convert'
+      'input-img-compress'
     );
 
   const bulkbar =
     document.getElementById(
-      'bulk-img-convert'
+      'bulk-img-compress'
     );
 
   const countEl =
     document.getElementById(
-      'count-img-convert'
+      'count-img-compress'
     );
 
-  const bulkFormatEl =
+  const qualityEl =
     document.getElementById(
-      'bulkFormat-img-convert'
+      'quality-img-compress'
+    );
+
+  const maxSizeEl =
+    document.getElementById(
+      'maxsize-img-compress'
+    );
+
+  const formatEl =
+    document.getElementById(
+      'format-img-compress'
     );
 
   const clearAllBtn =
     document.getElementById(
-      'clearAll-img-convert'
+      'clearAll-img-compress'
     );
 
-  const convertAllBtn =
+  const compressAllBtn =
     document.getElementById(
-      'convertAll-img-convert'
+      'compressAll-img-compress'
     );
 
   const downloadZipBtn =
     document.getElementById(
-      'downloadZip-img-convert'
+      'downloadZip-img-compress'
     );
 
   const jobsEl =
     document.getElementById(
-      'jobs-img-convert'
+      'jobs-img-compress'
     );
 
   const jobTemplate =
     document.getElementById(
-      'tpl-img-convert'
+      'tpl-img-compress'
     );
 
 
   // ============================================================
-  // SAFETY CHECK
+  // VALIDATION
   // ============================================================
 
   if (
     !dropzone ||
     !fileInput ||
-    !bulkbar ||
-    !countEl ||
-    !bulkFormatEl ||
-    !clearAllBtn ||
-    !convertAllBtn ||
-    !downloadZipBtn ||
     !jobsEl ||
     !jobTemplate
   ) {
 
-    return;
+    console.warn(
+      '[Image Compress] Required elements not found.'
+    );
 
+    return;
   }
 
 
@@ -126,10 +132,13 @@
   let jobSeq =
     0;
 
-
   const jobs =
     [];
 
+
+  // ============================================================
+  // CONSTANTS
+  // ============================================================
 
   const EXT_BY_FORMAT = {
 
@@ -145,18 +154,501 @@
   };
 
 
+  const ALLOWED_FORMATS = [
+
+    'image/jpeg',
+
+    'image/png',
+
+    'image/webp'
+
+  ];
+
+
+  const MAX_DIMENSION_LIMIT =
+    20000;
+
+
+  const CONCURRENCY =
+    3;
+
+
+  const MAX_CANVAS_PIXELS =
+    100000000;
+
+
   // ============================================================
-  // CONVERT JOB
+  // HELPERS
   // ============================================================
 
-  class ConvertJob {
+  function getQuality() {
+
+    if (
+      !qualityEl
+    ) {
+
+      return 0.85;
+
+    }
+
+
+    const value =
+      parseFloat(
+        qualityEl.value
+      );
+
+
+    if (
+      !Number.isFinite(
+        value
+      )
+    ) {
+
+      return 0.85;
+
+    }
+
+
+    return Math.min(
+      1,
+      Math.max(
+        0.05,
+        value
+      )
+    );
+  }
+
+
+  function getMaxSize() {
+
+    if (
+      !maxSizeEl
+    ) {
+
+      return 0;
+
+    }
+
+
+    const value =
+      parseInt(
+        maxSizeEl.value,
+        10
+      );
+
+
+    if (
+      !Number.isFinite(
+        value
+      ) ||
+      value <= 0
+    ) {
+
+      return 0;
+
+    }
+
+
+    return Math.min(
+      MAX_DIMENSION_LIMIT,
+      value
+    );
+  }
+
+
+  function getFormat() {
+
+    const value =
+      formatEl
+        ? formatEl.value
+        : 'image/jpeg';
+
+
+    if (
+      !ALLOWED_FORMATS.includes(
+        value
+      )
+    ) {
+
+      return 'image/jpeg';
+
+    }
+
+
+    return value;
+  }
+
+
+  function getOutputDimensions(
+    naturalW,
+    naturalH,
+    maxSize
+  ) {
+
+    if (
+      !naturalW ||
+      !naturalH
+    ) {
+
+      return {
+
+        width:
+          1,
+
+        height:
+          1
+
+      };
+    }
+
+
+    if (
+      !maxSize ||
+      Math.max(
+        naturalW,
+        naturalH
+      ) <= maxSize
+    ) {
+
+      return {
+
+        width:
+          Math.max(
+            1,
+            Math.round(
+              naturalW
+            )
+          ),
+
+        height:
+          Math.max(
+            1,
+            Math.round(
+              naturalH
+            )
+          )
+
+      };
+    }
+
+
+    const scale =
+      maxSize /
+      Math.max(
+        naturalW,
+        naturalH
+      );
+
+
+    const width =
+      Math.max(
+        1,
+        Math.round(
+          naturalW *
+          scale
+        )
+      );
+
+
+    const height =
+      Math.max(
+        1,
+        Math.round(
+          naturalH *
+          scale
+        )
+      );
+
+
+    return {
+
+      width,
+
+      height
+
+    };
+  }
+
+
+  function fitCanvasDimensions(
+    width,
+    height
+  ) {
+
+    let outW =
+      width;
+
+    let outH =
+      height;
+
+
+    const pixels =
+      outW *
+      outH;
+
+
+    if (
+      pixels <=
+      MAX_CANVAS_PIXELS
+    ) {
+
+      return {
+
+        width:
+          outW,
+
+        height:
+          outH
+
+      };
+    }
+
+
+    const scale =
+      Math.sqrt(
+        MAX_CANVAS_PIXELS /
+        pixels
+      );
+
+
+    outW =
+      Math.max(
+        1,
+        Math.floor(
+          outW *
+          scale
+        )
+      );
+
+
+    outH =
+      Math.max(
+        1,
+        Math.floor(
+          outH *
+          scale
+        )
+      );
+
+
+    return {
+
+      width:
+        outW,
+
+      height:
+        outH
+
+    };
+  }
+
+
+  function calculateSaving(
+    originalSize,
+    newSize
+  ) {
+
+    if (
+      !Number.isFinite(
+        originalSize
+      ) ||
+      originalSize <= 0 ||
+      !Number.isFinite(
+        newSize
+      ) ||
+      newSize < 0
+    ) {
+
+      return {
+
+        percent:
+          0,
+
+        bytes:
+          0,
+
+        isSmaller:
+          false
+
+      };
+    }
+
+
+    const bytes =
+      originalSize -
+      newSize;
+
+
+    const percent =
+      (
+        bytes /
+        originalSize
+      ) *
+      100;
+
+
+    return {
+
+      percent,
+
+      bytes,
+
+      isSmaller:
+        newSize <
+        originalSize
+
+    };
+  }
+
+
+  function formatSaving(
+    originalSize,
+    newSize
+  ) {
+
+    if (
+      !Number.isFinite(
+        originalSize
+      ) ||
+      originalSize <= 0
+    ) {
+
+      return '—';
+
+    }
+
+
+    const result =
+      calculateSaving(
+        originalSize,
+        newSize
+      );
+
+
+    if (
+      result.isSmaller
+    ) {
+
+      return t(
+        'image.savingSmaller',
+        {
+
+          percent:
+            result.percent.toFixed(1),
+
+          size:
+            U.formatBytes(
+              result.bytes
+            )
+
+        }
+      );
+
+    }
+
+
+    if (
+      newSize >
+      originalSize
+    ) {
+
+      const increase =
+        (
+          (
+            newSize -
+            originalSize
+          ) /
+          originalSize
+        ) *
+        100;
+
+
+      return t(
+        'image.savingLarger',
+        {
+
+          percent:
+            increase.toFixed(1)
+
+        }
+      );
+
+    }
+
+
+    return t(
+      'image.savingSame'
+    );
+  }
+
+
+  function revokeUrl(
+    url
+  ) {
+
+    if (
+      !url
+    ) {
+
+      return;
+
+    }
+
+
+    try {
+
+      URL.revokeObjectURL(
+        url
+      );
+
+    } catch (_) {}
+
+  }
+
+
+  function setProgress(
+    job,
+    value
+  ) {
+
+    if (
+      !job.progressEl
+    ) {
+
+      return;
+
+    }
+
+
+    const percent =
+      Math.min(
+        100,
+        Math.max(
+          0,
+          Number(
+            value
+          ) || 0
+        )
+      );
+
+
+    job.progressEl.style.width =
+      `${percent}%`;
+  }
+
+
+  // ============================================================
+  // COMPRESS JOB
+  // ============================================================
+
+  class CompressJob {
 
     constructor(
       file
     ) {
 
       this.id =
-        'conv-' +
+        'compress-' +
         (++jobSeq);
 
 
@@ -165,23 +657,15 @@
 
 
       this.format =
-        'image/png';
+        getFormat();
 
 
-      this.rotation =
-        0;
+      this.quality =
+        getQuality();
 
 
-      this.flipH =
-        false;
-
-
-      this.flipV =
-        false;
-
-
-      this.aspectLocked =
-        true;
+      this.maxSize =
+        getMaxSize();
 
 
       this.naturalW =
@@ -200,13 +684,14 @@
         null;
 
 
-      this.isConverting =
-        false;
+      this.sourceUrl =
+        null;
 
 
       /*
        * เก็บ key/params ของ error ล่าสุดไว้
        * เพื่อให้แปลภาษาใหม่ได้ตอน languagechange
+       * แทนที่จะค้างข้อความ error ภาษาเดิม
        */
       this.errorKey =
         null;
@@ -220,6 +705,10 @@
         false;
 
 
+      this.isProcessing =
+        false;
+
+
       this.el =
         jobTemplate
           .content
@@ -230,12 +719,11 @@
 
 
       this.buildDom();
-
     }
 
 
     // ========================================================
-    // BUILD DOM
+    // DOM
     // ========================================================
 
     buildDom() {
@@ -244,55 +732,15 @@
         this.el;
 
 
-      const url =
+      this.sourceUrl =
         URL.createObjectURL(
           this.file
         );
 
 
-      this.objectUrl =
-        url;
-
-
-      this.thumbImg =
+      this.previewImg =
         el.querySelector(
-          '.ticket-thumb img'
-        );
-
-
-      this.widthInput =
-        el.querySelector(
-          '.js-width'
-        );
-
-
-      this.heightInput =
-        el.querySelector(
-          '.js-height'
-        );
-
-
-      this.lockBtn =
-        el.querySelector(
-          '.js-lock'
-        );
-
-
-      this.qualityRow =
-        el.querySelector(
-          '.js-quality-row'
-        );
-
-
-      this.qualityInput =
-        el.querySelector(
-          '.js-quality'
-        );
-
-
-      this.qualityVal =
-        el.querySelector(
-          '.js-quality-val'
+          '.js-preview'
         );
 
 
@@ -302,9 +750,9 @@
         );
 
 
-      this.convertBtn =
+      this.compressBtn =
         el.querySelector(
-          '.js-convert-btn'
+          '.js-compress-btn'
         );
 
 
@@ -314,61 +762,63 @@
         );
 
 
-      this.formatGroup =
+      this.progressEl =
         el.querySelector(
-          '.js-format-group'
+          '.js-progress'
         );
 
 
-      this.rotateGroup =
+      this.newDimEl =
         el.querySelector(
-          '.js-rotate-group'
+          '.js-newdim'
         );
 
 
-      // ------------------------------------------------------
-      // File info
-      // ------------------------------------------------------
+      this.newSizeEl =
+        el.querySelector(
+          '.js-newsize'
+        );
 
-      const filenameEl =
+
+      this.savingEl =
+        el.querySelector(
+          '.js-saving'
+        );
+
+
+      this.filenameEl =
         el.querySelector(
           '.js-filename'
         );
 
 
-      const originalSizeEl =
-        el.querySelector(
-          '.js-origsize'
-        );
-
-
-      const originalExtEl =
-        el.querySelector(
-          '.js-origext'
-        );
-
-
-      const originalDimEl =
+      this.origDimEl =
         el.querySelector(
           '.js-origdim'
         );
 
 
+      this.origSizeEl =
+        el.querySelector(
+          '.js-origsize'
+        );
+
+
       if (
-        filenameEl
+        this.filenameEl
       ) {
 
-        filenameEl.textContent =
+        this.filenameEl.textContent =
           this.file.name;
 
       }
 
 
       if (
-        originalSizeEl
+        this.origSizeEl
       ) {
 
-        originalSizeEl.textContent =
+        this.origSizeEl.textContent =
           U.formatBytes(
             this.file.size
           );
@@ -377,87 +827,91 @@
 
 
       if (
-        originalExtEl
+        this.origDimEl
       ) {
 
-        originalExtEl.textContent =
-          U.extOf(
-            this.file.name
+        this.origDimEl.textContent =
+          t(
+            'image.reading'
           );
 
       }
 
 
-      // ------------------------------------------------------
-      // Processing state for app.js
-      // ------------------------------------------------------
+      if (
+        this.newDimEl
+      ) {
 
+        this.newDimEl.textContent =
+          '—';
+
+      }
+
+
+      if (
+        this.newSizeEl
+      ) {
+
+        this.newSizeEl.textContent =
+          '—';
+
+      }
+
+
+      if (
+        this.savingEl
+      ) {
+
+        this.savingEl.textContent =
+          '—';
+
+      }
+
+
+      setProgress(
+        this,
+        0
+      );
+
+
+      /*
+       * สำคัญสำหรับ app.js
+       */
       this.el.dataset.processing =
         'false';
 
 
-      // ------------------------------------------------------
-      // Image
-      // ------------------------------------------------------
-
-      this.thumbImg.src =
-        url;
+      this.previewImg.src =
+        this.sourceUrl;
 
 
-      this.thumbImg.onload =
+      this.previewImg.onload =
         () => {
 
           this.naturalW =
-            this.thumbImg.naturalWidth;
+            this.previewImg.naturalWidth;
 
 
           this.naturalH =
-            this.thumbImg.naturalHeight;
+            this.previewImg.naturalHeight;
 
 
           if (
-            originalDimEl
+            this.origDimEl
           ) {
 
-            originalDimEl.textContent =
+            this.origDimEl.textContent =
               `${this.naturalW}×${this.naturalH}`;
 
           }
 
 
-          /*
-           * ตั้งค่า default dimensions
-           */
-          if (
-            this.naturalW &&
-            this.naturalH
-          ) {
-
-            if (
-              !this.widthInput.value
-            ) {
-
-              this.widthInput.value =
-                this.naturalW;
-
-            }
-
-
-            if (
-              !this.heightInput.value
-            ) {
-
-              this.heightInput.value =
-                this.naturalH;
-
-            }
-
-          }
+          this.updatePreviewInfo();
 
         };
 
 
-      this.thumbImg.onerror =
+      this.previewImg.onerror =
         () => {
 
           this.imageReadFailed =
@@ -465,10 +919,10 @@
 
 
           if (
-            originalDimEl
+            this.origDimEl
           ) {
 
-            originalDimEl.textContent =
+            this.origDimEl.textContent =
               t(
                 'image.readFailed'
               );
@@ -506,10 +960,10 @@
 
 
           if (
-            this.convertBtn
+            this.compressBtn
           ) {
 
-            this.convertBtn.disabled =
+            this.compressBtn.disabled =
               true;
 
           }
@@ -517,334 +971,21 @@
         };
 
 
-      // ------------------------------------------------------
-      // Initial UI
-      // ------------------------------------------------------
+      if (
+        this.compressBtn
+      ) {
 
-      this.updateQualityVisibility();
+        this.compressBtn.addEventListener(
+          'click',
+          () => {
 
-      this.updateLanguageUI();
-
-
-      // ------------------------------------------------------
-      // Format
-      // ------------------------------------------------------
-
-      this.formatGroup.addEventListener(
-        'click',
-        event => {
-
-          const btn =
-            event.target.closest(
-              '.seg-btn'
-            );
-
-
-          if (
-            !btn
-          ) {
-
-            return;
+            this.compress();
 
           }
+        );
 
+      }
 
-          this.formatGroup
-            .querySelectorAll(
-              '.seg-btn'
-            )
-            .forEach(
-              button =>
-                button.classList.remove(
-                  'is-active'
-                )
-            );
-
-
-          btn.classList.add(
-            'is-active'
-          );
-
-
-          this.format =
-            btn.dataset.format;
-
-
-          this.updateQualityVisibility();
-
-          this.markStale();
-
-        }
-      );
-
-
-      // ------------------------------------------------------
-      // Rotate / Flip
-      // ------------------------------------------------------
-
-      this.rotateGroup.addEventListener(
-        'click',
-        event => {
-
-          const btn =
-            event.target.closest(
-              '.seg-btn'
-            );
-
-
-          if (
-            !btn
-          ) {
-
-            return;
-
-          }
-
-
-          const action =
-            btn.dataset.action;
-
-
-          if (
-            action ===
-            'rotate-left'
-          ) {
-
-            this.rotation =
-              (
-                this.rotation +
-                270
-              ) %
-              360;
-
-          } else if (
-            action ===
-            'rotate-right'
-          ) {
-
-            this.rotation =
-              (
-                this.rotation +
-                90
-              ) %
-              360;
-
-          } else if (
-            action ===
-            'flip-h'
-          ) {
-
-            this.flipH =
-              !this.flipH;
-
-          } else if (
-            action ===
-            'flip-v'
-          ) {
-
-            this.flipV =
-              !this.flipV;
-
-          }
-
-
-          btn.classList.toggle(
-            'is-active',
-            (
-              action ===
-                'flip-h' &&
-              this.flipH
-            ) ||
-            (
-              action ===
-                'flip-v' &&
-              this.flipV
-            )
-          );
-
-
-          this.markStale();
-
-        }
-      );
-
-
-      // ------------------------------------------------------
-      // Aspect lock
-      // ------------------------------------------------------
-
-      this.lockBtn.addEventListener(
-        'click',
-        () => {
-
-          this.aspectLocked =
-            !this.aspectLocked;
-
-
-          this.lockBtn.classList.toggle(
-            'is-locked',
-            this.aspectLocked
-          );
-
-        }
-      );
-
-
-      // ------------------------------------------------------
-      // Width
-      // ------------------------------------------------------
-
-      this.widthInput.addEventListener(
-        'input',
-        () => {
-
-          if (
-            this.aspectLocked &&
-            this.widthInput.value &&
-            this.naturalW
-          ) {
-
-            const ratio =
-              this.naturalH /
-              this.naturalW;
-
-
-            const width =
-              parseFloat(
-                this.widthInput.value
-              );
-
-
-            if (
-              Number.isFinite(
-                width
-              )
-            ) {
-
-              this.heightInput.value =
-                Math.max(
-                  1,
-                  Math.round(
-                    width *
-                    ratio
-                  )
-                );
-
-            }
-
-          }
-
-
-          this.markStale();
-
-        }
-      );
-
-
-      // ------------------------------------------------------
-      // Height
-      // ------------------------------------------------------
-
-      this.heightInput.addEventListener(
-        'input',
-        () => {
-
-          if (
-            this.aspectLocked &&
-            this.heightInput.value &&
-            this.naturalH
-          ) {
-
-            const ratio =
-              this.naturalW /
-              this.naturalH;
-
-
-            const height =
-              parseFloat(
-                this.heightInput.value
-              );
-
-
-            if (
-              Number.isFinite(
-                height
-              )
-            ) {
-
-              this.widthInput.value =
-                Math.max(
-                  1,
-                  Math.round(
-                    height *
-                    ratio
-                  )
-                );
-
-            }
-
-          }
-
-
-          this.markStale();
-
-        }
-      );
-
-
-      // ------------------------------------------------------
-      // Quality
-      // ------------------------------------------------------
-
-      this.qualityInput.addEventListener(
-        'input',
-        () => {
-
-          const value =
-            parseFloat(
-              this.qualityInput.value
-            );
-
-
-          const percent =
-            Number.isFinite(
-              value
-            )
-              ? Math.round(
-                  value *
-                  100
-                )
-              : 0;
-
-
-          this.qualityVal.textContent =
-            percent +
-            '%';
-
-
-          this.markStale();
-
-        }
-      );
-
-
-      // ------------------------------------------------------
-      // Convert
-      // ------------------------------------------------------
-
-      this.convertBtn.addEventListener(
-        'click',
-        () => {
-
-          this.convert();
-
-        }
-      );
-
-
-      // ------------------------------------------------------
-      // Remove
-      // ------------------------------------------------------
 
       const removeBtn =
         el.querySelector(
@@ -866,19 +1007,18 @@
             el.remove();
 
 
-            const idx =
+            const index =
               jobs.indexOf(
                 this
               );
 
 
             if (
-              idx >=
-              0
+              index >= 0
             ) {
 
               jobs.splice(
-                idx,
+                index,
                 1
               );
 
@@ -892,6 +1032,8 @@
 
       }
 
+
+      this.updateLanguageUI();
     }
 
 
@@ -902,7 +1044,7 @@
     updateLanguageUI() {
 
       if (
-        !this.statusEl
+        this.isProcessing
       ) {
 
         return;
@@ -911,42 +1053,61 @@
 
 
       /*
-       * กำลังแปลง
-       *
-       * ไม่แก้ข้อความตรงนี้ เพราะ convert()
-       * จะดูแลข้อความ dynamic เอง
-       */
-      if (
-        this.isConverting
-      ) {
-
-        this.statusEl.textContent =
-          t(
-            'image.converting'
-          );
-
-        return;
-
-      }
-
-
-      /*
-       * มีผลลัพธ์แล้ว
+       * Result exists
        */
       if (
         this.resultBlob
       ) {
 
-        this.statusEl.textContent =
-          t(
-            'image.readyDownload',
-            {
-              size:
-                U.formatBytes(
-                  this.resultBlob.size
-                )
-            }
+        const saving =
+          calculateSaving(
+            this.file.size,
+            this.resultBlob.size
           );
+
+
+        if (
+          saving.isSmaller
+        ) {
+
+          this.statusEl.textContent =
+            t(
+              'image.readySavedPercent',
+              {
+
+                percent:
+                  saving.percent.toFixed(
+                    1
+                  )
+
+              }
+            );
+
+        } else if (
+          this.resultBlob.size >
+          this.file.size
+        ) {
+
+          this.statusEl.textContent =
+            t(
+              'image.readyFileLarger'
+            );
+
+        } else {
+
+          this.statusEl.textContent =
+            t(
+              'image.readyDownload',
+              {
+
+                size:
+                  U.formatBytes(
+                    this.resultBlob.size
+                  )
+
+              }
+            );
+        }
 
 
         this.statusEl.classList.remove(
@@ -960,15 +1121,16 @@
 
 
         return;
-
       }
 
 
       /*
-       * ถ้า error อยู่
-       * แปล error เดิมใหม่ด้วย key/params ที่เก็บไว้
+       * ถ้ากำลังอยู่ในสถานะ error
+       * ให้แปล error เดิมใหม่ด้วย key/params ที่เก็บไว้
+       * แทนที่จะปล่อยข้อความค้างเป็นภาษาเดิม
        */
       if (
+        this.statusEl &&
         this.statusEl.classList.contains(
           'is-error'
         )
@@ -987,30 +1149,72 @@
 
         }
 
+
+        if (
+          this.origDimEl &&
+          this.imageReadFailed
+        ) {
+
+          this.origDimEl.textContent =
+            t(
+              'image.readFailed'
+            );
+
+        }
+
+
         return;
 
       }
 
 
       /*
-       * รอแปลง
+       * Waiting
        */
-      this.statusEl.textContent =
-        t(
-          'image.waitingConvert'
+      if (
+        this.statusEl
+      ) {
+
+        this.statusEl.textContent =
+          t(
+            'image.waitingCompress'
+          );
+
+
+        this.statusEl.classList.remove(
+          'is-ready'
         );
+
+      }
+
+
+      /*
+       * Original image metadata
+       */
+      if (
+        this.origDimEl &&
+        !this.naturalW
+      ) {
+
+        this.origDimEl.textContent =
+          t(
+            'image.reading'
+          );
+
+      }
 
     }
 
 
     // ========================================================
-    // QUALITY VISIBILITY
+    // PREVIEW INFO
     // ========================================================
 
-    updateQualityVisibility() {
+    updatePreviewInfo() {
 
       if (
-        !this.qualityRow
+        !this.naturalW ||
+        !this.naturalH
       ) {
 
         return;
@@ -1018,11 +1222,92 @@
       }
 
 
-      this.qualityRow.classList.toggle(
-        'hidden',
-        this.format ===
-          'image/png'
-      );
+      const dimensions =
+        getOutputDimensions(
+          this.naturalW,
+          this.naturalH,
+          this.maxSize
+        );
+
+
+      const safeDimensions =
+        fitCanvasDimensions(
+          dimensions.width,
+          dimensions.height
+        );
+
+
+      if (
+        this.newDimEl
+      ) {
+
+        this.newDimEl.textContent =
+          `${safeDimensions.width}×${safeDimensions.height}`;
+
+      }
+
+    }
+
+
+    // ========================================================
+    // UPDATE OPTIONS
+    // ========================================================
+
+    updateOptionsFromGlobal(
+      invalidate = true
+    ) {
+
+      const nextFormat =
+        getFormat();
+
+
+      const nextQuality =
+        getQuality();
+
+
+      const nextMaxSize =
+        getMaxSize();
+
+
+      const changed =
+        nextFormat !==
+          this.format ||
+        nextQuality !==
+          this.quality ||
+        nextMaxSize !==
+          this.maxSize;
+
+
+      this.format =
+        nextFormat;
+
+
+      this.quality =
+        nextQuality;
+
+
+      this.maxSize =
+        nextMaxSize;
+
+
+      if (
+        this.naturalW &&
+        this.naturalH
+      ) {
+
+        this.updatePreviewInfo();
+
+      }
+
+
+      if (
+        invalidate &&
+        changed
+      ) {
+
+        this.markStale();
+
+      }
 
     }
 
@@ -1034,7 +1319,7 @@
     markStale() {
 
       if (
-        this.isConverting
+        this.isProcessing
       ) {
 
         return;
@@ -1046,13 +1331,9 @@
         this.resultUrl
       ) {
 
-        try {
-
-          URL.revokeObjectURL(
-            this.resultUrl
-          );
-
-        } catch (_) {}
+        revokeUrl(
+          this.resultUrl
+        );
 
 
         this.resultUrl =
@@ -1086,6 +1367,32 @@
       }
 
 
+      setProgress(
+        this,
+        0
+      );
+
+
+      if (
+        this.newSizeEl
+      ) {
+
+        this.newSizeEl.textContent =
+          '—';
+
+      }
+
+
+      if (
+        this.savingEl
+      ) {
+
+        this.savingEl.textContent =
+          '—';
+
+      }
+
+
       this.errorKey =
         null;
 
@@ -1102,7 +1409,7 @@
 
         this.statusEl.textContent =
           t(
-            'image.waitingConvert'
+            'image.waitingCompress'
           );
 
 
@@ -1117,13 +1424,13 @@
 
 
     // ========================================================
-    // CONVERT
+    // COMPRESS
     // ========================================================
 
-    async convert() {
+    async compress() {
 
       if (
-        this.isConverting
+        this.isProcessing
       ) {
 
         return;
@@ -1131,9 +1438,9 @@
       }
 
 
-      // ------------------------------------------------------
-      // Wait for image metadata
-      // ------------------------------------------------------
+      /*
+       * Wait for image
+       */
 
       if (
         !this.naturalW ||
@@ -1155,9 +1462,17 @@
             }
 
 
-            this.thumbImg.addEventListener(
+            const onLoad =
+              () => {
+
+                resolve();
+
+              };
+
+
+            this.previewImg.addEventListener(
               'load',
-              resolve,
+              onLoad,
               {
                 once:
                   true
@@ -1175,27 +1490,33 @@
         !this.naturalH
       ) {
 
-        this.errorKey =
-          'image.readInfoFailed';
+        if (
+          this.statusEl
+        ) {
 
-        this.errorParams =
-          null;
+          this.errorKey =
+            'image.readInfoFailed';
+
+          this.errorParams =
+            null;
 
 
-        this.statusEl.textContent =
-          t(
-            this.errorKey
+          this.statusEl.textContent =
+            t(
+              this.errorKey
+            );
+
+
+          this.statusEl.classList.remove(
+            'is-ready'
           );
 
 
-        this.statusEl.classList.remove(
-          'is-ready'
-        );
+          this.statusEl.classList.add(
+            'is-error'
+          );
 
-
-        this.statusEl.classList.add(
-          'is-error'
-        );
+        }
 
 
         return;
@@ -1203,11 +1524,12 @@
       }
 
 
-      // ------------------------------------------------------
-      // Set processing state
-      // ------------------------------------------------------
+      this.updateOptionsFromGlobal(
+        false
+      );
 
-      this.isConverting =
+
+      this.isProcessing =
         true;
 
 
@@ -1215,7 +1537,7 @@
         'true';
 
 
-      this.convertBtn.disabled =
+      this.compressBtn.disabled =
         true;
 
 
@@ -1227,81 +1549,100 @@
 
       this.statusEl.textContent =
         t(
-          'image.converting'
+          'image.compressing'
         );
+
+
+      setProgress(
+        this,
+        8
+      );
+
+
+      await new Promise(
+        resolve =>
+          requestAnimationFrame(
+            resolve
+          )
+      );
+
+
+      let canvas =
+        null;
 
 
       try {
 
-        // --------------------------------------------------
-        // Rotation
-        // --------------------------------------------------
+        // ----------------------------------------------------
+        // Calculate dimensions
+        // ----------------------------------------------------
 
-        const rotSwaps =
-          this.rotation %
-            180 !==
-          0;
-
-
-        const rotW =
-          rotSwaps
-            ? this.naturalH
-            : this.naturalW;
-
-
-        const rotH =
-          rotSwaps
-            ? this.naturalW
-            : this.naturalH;
-
-
-        // --------------------------------------------------
-        // Output dimensions
-        // --------------------------------------------------
-
-        const outW =
-          Math.max(
-            1,
-            parseInt(
-              this.widthInput.value,
-              10
-            ) ||
-            rotW
+        let dimensions =
+          getOutputDimensions(
+            this.naturalW,
+            this.naturalH,
+            this.maxSize
           );
 
 
-        const outH =
-          Math.max(
-            1,
-            parseInt(
-              this.heightInput.value,
-              10
-            ) ||
-            rotH
+        dimensions =
+          fitCanvasDimensions(
+            dimensions.width,
+            dimensions.height
           );
 
 
-        // --------------------------------------------------
-        // Canvas
-        // --------------------------------------------------
+        if (
+          dimensions.width <= 0 ||
+          dimensions.height <= 0
+        ) {
 
-        const canvas =
+          throw new Error(
+            t(
+              'errors.invalidImageDimensions'
+            )
+          );
+
+        }
+
+
+        if (
+          this.newDimEl
+        ) {
+
+          this.newDimEl.textContent =
+            `${dimensions.width}×${dimensions.height}`;
+
+        }
+
+
+        setProgress(
+          this,
+          25
+        );
+
+
+        canvas =
           document.createElement(
             'canvas'
           );
 
 
         canvas.width =
-          outW;
+          dimensions.width;
 
 
         canvas.height =
-          outH;
+          dimensions.height;
 
 
         const ctx =
           canvas.getContext(
-            '2d'
+            '2d',
+            {
+              alpha:
+                true
+            }
           );
 
 
@@ -1318,9 +1659,9 @@
         }
 
 
-        // --------------------------------------------------
-        // JPEG background
-        // --------------------------------------------------
+        // ----------------------------------------------------
+        // JPG background
+        // ----------------------------------------------------
 
         if (
           this.format ===
@@ -1334,84 +1675,47 @@
           ctx.fillRect(
             0,
             0,
-            outW,
-            outH
+            dimensions.width,
+            dimensions.height
           );
 
         }
 
 
-        // --------------------------------------------------
-        // Draw dimensions
-        // --------------------------------------------------
-
-        const dw =
-          rotSwaps
-            ? outH
-            : outW;
+        ctx.imageSmoothingEnabled =
+          true;
 
 
-        const dh =
-          rotSwaps
-            ? outW
-            : outH;
+        ctx.imageSmoothingQuality =
+          'high';
 
 
-        // --------------------------------------------------
-        // Transform
-        // --------------------------------------------------
-
-        ctx.save();
-
-
-        ctx.translate(
-          outW / 2,
-          outH / 2
-        );
-
-
-        ctx.rotate(
-          (
-            this.rotation *
-            Math.PI
-          ) /
-          180
-        );
-
-
-        ctx.scale(
-          this.flipH
-            ? -1
-            : 1,
-          this.flipV
-            ? -1
-            : 1
+        setProgress(
+          this,
+          42
         );
 
 
         ctx.drawImage(
-          this.thumbImg,
-          -dw / 2,
-          -dh / 2,
-          dw,
-          dh
+          this.previewImg,
+          0,
+          0,
+          dimensions.width,
+          dimensions.height
         );
 
 
-        ctx.restore();
+        setProgress(
+          this,
+          68
+        );
 
-
-        // --------------------------------------------------
-        // Encode
-        // --------------------------------------------------
 
         const quality =
           this.format ===
-          'image/png'
+            'image/png'
             ? undefined
-            : parseFloat(
-                this.qualityInput.value
-              );
+            : this.quality;
 
 
         const blob =
@@ -1466,28 +1770,22 @@
         }
 
 
-        // --------------------------------------------------
-        // Previous result URL
-        // --------------------------------------------------
+        setProgress(
+          this,
+          82
+        );
+
 
         if (
           this.resultUrl
         ) {
 
-          try {
-
-            URL.revokeObjectURL(
-              this.resultUrl
-            );
-
-          } catch (_) {}
+          revokeUrl(
+            this.resultUrl
+          );
 
         }
 
-
-        // --------------------------------------------------
-        // Store result
-        // --------------------------------------------------
 
         this.resultBlob =
           blob;
@@ -1503,42 +1801,115 @@
           EXT_BY_FORMAT[
             this.format
           ] ||
-          'png';
+          'jpg';
 
 
-        const filename =
+        const outputName =
           `${U.baseName(
             this.file.name
           )}.${ext}`;
 
 
-        this.downloadBtn.href =
-          this.resultUrl;
+        if (
+          this.downloadBtn
+        ) {
+
+          this.downloadBtn.href =
+            this.resultUrl;
 
 
-        this.downloadBtn.download =
-          filename;
+          this.downloadBtn.download =
+            outputName;
 
 
-        this.downloadBtn.classList.remove(
-          'hidden'
+          this.downloadBtn.classList.remove(
+            'hidden'
+          );
+
+        }
+
+
+        if (
+          this.newSizeEl
+        ) {
+
+          this.newSizeEl.textContent =
+            U.formatBytes(
+              blob.size
+            );
+
+        }
+
+
+        if (
+          this.savingEl
+        ) {
+
+          this.savingEl.textContent =
+            formatSaving(
+              this.file.size,
+              blob.size
+            );
+
+        }
+
+
+        setProgress(
+          this,
+          100
         );
 
 
-        // --------------------------------------------------
-        // Success
-        // --------------------------------------------------
-
-        this.statusEl.textContent =
-          t(
-            'image.readyDownload',
-            {
-              size:
-                U.formatBytes(
-                  blob.size
-                )
-            }
+        const saving =
+          calculateSaving(
+            this.file.size,
+            blob.size
           );
+
+
+        // ----------------------------------------------------
+        // Success status
+        // ----------------------------------------------------
+
+        if (
+          saving.isSmaller
+        ) {
+
+          this.statusEl.textContent =
+            t(
+              'image.readySavedPercent',
+              {
+                percent:
+                  saving.percent.toFixed(
+                    1
+                  )
+              }
+            );
+
+        } else if (
+          blob.size >
+          this.file.size
+        ) {
+
+          this.statusEl.textContent =
+            t(
+              'image.readyFileLarger'
+            );
+
+        } else {
+
+          this.statusEl.textContent =
+            t(
+              'image.readyDownload',
+              {
+                size:
+                  U.formatBytes(
+                    blob.size
+                  )
+              }
+            );
+
+        }
 
 
         this.statusEl.classList.remove(
@@ -1552,30 +1923,44 @@
 
 
       } catch (
-        err
+        error
       ) {
 
         console.error(
-          '[Image Convert]',
-          err
+          '[Image Compress]',
+          error
         );
 
 
-        const message =
-          err &&
-          err.message
-            ? err.message
-            : t(
-                'errors.processingFailed'
-              );
+        setProgress(
+          this,
+          0
+        );
+
+
+        if (
+          this.downloadBtn
+        ) {
+
+          this.downloadBtn.classList.add(
+            'hidden'
+          );
+
+        }
 
 
         this.errorKey =
-          'image.conversionFailed';
+          'image.compressionFailed';
 
         this.errorParams =
           {
-            message
+            message:
+              error &&
+              error.message
+                ? error.message
+                : t(
+                    'errors.somethingWentWrong'
+                  )
           };
 
 
@@ -1597,16 +1982,34 @@
 
       } finally {
 
-        this.isConverting =
+        if (
+          canvas
+        ) {
+
+          canvas.width =
+            1;
+
+
+          canvas.height =
+            1;
+
+
+          canvas =
+            null;
+
+        }
+
+
+        this.isProcessing =
+          false;
+
+
+        this.compressBtn.disabled =
           false;
 
 
         this.el.dataset.processing =
           'false';
-
-
-        this.convertBtn.disabled =
-          false;
 
       }
 
@@ -1619,35 +2022,13 @@
 
     dispose() {
 
-      this.isConverting =
-        false;
-
-
       if (
-        this.el
+        this.sourceUrl
       ) {
 
-        this.el.dataset.processing =
-          'false';
-
-      }
-
-
-      if (
-        this.objectUrl
-      ) {
-
-        try {
-
-          URL.revokeObjectURL(
-            this.objectUrl
-          );
-
-        } catch (_) {}
-
-
-        this.objectUrl =
-          null;
+        revokeUrl(
+          this.sourceUrl
+        );
 
       }
 
@@ -1656,23 +2037,31 @@
         this.resultUrl
       ) {
 
-        try {
-
-          URL.revokeObjectURL(
-            this.resultUrl
-          );
-
-        } catch (_) {}
-
-
-        this.resultUrl =
-          null;
+        revokeUrl(
+          this.resultUrl
+        );
 
       }
 
 
+      this.sourceUrl =
+        null;
+
+
+      this.resultUrl =
+        null;
+
+
       this.resultBlob =
         null;
+
+
+      this.isProcessing =
+        false;
+
+
+      this.el.dataset.processing =
+        'false';
 
     }
 
@@ -1685,16 +2074,28 @@
 
   function updateBulkUI() {
 
-    countEl.textContent =
-      String(
-        jobs.length
+    if (
+      countEl
+    ) {
+
+      countEl.textContent =
+        String(
+          jobs.length
+        );
+
+    }
+
+
+    if (
+      bulkbar
+    ) {
+
+      bulkbar.classList.toggle(
+        'hidden',
+        jobs.length === 0
       );
 
-
-    bulkbar.classList.toggle(
-      'hidden',
-      jobs.length === 0
-    );
+    }
 
 
     const hasReady =
@@ -1704,10 +2105,16 @@
       );
 
 
-    downloadZipBtn.classList.toggle(
-      'hidden',
-      !hasReady
-    );
+    if (
+      downloadZipBtn
+    ) {
+
+      downloadZipBtn.classList.toggle(
+        'hidden',
+        !hasReady
+      );
+
+    }
 
   }
 
@@ -1720,23 +2127,25 @@
     fileList
   ) {
 
-    Array.from(
-      fileList || []
-    )
+    const files =
+      Array.from(
+        fileList || []
+      );
+
+
+    files
       .filter(
         file =>
           file &&
-          typeof file.type ===
-            'string' &&
-          file.type.startsWith(
-            'image/'
+          ALLOWED_FORMATS.includes(
+            file.type
           )
       )
       .forEach(
         file => {
 
           const job =
-            new ConvertJob(
+            new CompressJob(
               file
             );
 
@@ -1760,376 +2169,399 @@
 
 
   // ============================================================
-  // BULK FORMAT
+  // REFRESH GLOBAL SETTINGS
   // ============================================================
 
-  bulkFormatEl.addEventListener(
-    'change',
-    () => {
+  function refreshAllJobs() {
 
-      const format =
-        bulkFormatEl.value;
+    jobs.forEach(
+      job => {
 
-
-      if (
-        !format
-      ) {
-
-        return;
+        job.updateOptionsFromGlobal(
+          true
+        );
 
       }
+    );
 
 
-      jobs.forEach(
-        job => {
+    updateBulkUI();
 
-          job.format =
-            format;
+  }
 
 
-          job.formatGroup
-            .querySelectorAll(
-              '.seg-btn'
-            )
-            .forEach(
-              button => {
+  if (
+    qualityEl
+  ) {
 
-                button.classList.toggle(
-                  'is-active',
-                  button.dataset.format ===
-                    format
-                );
+    qualityEl.addEventListener(
+      'change',
+      refreshAllJobs
+    );
 
-              }
-            );
+  }
 
 
-          job.updateQualityVisibility();
+  if (
+    maxSizeEl
+  ) {
 
-          job.markStale();
+    maxSizeEl.addEventListener(
+      'change',
+      refreshAllJobs
+    );
 
-        }
-      );
+  }
 
 
-      updateBulkUI();
+  if (
+    formatEl
+  ) {
 
-    }
-  );
+    formatEl.addEventListener(
+      'change',
+      refreshAllJobs
+    );
+
+  }
 
 
   // ============================================================
   // CLEAR ALL
   // ============================================================
 
-  clearAllBtn.addEventListener(
-    'click',
-    () => {
+  if (
+    clearAllBtn
+  ) {
 
-      jobs.forEach(
-        job => {
+    clearAllBtn.addEventListener(
+      'click',
+      () => {
 
-          job.dispose();
-
-        }
-      );
-
-
-      jobs.length =
-        0;
-
-
-      jobsEl.innerHTML =
-        '';
-
-
-      updateBulkUI();
-
-    }
-  );
-
-
-  // ============================================================
-  // CONVERT ALL
-  // ============================================================
-
-  convertAllBtn.addEventListener(
-    'click',
-    async () => {
-
-      if (
-        !jobs.length
-      ) {
-
-        return;
-
-      }
-
-
-      convertAllBtn.disabled =
-        true;
-
-
-      convertAllBtn.textContent =
-        t(
-          'image.convertingAll'
+        jobs.forEach(
+          job =>
+            job.dispose()
         );
 
 
-      try {
-
-        const CONCURRENCY =
-          3;
-
-
-        let index =
+        jobs.length =
           0;
 
 
-        async function worker() {
-
-          while (
-            index <
-            jobs.length
-          ) {
-
-            const job =
-              jobs[
-                index++
-              ];
+        jobsEl.innerHTML =
+          '';
 
 
-            if (
-              !job
-            ) {
+        updateBulkUI();
 
-              continue;
+      }
+    );
 
-            }
+  }
 
 
-            await job.convert();
+  // ============================================================
+  // COMPRESS ALL
+  // ============================================================
 
-          }
+  if (
+    compressAllBtn
+  ) {
+
+    compressAllBtn.addEventListener(
+      'click',
+      async () => {
+
+        if (
+          !jobs.length
+        ) {
+
+          return;
 
         }
 
 
-        await Promise.all(
-          Array.from(
-            {
-              length:
-                Math.min(
-                  CONCURRENCY,
-                  jobs.length
-                )
-            },
-            () =>
-              worker()
-          )
-        );
+        refreshAllJobs();
 
 
-      } finally {
-
-        convertAllBtn.disabled =
-          false;
+        compressAllBtn.disabled =
+          true;
 
 
-        convertAllBtn.textContent =
+        compressAllBtn.textContent =
           t(
-            'image.convertAll'
+            'image.compressingAll'
           );
 
 
-        downloadZipBtn.classList.toggle(
-          'hidden',
-          !jobs.some(
-            job =>
-              !!job.resultBlob
-          )
-        );
+        try {
+
+          let index =
+            0;
+
+
+          async function worker() {
+
+            while (
+              index <
+              jobs.length
+            ) {
+
+              const job =
+                jobs[index++];
+
+
+              if (
+                !job ||
+                job.isProcessing
+              ) {
+
+                continue;
+
+              }
+
+
+              await job.compress();
+
+            }
+
+          }
+
+
+          const workerCount =
+            Math.min(
+              CONCURRENCY,
+              jobs.length
+            );
+
+
+          await Promise.all(
+            Array.from(
+              {
+                length:
+                  workerCount
+              },
+              () =>
+                worker()
+            )
+          );
+
+
+        } finally {
+
+          compressAllBtn.disabled =
+            false;
+
+
+          compressAllBtn.textContent =
+            t(
+              'image.compressAll'
+            );
+
+
+          updateBulkUI();
+
+        }
 
       }
+    );
 
-    }
-  );
+  }
 
 
   // ============================================================
   // DOWNLOAD ZIP
   // ============================================================
 
-  downloadZipBtn.addEventListener(
-    'click',
-    async () => {
+  if (
+    downloadZipBtn
+  ) {
 
-      const ready =
-        jobs.filter(
-          job =>
-            !!job.resultBlob
-        );
+    downloadZipBtn.addEventListener(
+      'click',
+      async () => {
 
-
-      if (
-        !ready.length
-      ) {
-
-        return;
-
-      }
-
-
-      downloadZipBtn.disabled =
-        true;
-
-
-      downloadZipBtn.textContent =
-        t(
-          'image.compressingZip'
-        );
-
-
-      try {
-
-        const zip =
-          new JSZip();
-
-
-        const usedNames =
-          new Set();
-
-
-        ready.forEach(
-          job => {
-
-            const ext =
-              EXT_BY_FORMAT[
-                job.format
-              ] ||
-              'png';
-
-
-            const base =
-              U.baseName(
-                job.file.name
-              );
-
-
-            let name =
-              `${base}.${ext}`;
-
-
-            let n =
-              2;
-
-
-            while (
-              usedNames.has(
-                name
-              )
-            ) {
-
-              name =
-                `${base}-${n++}.${ext}`;
-
-            }
-
-
-            usedNames.add(
-              name
-            );
-
-
-            zip.file(
-              name,
-              job.resultBlob
-            );
-
-          }
-        );
-
-
-        const content =
-          await zip.generateAsync(
-            {
-              type:
-                'blob'
-            }
+        const ready =
+          jobs.filter(
+            job =>
+              !!job.resultBlob
           );
 
 
-        U.downloadBlob(
-          content,
-          'converted-images.zip'
-        );
+        if (
+          !ready.length
+        ) {
 
+          return;
 
-      } catch (
-        err
-      ) {
+        }
 
-        console.error(
-          '[Image Convert] ZIP failed:',
-          err
-        );
-
-      } finally {
 
         downloadZipBtn.disabled =
-          false;
+          true;
 
 
         downloadZipBtn.textContent =
           t(
-            'image.downloadZip'
+            'image.compressingZip'
           );
 
-      }
 
-    }
-  );
+        try {
+
+          const zip =
+            new JSZip();
+
+
+          const usedNames =
+            new Set();
+
+
+          ready.forEach(
+            job => {
+
+              const ext =
+                EXT_BY_FORMAT[
+                  job.format
+                ] ||
+                'jpg';
+
+
+              const base =
+                U.baseName(
+                  job.file.name
+                );
+
+
+              let name =
+                `${base}.${ext}`;
+
+
+              let n =
+                2;
+
+
+              while (
+                usedNames.has(
+                  name
+                )
+              ) {
+
+                name =
+                  `${base}-${n++}.${ext}`;
+
+              }
+
+
+              usedNames.add(
+                name
+              );
+
+
+              zip.file(
+                name,
+                job.resultBlob
+              );
+
+            }
+          );
+
+
+          const content =
+            await zip.generateAsync(
+              {
+                type:
+                  'blob'
+              }
+            );
+
+
+          U.downloadBlob(
+            content,
+            'compressed-images.zip'
+          );
+
+
+        } catch (
+          error
+        ) {
+
+          console.error(
+            '[Image Compress] ZIP failed:',
+            error
+          );
+
+        } finally {
+
+          downloadZipBtn.disabled =
+            false;
+
+
+          downloadZipBtn.textContent =
+            t(
+              'image.downloadZip'
+            );
+
+        }
+
+      }
+    );
+
+  }
 
 
   // ============================================================
   // DROPZONE
   // ============================================================
 
-  U.setupDropzone(
-    dropzone,
-    fileInput,
-    addFiles
-  );
+  if (
+    U &&
+    typeof U.setupDropzone ===
+      'function'
+  ) {
+
+    U.setupDropzone(
+      dropzone,
+      fileInput,
+      addFiles
+    );
+
+  }
 
 
   // ============================================================
   // CLEAR CACHE
   // ============================================================
 
-  U.onClearCache(
-    () => {
+  if (
+    U &&
+    typeof U.onClearCache ===
+      'function'
+  ) {
 
-      jobs.forEach(
-        job => {
+    U.onClearCache(
+      () => {
 
-          job.dispose();
-
-        }
-      );
-
-
-      jobs.length =
-        0;
-
-
-      jobsEl.innerHTML =
-        '';
+        jobs.forEach(
+          job =>
+            job.dispose()
+        );
 
 
-      updateBulkUI();
+        jobs.length =
+          0;
 
-    }
-  );
+
+        jobsEl.innerHTML =
+          '';
+
+
+        updateBulkUI();
+
+      }
+    );
+
+  }
 
 
   // ============================================================
@@ -2145,18 +2577,20 @@
        */
 
       if (
-        !convertAllBtn.disabled
+        compressAllBtn &&
+        !compressAllBtn.disabled
       ) {
 
-        convertAllBtn.textContent =
+        compressAllBtn.textContent =
           t(
-            'image.convertAll'
+            'image.compressAll'
           );
 
       }
 
 
       if (
+        downloadZipBtn &&
         !downloadZipBtn.disabled
       ) {
 
@@ -2169,13 +2603,25 @@
 
 
       /*
-       * Existing jobs
+       * Labels inside current jobs
        */
 
       jobs.forEach(
         job => {
 
           job.updateLanguageUI();
+
+          if (
+            job.origDimEl &&
+            !job.naturalW
+          ) {
+
+            job.origDimEl.textContent =
+              t(
+                'image.reading'
+              );
+
+          }
 
         }
       );
