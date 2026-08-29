@@ -6,7 +6,7 @@
 
 
   // ============================================================
-  // TRANSLATION HELPER
+  // TRANSLATION
   // ============================================================
 
   function t(
@@ -16,19 +16,31 @@
 
     if (
       I18n &&
-      typeof I18n.t ===
-        'function'
+      typeof I18n.t === 'function'
     ) {
-
       return I18n.t(
         key,
         values
       );
     }
 
-    return String(
-      key
-    );
+    return String(key);
+  }
+
+
+  function currentLanguage() {
+
+    if (
+      I18n &&
+      typeof I18n.getLanguage ===
+        'function'
+    ) {
+
+      return I18n.getLanguage();
+
+    }
+
+    return 'en';
   }
 
 
@@ -68,70 +80,66 @@
   // TOOL META
   // ============================================================
 
-  /*
-   * ใช้ translation key แทนข้อความภาษาไทยโดยตรง
-   */
-
   const TOOL_META = {
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // IMAGE
-    // ----------------------------------------------------------
+    // ==========================================================
 
-    'img-convert': [
-      'image',
-      'image.characterConvert'
-    ],
+    'img-convert': {
+      kind: 'image',
+      key: 'image.characterConvert'
+    },
 
-    'img-crop': [
-      'image',
-      'image.characterCrop'
-    ],
+    'img-crop': {
+      kind: 'image',
+      key: 'image.characterCrop'
+    },
 
-    'img-bgremove': [
-      'image',
-      'image.characterBgRemove'
-    ],
+    'img-bgremove': {
+      kind: 'image',
+      key: 'image.characterBgRemove'
+    },
 
-    'img-compress': [
-      'image',
-      'image.characterCompress'
-    ],
+    'img-compress': {
+      kind: 'image',
+      key: 'image.characterCompress'
+    },
 
 
-    // ----------------------------------------------------------
+    // ==========================================================
     // PDF
-    // ----------------------------------------------------------
+    // ==========================================================
 
-    'pdf-from-images': [
-      'pdf',
-      'pdf.characterFromImages'
-    ],
+    'pdf-from-images': {
+      kind: 'pdf',
+      key: 'pdf.characterFromImages'
+    },
 
-    'pdf-to-images': [
-      'pdf',
-      'pdf.characterToImages'
-    ],
+    'pdf-to-images': {
+      kind: 'pdf',
+      key: 'pdf.characterToImages'
+    },
 
-    'pdf-pages': [
-      'pdf',
-      'pdf.characterPages'
-    ],
+    'pdf-pages': {
+      kind: 'pdf',
+      key: 'pdf.characterPages'
+    },
 
-    'pdf-merge': [
-      'pdf',
-      'pdf.characterMerge'
-    ],
+    'pdf-merge': {
+      kind: 'pdf',
+      key: 'pdf.characterMerge'
+    },
 
-    'pdf-watermark': [
-      'pdf',
-      'pdf.characterWatermark'
-    ],
+    'pdf-watermark': {
+      kind: 'pdf',
+      key: 'pdf.characterWatermark'
+    },
 
-    'pdf-pagenumbers': [
-      'pdf',
-      'pdf.characterPageNumbers'
-    ]
+    'pdf-pagenumbers': {
+      kind: 'pdf',
+      key: 'pdf.characterPageNumbers'
+    }
 
   };
 
@@ -295,8 +303,323 @@
 
 
   // ============================================================
-  // CUTE UI
+  // CUTE TOOL UI
   // ============================================================
+
+  function getToolMeta(
+    tool
+  ) {
+
+    return (
+      TOOL_META[tool] ||
+      {
+        kind: 'image',
+        key: 'common.ready'
+      }
+    );
+  }
+
+
+  function updateCuteCharacterText(
+    panel
+  ) {
+
+    if (!panel) {
+      return;
+    }
+
+
+    const tool =
+      panel.dataset.tool;
+
+
+    if (!tool) {
+      return;
+    }
+
+
+    const meta =
+      getToolMeta(
+        tool
+      );
+
+
+    const copy =
+      panel.querySelector(
+        '.cute-empty-copy'
+      );
+
+
+    if (!copy) {
+      return;
+    }
+
+
+    const translated =
+      t(
+        meta.key
+      );
+
+
+    /*
+     * เก็บ key ไว้ด้วย
+     * เผื่อเปลี่ยนภาษาอีกครั้ง
+     */
+
+    copy.dataset.i18n =
+      meta.key;
+
+
+    copy.textContent =
+      translated;
+  }
+
+
+  function updateCuteProgressText(
+    panel,
+    mode,
+    itemCount
+  ) {
+
+    if (!panel) {
+      return;
+    }
+
+
+    const progress =
+      panel.querySelector(
+        '.cute-progress'
+      );
+
+
+    if (!progress) {
+      return;
+    }
+
+
+    const strong =
+      progress.querySelector(
+        '.cute-progress-title'
+      );
+
+
+    const count =
+      progress.querySelector(
+        '.cute-progress-count'
+      );
+
+
+    if (
+      mode ===
+      'done'
+    ) {
+
+      if (strong) {
+
+        strong.textContent =
+          t(
+            'cute.ready'
+          );
+      }
+
+
+      if (count) {
+
+        count.textContent =
+          t(
+            'cute.completed'
+          );
+      }
+
+
+      return;
+    }
+
+
+    if (
+      mode ===
+      'processing'
+    ) {
+
+      if (strong) {
+
+        strong.textContent =
+          t(
+            'cute.processing'
+          );
+      }
+
+
+      if (count) {
+
+        if (
+          itemCount > 0
+        ) {
+
+          count.textContent =
+            t(
+              'cute.itemCount',
+              {
+                count:
+                  itemCount
+              }
+            );
+
+        } else {
+
+          count.textContent =
+            t(
+              'common.processing'
+            );
+        }
+      }
+
+
+      return;
+    }
+
+
+    /*
+     * idle
+     */
+    progress.classList.remove(
+      'is-done'
+    );
+  }
+
+
+  function createCuteCharacter(
+    panel
+  ) {
+
+    if (
+      panel.querySelector(
+        '.cute-character'
+      )
+    ) {
+
+      return;
+    }
+
+
+    const dot =
+      document.createElement(
+        'span'
+      );
+
+
+    dot.className =
+      'cute-character';
+
+
+    dot.setAttribute(
+      'aria-hidden',
+      'true'
+    );
+
+
+    panel.appendChild(
+      dot
+    );
+  }
+
+
+  function createCuteEmptyState(
+    dz
+  ) {
+
+    if (
+      dz.querySelector(
+        '.cute-empty-state'
+      )
+    ) {
+
+      return;
+    }
+
+
+    const empty =
+      document.createElement(
+        'div'
+      );
+
+
+    empty.className =
+      'cute-empty-state';
+
+
+    empty.innerHTML =
+      '<span class="cute-dot"></span>' +
+      '<span class="cute-empty-copy"></span>';
+
+
+    const inner =
+      dz.querySelector(
+        '.dz-inner'
+      );
+
+
+    (
+      inner ||
+      dz
+    ).appendChild(
+      empty
+    );
+  }
+
+
+  function createCuteProgress(
+    dz
+  ) {
+
+    if (
+      dz.querySelector(
+        '.cute-progress'
+      )
+    ) {
+
+      return;
+    }
+
+
+    const progress =
+      document.createElement(
+        'div'
+      );
+
+
+    progress.className =
+      'cute-progress';
+
+
+    progress.innerHTML = `
+      <div class="cute-progress-head">
+
+        <strong
+          class="cute-progress-title"
+        ></strong>
+
+        <span
+          class="cute-progress-count"
+        ></span>
+
+      </div>
+
+      <div class="cute-progress-track">
+
+        <div
+          class="cute-progress-bar"
+        ></div>
+
+      </div>
+    `;
+
+
+    dz.appendChild(
+      progress
+    );
+  }
+
 
   function setupCuteToolUI() {
 
@@ -311,11 +634,9 @@
 
 
         const meta =
-          TOOL_META[tool] ||
-          [
-            'image',
-            'common.ready'
-          ];
+          getToolMeta(
+            tool
+          );
 
 
         panel.dataset.tool =
@@ -323,39 +644,16 @@
 
 
         panel.dataset.toolKind =
-          meta[0];
+          meta.kind;
 
 
         // ------------------------------------------------------
         // Character
         // ------------------------------------------------------
 
-        if (
-          !panel.querySelector(
-            '.cute-character'
-          )
-        ) {
-
-          const dot =
-            document.createElement(
-              'span'
-            );
-
-
-          dot.className =
-            'cute-character';
-
-
-          dot.setAttribute(
-            'aria-hidden',
-            'true'
-          );
-
-
-          panel.appendChild(
-            dot
-          );
-        }
+        createCuteCharacter(
+          panel
+        );
 
 
         // ------------------------------------------------------
@@ -368,9 +666,7 @@
           );
 
 
-        if (
-          !dz
-        ) {
+        if (!dz) {
           return;
         }
 
@@ -379,110 +675,23 @@
         // Empty state
         // ------------------------------------------------------
 
-        if (
-          !dz.querySelector(
-            '.cute-empty-state'
-          )
-        ) {
-
-          const empty =
-            document.createElement(
-              'div'
-            );
+        createCuteEmptyState(
+          dz
+        );
 
 
-          empty.className =
-            'cute-empty-state';
-
-
-          empty.innerHTML =
-            '<span class="cute-dot"></span>' +
-            '<span class="cute-empty-copy"></span>';
-
-
-          const inner =
-            dz.querySelector(
-              '.dz-inner'
-            );
-
-
-          (
-            inner ||
-            dz
-          ).appendChild(
-            empty
-          );
-        }
-
-
-        const copy =
-          dz.querySelector(
-            '.cute-empty-copy'
-          );
-
-
-        if (
-          copy
-        ) {
-
-          copy.dataset.i18n =
-            meta[1];
-
-
-          copy.textContent =
-            t(
-              meta[1]
-            );
-        }
+        updateCuteCharacterText(
+          panel
+        );
 
 
         // ------------------------------------------------------
         // Progress
         // ------------------------------------------------------
 
-        if (
-          !dz.querySelector(
-            '.cute-progress'
-          )
-        ) {
-
-          const progress =
-            document.createElement(
-              'div'
-            );
-
-
-          progress.className =
-            'cute-progress';
-
-
-          progress.innerHTML = `
-            <div class="cute-progress-head">
-
-              <strong
-                class="cute-progress-title"
-              ></strong>
-
-              <span
-                class="cute-progress-count"
-              ></span>
-
-            </div>
-
-            <div class="cute-progress-track">
-
-              <div
-                class="cute-progress-bar"
-              ></div>
-
-            </div>
-          `;
-
-
-          dz.appendChild(
-            progress
-          );
-        }
+        createCuteProgress(
+          dz
+        );
 
 
         // ------------------------------------------------------
@@ -499,111 +708,166 @@
           };
 
 
-        dz.addEventListener(
-          'dragenter',
-          () => {
+        if (
+          !dz.dataset.cuteDragBound
+        ) {
 
-            setDrag(
-              true
-            );
-          }
-        );
+          dz.dataset.cuteDragBound =
+            'true';
 
 
-        dz.addEventListener(
-          'dragover',
-          () => {
-
-            setDrag(
-              true
-            );
-          }
-        );
-
-
-        dz.addEventListener(
-          'dragleave',
-          event => {
-
-            if (
-              !dz.contains(
-                event.relatedTarget
-              )
-            ) {
-
-              setDrag(
-                false
-              );
+          dz.addEventListener(
+            'dragenter',
+            () => {
+              setDrag(true);
             }
-          }
-        );
+          );
 
 
-        dz.addEventListener(
-          'drop',
-          () => {
+          dz.addEventListener(
+            'dragover',
+            () => {
+              setDrag(true);
+            }
+          );
 
-            setDrag(
-              false
-            );
-          }
-        );
+
+          dz.addEventListener(
+            'dragleave',
+            event => {
+
+              if (
+                !dz.contains(
+                  event.relatedTarget
+                )
+              ) {
+
+                setDrag(
+                  false
+                );
+              }
+            }
+          );
+
+
+          dz.addEventListener(
+            'drop',
+            () => {
+              setDrag(false);
+            }
+          );
+        }
       }
     );
 
+
+    /*
+     * สำคัญ:
+     * แปลข้อความ Cute UI หลังสร้างทั้งหมด
+     */
+    refreshCuteLanguage();
 
     refreshCuteStates();
   }
 
 
   // ============================================================
-  // CUTE STATE REFRESH
+  // LANGUAGE REFRESH
   // ============================================================
 
-  let cuteRefreshQueued =
-    false;
+  function refreshCuteLanguage() {
+
+    panels.forEach(
+      panel => {
+
+        updateCuteCharacterText(
+          panel
+        );
 
 
-  function scheduleCuteRefresh() {
+        /*
+         * อย่าเดาข้อความจากภาษาเก่า
+         * ใช้ I18n.t() ทุกครั้ง
+         */
+        const progress =
+          panel.querySelector(
+            '.cute-progress'
+          );
 
+
+        if (!progress) {
+          return;
+        }
+
+
+        const processing =
+          panel.querySelectorAll(
+            '.is-processing'
+          ).length > 0;
+
+
+        const result =
+          panel.querySelector(
+            '[id^="result-"]'
+          );
+
+
+        const resultVisible =
+          result &&
+          !result.classList.contains(
+            'hidden'
+          );
+
+
+        const cards =
+          panel.querySelectorAll(
+            '.ticket, .file-row, .page-card'
+          );
+
+
+        if (
+          resultVisible
+        ) {
+
+          updateCuteProgressText(
+            panel,
+            'done',
+            cards.length
+          );
+
+        } else if (
+          processing
+        ) {
+
+          updateCuteProgressText(
+            panel,
+            'processing',
+            cards.length
+          );
+
+        }
+      }
+    );
+
+
+    /*
+     * เรียก I18n แปล static HTML อีกครั้ง
+     */
     if (
-      cuteRefreshQueued
+      I18n &&
+      typeof I18n.applyTranslations ===
+        'function'
     ) {
-      return;
+
+      I18n.applyTranslations();
     }
 
 
-    cuteRefreshQueued =
-      true;
-
-
-    const run =
-      () => {
-
-        cuteRefreshQueued =
-          false;
-
-
-        refreshCuteStates();
-      };
-
-
-    if (
-      typeof requestAnimationFrame ===
-      'function'
-    ) {
-
-      requestAnimationFrame(
-        run
-      );
-
-    } else {
-
-      setTimeout(
-        run,
-        0
-      );
-    }
+    /*
+     * sync ภาษาไว้ที่ document
+     */
+    document.documentElement.dataset.language =
+      currentLanguage();
   }
 
 
@@ -634,10 +898,19 @@
 
 
     /*
-     * fallback สำหรับ Tool เดิม
-     *
-     * รองรับข้อความหลายภาษา
+     * ถ้า Tool ไหนกำหนด class is-processing
+     * ให้เชื่อก่อน
      */
+    if (
+      card.classList.contains(
+        'is-processing'
+      )
+    ) {
+
+      return true;
+    }
+
+
     const text =
       (
         card.textContent ||
@@ -645,37 +918,77 @@
       ).toLowerCase();
 
 
-    return (
-      // Thai
+    /*
+     * Thai
+     */
+    if (
       /กำลัง|ประมวลผล|จัดทำ|กำลังทำงาน/.test(
         text
-      ) ||
+      )
+    ) {
 
-      // English
+      return true;
+    }
+
+
+    /*
+     * English
+     */
+    if (
       /processing|converting|removing|loading|building|merging|exporting|saving|working|creating|compressing|cropping/.test(
         text
-      ) ||
+      )
+    ) {
 
-      // Japanese
-      /処理中|変換中|読み込み中|作成中|保存中/.test(
-        text
-      ) ||
+      return true;
+    }
 
-      // Korean
-      /처리 중|변환 중|불러오는 중|생성 중|저장 중/.test(
-        text
-      ) ||
 
-      // Chinese
-      /处理中|转换中|加载中|创建中|保存中/.test(
+    /*
+     * Japanese
+     */
+    if (
+      /処理中|変換中|読み込み中|作成中|保存中|圧縮中|切り抜き中/.test(
         text
       )
-    );
+    ) {
+
+      return true;
+    }
+
+
+    /*
+     * Korean
+     */
+    if (
+      /처리 중|변환 중|불러오는 중|생성 중|저장 중|압축 중/.test(
+        text
+      )
+    ) {
+
+      return true;
+    }
+
+
+    /*
+     * Chinese
+     */
+    if (
+      /处理中|转换中|加载中|创建中|保存中|压缩中|裁剪中/.test(
+        text
+      )
+    ) {
+
+      return true;
+    }
+
+
+    return false;
   }
 
 
   // ============================================================
-  // REFRESH CUTE STATES
+  // CUTE STATE REFRESH
   // ============================================================
 
   function refreshCuteStates() {
@@ -689,9 +1002,7 @@
           );
 
 
-        if (
-          !dz
-        ) {
+        if (!dz) {
           return;
         }
 
@@ -742,9 +1053,7 @@
           );
 
 
-        if (
-          empty
-        ) {
+        if (empty) {
 
           empty.classList.toggle(
             'is-hidden',
@@ -823,22 +1132,6 @@
           );
 
 
-          const strong =
-            progress.querySelector(
-              '.cute-progress-title'
-            );
-
-
-          const count =
-            progress.querySelector(
-              '.cute-progress-count'
-            );
-
-
-          // ----------------------------------------------------
-          // DONE
-          // ----------------------------------------------------
-
           if (
             !processing &&
             hasFiles
@@ -849,31 +1142,11 @@
             );
 
 
-            if (
-              strong
-            ) {
-
-              strong.textContent =
-                t(
-                  'cute.ready'
-                );
-            }
-
-
-            if (
-              count
-            ) {
-
-              count.textContent =
-                t(
-                  'cute.completed'
-                );
-            }
-
-
-          // ----------------------------------------------------
-          // PROCESSING
-          // ----------------------------------------------------
+            updateCuteProgressText(
+              panel,
+              'done',
+              cards.length
+            );
 
           } else if (
             processing
@@ -884,47 +1157,11 @@
             );
 
 
-            if (
-              strong
-            ) {
-
-              strong.textContent =
-                t(
-                  'cute.processing'
-                );
-            }
-
-
-            if (
-              count
-            ) {
-
-              if (
-                cards.length
-              ) {
-
-                count.textContent =
-                  t(
-                    'cute.itemCount',
-                    {
-                      count:
-                        cards.length
-                    }
-                  );
-
-              } else {
-
-                count.textContent =
-                  t(
-                    'common.processing'
-                  );
-              }
-            }
-
-
-          // ----------------------------------------------------
-          // IDLE
-          // ----------------------------------------------------
+            updateCuteProgressText(
+              panel,
+              'processing',
+              cards.length
+            );
 
           } else {
 
@@ -936,7 +1173,7 @@
 
 
         // ------------------------------------------------------
-        // Busy state
+        // Busy
         // ------------------------------------------------------
 
         dz.classList.toggle(
@@ -949,10 +1186,77 @@
 
 
   // ============================================================
-  // INITIALIZE
+  // REFRESH QUEUE
   // ============================================================
 
-  setupCuteToolUI();
+  let cuteRefreshQueued =
+    false;
+
+
+  function scheduleCuteRefresh() {
+
+    if (
+      cuteRefreshQueued
+    ) {
+
+      return;
+    }
+
+
+    cuteRefreshQueued =
+      true;
+
+
+    const run =
+      () => {
+
+        cuteRefreshQueued =
+          false;
+
+
+        refreshCuteStates();
+      };
+
+
+    if (
+      typeof requestAnimationFrame ===
+      'function'
+    ) {
+
+      requestAnimationFrame(
+        run
+      );
+
+    } else {
+
+      setTimeout(
+        run,
+        0
+      );
+    }
+  }
+
+
+  // ============================================================
+  // LANGUAGE CHANGE
+  // ============================================================
+
+  /*
+   * ใช้ capture=true ด้วย
+   * เพื่อให้แน่ใจว่ารับ event ได้
+   */
+
+  document.addEventListener(
+    'languagechange',
+    () => {
+
+      refreshCuteLanguage();
+
+      scheduleCuteRefresh();
+
+    },
+    true
+  );
 
 
   // ============================================================
@@ -970,7 +1274,9 @@
 
 
   if (
-    panelContainer
+    panelContainer &&
+    typeof MutationObserver !==
+      'undefined'
   ) {
 
     cuteObserver =
@@ -1020,7 +1326,9 @@
                   ) ||
                   target.classList?.contains(
                     'is-processing'
-                  )
+                  ) ||
+                  target.dataset.processing !==
+                    undefined
                 )
               ) {
 
@@ -1063,66 +1371,6 @@
       }
     );
   }
-
-
-  // ============================================================
-  // LANGUAGE CHANGE
-  // ============================================================
-
-  document.addEventListener(
-    'languagechange',
-    () => {
-
-      /*
-       * อัปเดตข้อความของ cute empty state
-       */
-      panels.forEach(
-        panel => {
-
-          const tool =
-            panel.dataset.tool;
-
-
-          if (
-            !tool
-          ) {
-            return;
-          }
-
-
-          const meta =
-            TOOL_META[tool];
-
-
-          if (
-            !meta
-          ) {
-            return;
-          }
-
-
-          const copy =
-            panel.querySelector(
-              '.cute-empty-copy'
-            );
-
-
-          if (
-            copy
-          ) {
-
-            copy.textContent =
-              t(
-                meta[1]
-              );
-          }
-        }
-      );
-
-
-      scheduleCuteRefresh();
-    }
-  );
 
 
   // ============================================================
@@ -1231,6 +1479,7 @@
     if (
       !active
     ) {
+
       return false;
     }
 
@@ -1344,6 +1593,8 @@
   // ============================================================
   // START
   // ============================================================
+
+  setupCuteToolUI();
 
   showCategory(
     'image'
