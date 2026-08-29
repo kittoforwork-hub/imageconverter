@@ -1,517 +1,3398 @@
-/* global window, document, localStorage */
+/* global window, document, localStorage, navigator, MutationObserver */
+
+/*
+ * ============================================================
+ * WORKSHOP UTILITY - INTERNATIONALIZATION
+ * js/i18n.js
+ *
+ * หน้าที่:
+ * - ตรวจภาษาจาก Browser / เครื่องผู้ใช้
+ * - จำภาษาที่ผู้ใช้เลือกเอง
+ * - แปลข้อความใน HTML
+ * - แปล attribute เช่น title / aria-label / placeholder
+ * - รองรับ UI ที่ถูกสร้างขึ้นภายหลัง
+ * - รองรับ RTL สำหรับภาษาในอนาคต
+ *
+ * ไม่ต้องมีไฟล์ภาษาแยก
+ * ทุกอย่างเก็บอยู่ในไฟล์นี้
+ * ============================================================
+ */
+
 window.I18n = (() => {
   'use strict';
+
 
   // ============================================================
   // CONFIG
   // ============================================================
 
-  const STORAGE_KEY = 'utilitytools-language';
+  const STORAGE_KEY =
+    'workshop-utility-language';
 
-  const DEFAULT_LANGUAGE = 'en';
+  const DEFAULT_LANGUAGE =
+    'en';
+
 
   /*
-   * ภาษาไม่ต้องสร้างไฟล์แยก
-   * เพิ่มภาษาใหม่ตรงนี้ได้เลย
+   * ------------------------------------------------------------
+   * Supported Languages
+   * ------------------------------------------------------------
+   *
+   * ตอนนี้ใส่ภาษาหลักไว้ก่อน
+   * เพิ่มภาษาใน object นี้ได้โดยไม่ต้องสร้างไฟล์ใหม่
    */
+
   const LANGUAGES = {
+
+    // ==========================================================
+    // THAI
+    // ==========================================================
+
     th: {
-      name: 'ไทย',
+
+      name: 'Thai',
+
       nativeName: 'ไทย',
+
       dir: 'ltr',
 
-      common: {
-        upload: 'อัปโหลด',
-        chooseFile: 'เลือกไฟล์',
-        download: 'ดาวน์โหลด',
-        downloadAll: 'ดาวน์โหลดทั้งหมด',
-        clear: 'ล้างทั้งหมด',
-        cancel: 'ยกเลิก',
-        delete: 'ลบ',
-        remove: 'นำออก',
-        process: 'เริ่มประมวลผล',
-        processing: 'กำลังประมวลผล...',
-        completed: 'เสร็จสิ้น',
-        failed: 'ไม่สำเร็จ',
-        loading: 'กำลังโหลด...',
-        ready: 'พร้อมใช้งาน',
-        retry: 'ลองอีกครั้ง',
-        close: 'ปิด',
-        save: 'บันทึก',
-        reset: 'รีเซ็ต',
-        continue: 'ดำเนินการต่อ',
-        confirm: 'ยืนยัน',
-        yes: 'ใช่',
-        no: 'ไม่',
-        files: 'ไฟล์',
-        file: 'ไฟล์',
-        items: 'รายการ',
-        pages: 'หน้า',
-        page: 'หน้า'
-      },
+      messages: {
 
-      errors: {
-        downloadDataNotFound:
-          'ไม่พบข้อมูลสำหรับดาวน์โหลด',
+        // ------------------------------------------------------
+        // COMMON
+        // ------------------------------------------------------
 
-        fileNotFound:
-          'ไม่พบไฟล์',
+        common: {
 
-        fileReadFailed:
-          'อ่านไฟล์ไม่สำเร็จ',
+          home:
+            'หน้าหลัก',
 
-        fileReadAborted:
-          'การอ่านไฟล์ถูกยกเลิก',
+          image:
+            'รูปภาพ',
 
-        imageLoadFailed:
-          'โหลดรูปภาพไม่สำเร็จ',
+          images:
+            'รูปภาพ',
 
-        unsupportedFile:
-          'ไม่รองรับไฟล์ประเภทนี้',
+          pdf:
+            'PDF',
 
-        processingFailed:
-          'ประมวลผลไฟล์ไม่สำเร็จ',
+          notepad:
+            'Notepad',
 
-        somethingWentWrong:
-          'เกิดข้อผิดพลาด กรุณาลองอีกครั้ง'
-      },
+          upload:
+            'อัปโหลด',
 
-      file: {
-        size:
-          'ขนาดไฟล์: {size}',
+          chooseFile:
+            'เลือกไฟล์',
 
-        largeWarning:
-          'ไฟล์ขนาดนี้อาจใช้เวลานานและกินหน่วยความจำมาก',
+          chooseFiles:
+            'เลือกไฟล์',
 
-        continueQuestion:
-          'ต้องการดำเนินการต่อหรือไม่?'
-      },
+          download:
+            'ดาวน์โหลด',
 
-      accessibility: {
-        dropzone:
-          'ลากและวางไฟล์ที่นี่ หรือกดเพื่อเลือกไฟล์'
-      },
+          downloadAll:
+            'ดาวน์โหลดทั้งหมด',
 
-      utils: {
-        cacheHandlerFailed:
-          'ตัวจัดการ clearCache ทำงานไม่สำเร็จ'
+          clear:
+            'ล้างทั้งหมด',
+
+          cancel:
+            'ยกเลิก',
+
+          delete:
+            'ลบ',
+
+          remove:
+            'นำออก',
+
+          process:
+            'เริ่มประมวลผล',
+
+          processing:
+            'กำลังประมวลผล...',
+
+          completed:
+            'เสร็จสิ้น',
+
+          failed:
+            'ไม่สำเร็จ',
+
+          loading:
+            'กำลังโหลด...',
+
+          ready:
+            'พร้อมใช้งาน',
+
+          retry:
+            'ลองอีกครั้ง',
+
+          close:
+            'ปิด',
+
+          save:
+            'บันทึก',
+
+          reset:
+            'รีเซ็ต',
+
+          continue:
+            'ดำเนินการต่อ',
+
+          confirm:
+            'ยืนยัน',
+
+          selectAll:
+            'เลือกทั้งหมด',
+
+          items:
+            'รายการ',
+
+          files:
+            'ไฟล์',
+
+          file:
+            'ไฟล์',
+
+          pages:
+            'หน้า',
+
+          page:
+            'หน้า',
+
+          jobs:
+            'งาน',
+
+          original:
+            'ต้นฉบับ',
+
+          format:
+            'รูปแบบ',
+
+          size:
+            'ขนาด',
+
+          quality:
+            'คุณภาพ',
+
+          width:
+            'กว้าง',
+
+          height:
+            'สูง',
+
+          saveAs:
+            'บันทึกเป็น',
+
+          result:
+            'ผลลัพธ์',
+
+          done:
+            'เสร็จแล้ว'
+        },
+
+
+        // ------------------------------------------------------
+        // PAGE
+        // ------------------------------------------------------
+
+        page: {
+
+          title:
+            'Workshop Utility BY KITTO',
+
+          heading:
+            'ชุดเครื่องมือจัดการไฟล์',
+
+          subtitle:
+            'แปลงและแก้ไขรูปภาพ/PDF ทั้งหมดในเบราว์เซอร์ของคุณ ไม่มีการอัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์ใดๆ',
+
+          footer:
+            'ทำงานในเบราว์เซอร์ของคุณทั้งหมด — ไม่มีไฟล์ถูกส่งออกไปที่ใด',
+
+          notepadTitle:
+            'เปิด Online Notepad'
+        },
+
+
+        // ------------------------------------------------------
+        // IMAGE TOOLS
+        // ------------------------------------------------------
+
+        image: {
+
+          convertTitle:
+            'แปลงนามสกุล & ปรับขนาด',
+
+          convertHint:
+            'แปลงนามสกุลไฟล์ (PNG / JPG / WEBP) ปรับขนาด คุณภาพ หมุน และพลิกรูปภาพ — ทำได้หลายไฟล์พร้อมกัน',
+
+          cropTitle:
+            'ครอบตัดรูปภาพ',
+
+          cropHint:
+            'ลากเลือกพื้นที่ที่ต้องการบนรูปภาพเพื่อครอบตัด ปรับกรอบได้อย่างอิสระ แล้วดาวน์โหลดผลลัพธ์',
+
+          bgRemoveTitle:
+            'ลบพื้นหลัง',
+
+          bgRemoveHint:
+            'ลบพื้นหลังรูปภาพอัตโนมัติด้วย AI — ประมวลผลในเบราว์เซอร์ทั้งหมด ไม่มีการอัปโหลดรูปขึ้นเซิร์ฟเวอร์',
+
+          compressTitle:
+            'ลดขนาดรูปภาพ',
+
+          compressHint:
+            'ลดขนาดไฟล์รูปภาพโดยปรับคุณภาพและขนาดภาพ ประมวลผลทั้งหมดในเบราว์เซอร์ของคุณ',
+
+          dropImage:
+            'วางรูปภาพที่นี่',
+
+          chooseImage:
+            'หรือคลิกเพื่อเลือกไฟล์',
+
+          supportedImages:
+            'รองรับหลายไฟล์ (JPG · PNG · WEBP · GIF · BMP)',
+
+          addMultiple:
+            'เพิ่มได้หลายรูป',
+
+          cropSeparately:
+            'แต่ละรูปครอบตัดแยกกัน',
+
+          cropInstruction:
+            'ลากกรอบเพื่อครอบตัด',
+
+          outputTransparent:
+            'ผลลัพธ์เป็น PNG พื้นหลังโปร่งใส',
+
+          compressSupported:
+            'รองรับ JPG · PNG · WEBP และหลายไฟล์พร้อมกัน',
+
+          task:
+            'งาน',
+
+          convertAll:
+            'แปลงทั้งหมด',
+
+          compressAll:
+            'ลดขนาดทั้งหมด',
+
+          removeBackgroundAll:
+            'ลบพื้นหลังทั้งหมด',
+
+          downloadZip:
+            'ดาวน์โหลดทั้งหมด (.zip)',
+
+          allFormats:
+            'นามสกุลทั้งหมด',
+
+          choosePerFile:
+            '— เลือกทีละไฟล์ —',
+
+          convertTo:
+            'แปลงเป็น',
+
+          dimensions:
+            'ขนาด (px)',
+
+          rotateFlip:
+            'หมุน/พลิก',
+
+          rotateLeft:
+            'หมุนซ้าย 90°',
+
+          rotateRight:
+            'หมุนขวา 90°',
+
+          flipHorizontal:
+            'พลิกแนวนอน',
+
+          flipVertical:
+            'พลิกแนวตั้ง',
+
+          lockAspect:
+            'ล็อกสัดส่วนภาพ',
+
+          aspectRatio:
+            'อัตราส่วน',
+
+          free:
+            'อิสระ',
+
+          crop:
+            'ตัด',
+
+          saveFormat:
+            'บันทึกเป็น',
+
+          waitingConvert:
+            'รอแปลง',
+
+          waitingCrop:
+            'ลากกรอบเพื่อครอบตัด',
+
+          waitingBackground:
+            'รอลบพื้นหลัง',
+
+          removeBackground:
+            'ลบพื้นหลัง',
+
+          waitingCompress:
+            'รอลดขนาด',
+
+          compress:
+            'ลดขนาด',
+
+          afterCompress:
+            'หลังลด',
+
+          savings:
+            'ลดไป',
+
+          modelFirstUse:
+            'ครั้งแรกที่ใช้งานจะโหลดโมเดล AI ขนาดประมาณ 40MB (ครั้งเดียว เบราว์เซอร์จะแคชไว้ให้ครั้งถัดไปเร็วขึ้น) และใช้เวลาประมวลผลต่อรูปสักครู่ขึ้นอยู่กับสเปกเครื่อง'
+        },
+
+
+        // ------------------------------------------------------
+        // PDF TOOLS
+        // ------------------------------------------------------
+
+        pdf: {
+
+          fromImagesTitle:
+            'รวมรูปเป็น PDF',
+
+          fromImagesHint:
+            'รวมรูปภาพหลายไฟล์เป็น PDF เล่มเดียว เรียงลำดับหน้าได้ตามใจ',
+
+          toImagesTitle:
+            'PDF → รูปภาพ',
+
+          toImagesHint:
+            'แปลงทุกหน้าของไฟล์ PDF ให้เป็นไฟล์รูปภาพ เลือกนามสกุลและความละเอียดได้',
+
+          pagesTitle:
+            'จัดการหน้า PDF',
+
+          pagesHint:
+            'ลบหน้า เรียงลำดับใหม่ หรือแยกเฉพาะหน้าที่เลือกออกมาเป็น PDF ใหม่',
+
+          mergeTitle:
+            'รวมไฟล์ PDF',
+
+          mergeHint:
+            'รวมไฟล์ PDF หลายไฟล์เป็นเล่มเดียว เรียงลำดับไฟล์ได้ก่อนรวม',
+
+          watermarkTitle:
+            'ใส่ลายน้ำ',
+
+          watermarkHint:
+            'ใส่ลายน้ำข้อความหรือรูป PNG ทับทุกหน้าของ PDF รองรับข้อความภาษาไทยและ PNG พื้นหลังโปร่งใส',
+
+          pageNumbersTitle:
+            'ใส่เลขหน้า',
+
+          pageNumbersHint:
+            'ใส่เลขหน้าอัตโนมัติทุกหน้าของ PDF เลือกตำแหน่งและรูปแบบข้อความได้',
+
+          dropPdf:
+            'วางไฟล์ PDF ที่นี่',
+
+          dropPdfMultiple:
+            'วางไฟล์ PDF หลายไฟล์มาวางที่นี่',
+
+          clickChoosePdf:
+            'หรือคลิกเพื่อเลือกไฟล์',
+
+          oneFile:
+            'ทีละไฟล์',
+
+          multipleFiles:
+            'เพิ่มได้หลายไฟล์',
+
+          imagesToPdfOrder:
+            'ลำดับที่เพิ่มจะเป็นลำดับหน้าใน PDF (ปรับได้ทีหลัง)',
+
+          mergeOrder:
+            'เรียงลำดับก่อนรวมได้ด้านล่าง',
+
+          pageSize:
+            'ขนาดหน้า',
+
+          fitToImage:
+            'พอดีกับรูปภาพ',
+
+          buildPdf:
+            'สร้าง PDF',
+
+          mergeFiles:
+            'รวมไฟล์',
+
+          mergedSuccess:
+            'รวมไฟล์สำเร็จ',
+
+          createdSuccess:
+            'สร้าง PDF สำเร็จ',
+
+          downloadPdf:
+            'ดาวน์โหลด PDF',
+
+          downloadMergedPdf:
+            'ดาวน์โหลด PDF ที่รวมแล้ว',
+
+          imageFormat:
+            'นามสกุล',
+
+          resolution:
+            'ความละเอียด',
+
+          renderAllPages:
+            'แปลงทุกหน้า',
+
+          pageProgress:
+            'หน้า {current}/{total}',
+
+          manageInstructions:
+            'ทำเครื่องหมาย ✕ เพื่อลบหน้าออกจากไฟล์หลัก ใช้ ↑ ↓ เพื่อสลับลำดับ และติ๊กช่องเพื่อเลือกหน้าสำหรับดาวน์โหลดแยก',
+
+          downloadPdfOrdered:
+            'ดาวน์โหลด PDF (ตามลำดับ/ลบแล้ว)',
+
+          downloadSelected:
+            'ดาวน์โหลดเฉพาะที่เลือก',
+
+          deleteThisPage:
+            'ลบหน้านี้',
+
+          moveUp:
+            'ย้ายขึ้น',
+
+          moveDown:
+            'ย้ายลง',
+
+          watermarkText:
+            'ข้อความลายน้ำ',
+
+          watermarkImage:
+            'รูปลายน้ำ PNG',
+
+          watermarkImagePlaceholder:
+            'เว้นว่างได้ หากใช้รูปอย่างเดียว',
+
+          noImageSelected:
+            'ยังไม่ได้เลือกรูป',
+
+          fontSize:
+            'ขนาดตัวอักษร',
+
+          watermarkImageSize:
+            'ขนาดรูปลายน้ำ',
+
+          opacity:
+            'ความโปร่งใส',
+
+          angle:
+            'มุมหมุน (องศา)',
+
+          watermarkCombination:
+            'สามารถใช้ข้อความอย่างเดียว, ใช้ PNG อย่างเดียว หรือใช้ข้อความและ PNG พร้อมกันได้',
+
+          readyWatermark:
+            'พร้อมใส่ลายน้ำ',
+
+          applyWatermark:
+            'ใส่ลายน้ำ',
+
+          pageNumberFormat:
+            'รูปแบบข้อความ',
+
+          startCountingAt:
+            'เริ่มนับที่',
+
+          position:
+            'ตำแหน่ง',
+
+          bottomCenter:
+            'ล่างกึ่งกลาง',
+
+          bottomRight:
+            'ล่างขวา',
+
+          bottomLeft:
+            'ล่างซ้าย',
+
+          topCenter:
+            'บนกึ่งกลาง',
+
+          topRight:
+            'บนขวา',
+
+          readyPageNumber:
+            'พร้อมใส่เลขหน้า',
+
+          applyPageNumber:
+            'ใส่เลขหน้า',
+
+          pageNumberHelp:
+            'ใช้ {n} แทนเลขหน้า และ {total} แทนจำนวนหน้าทั้งหมด'
+        },
+
+
+        // ------------------------------------------------------
+        // DROPZONE
+        // ------------------------------------------------------
+
+        dropzone: {
+
+          image:
+            'ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์',
+
+          pdf:
+            'ลากไฟล์ PDF มาวางที่นี่',
+
+          pdfMultiple:
+            'ลากไฟล์ PDF หลายไฟล์มาวางที่นี่',
+
+          imageOnly:
+            'ลากไฟล์รูปภาพมาวางที่นี่',
+
+          pdfOne:
+            'ลากไฟล์ PDF มาวางที่นี่'
+        },
+
+
+        // ------------------------------------------------------
+        // ERRORS
+        // ------------------------------------------------------
+
+        errors: {
+
+          downloadDataNotFound:
+            'ไม่พบข้อมูลสำหรับดาวน์โหลด',
+
+          fileNotFound:
+            'ไม่พบไฟล์',
+
+          fileReadFailed:
+            'อ่านไฟล์ไม่สำเร็จ',
+
+          fileReadAborted:
+            'การอ่านไฟล์ถูกยกเลิก',
+
+          imageLoadFailed:
+            'โหลดรูปภาพไม่สำเร็จ',
+
+          unsupportedFile:
+            'ไม่รองรับไฟล์ประเภทนี้',
+
+          processingFailed:
+            'ประมวลผลไฟล์ไม่สำเร็จ',
+
+          somethingWentWrong:
+            'เกิดข้อผิดพลาด กรุณาลองอีกครั้ง'
+        },
+
+
+        // ------------------------------------------------------
+        // FILE
+        // ------------------------------------------------------
+
+        file: {
+
+          size:
+            'ขนาดไฟล์: {size}',
+
+          largeWarning:
+            'ไฟล์ใหญ่ขนาดนี้อาจใช้เวลานานและกินแรมมาก',
+
+          continueQuestion:
+            'ต้องการดำเนินการต่อหรือไม่?',
+
+          original:
+            'ต้นฉบับ'
+        },
+
+
+        // ------------------------------------------------------
+        // UTILS
+        // ------------------------------------------------------
+
+        utils: {
+
+          cacheHandlerFailed:
+            'ตัวจัดการ clearCache ทำงานไม่สำเร็จ'
+        }
+
       }
     },
+
+
+    // ==========================================================
+    // ENGLISH
+    // ==========================================================
 
     en: {
+
       name: 'English',
+
       nativeName: 'English',
+
       dir: 'ltr',
 
-      common: {
-        upload: 'Upload',
-        chooseFile: 'Choose File',
-        download: 'Download',
-        downloadAll: 'Download All',
-        clear: 'Clear All',
-        cancel: 'Cancel',
-        delete: 'Delete',
-        remove: 'Remove',
-        process: 'Process',
-        processing: 'Processing...',
-        completed: 'Completed',
-        failed: 'Failed',
-        loading: 'Loading...',
-        ready: 'Ready',
-        retry: 'Try Again',
-        close: 'Close',
-        save: 'Save',
-        reset: 'Reset',
-        continue: 'Continue',
-        confirm: 'Confirm',
-        yes: 'Yes',
-        no: 'No',
-        files: 'files',
-        file: 'file',
-        items: 'items',
-        pages: 'pages',
-        page: 'page'
-      },
+      messages: {
 
-      errors: {
-        downloadDataNotFound:
-          'No data was found for download.',
+        common: {
 
-        fileNotFound:
-          'File not found.',
+          home:
+            'Home',
 
-        fileReadFailed:
-          'Failed to read the file.',
+          image:
+            'Images',
 
-        fileReadAborted:
-          'File reading was aborted.',
+          images:
+            'Images',
 
-        imageLoadFailed:
-          'Failed to load the image.',
+          pdf:
+            'PDF',
 
-        unsupportedFile:
-          'This file type is not supported.',
+          notepad:
+            'Notepad',
 
-        processingFailed:
-          'Failed to process the file.',
+          upload:
+            'Upload',
 
-        somethingWentWrong:
-          'Something went wrong. Please try again.'
-      },
+          chooseFile:
+            'Choose File',
 
-      file: {
-        size:
-          'File size: {size}',
+          chooseFiles:
+            'Choose Files',
 
-        largeWarning:
-          'A file this large may take longer to process and use a significant amount of memory.',
+          download:
+            'Download',
 
-        continueQuestion:
-          'Do you want to continue?'
-      },
+          downloadAll:
+            'Download All',
 
-      accessibility: {
-        dropzone:
-          'Drag and drop files here, or click to choose files'
-      },
+          clear:
+            'Clear All',
 
-      utils: {
-        cacheHandlerFailed:
-          'clearCache handler failed'
+          cancel:
+            'Cancel',
+
+          delete:
+            'Delete',
+
+          remove:
+            'Remove',
+
+          process:
+            'Process',
+
+          processing:
+            'Processing...',
+
+          completed:
+            'Completed',
+
+          failed:
+            'Failed',
+
+          loading:
+            'Loading...',
+
+          ready:
+            'Ready',
+
+          retry:
+            'Try Again',
+
+          close:
+            'Close',
+
+          save:
+            'Save',
+
+          reset:
+            'Reset',
+
+          continue:
+            'Continue',
+
+          confirm:
+            'Confirm',
+
+          selectAll:
+            'Select All',
+
+          items:
+            'items',
+
+          files:
+            'files',
+
+          file:
+            'file',
+
+          pages:
+            'pages',
+
+          page:
+            'page',
+
+          jobs:
+            'Jobs',
+
+          original:
+            'Original',
+
+          format:
+            'Format',
+
+          size:
+            'Size',
+
+          quality:
+            'Quality',
+
+          width:
+            'Width',
+
+          height:
+            'Height',
+
+          saveAs:
+            'Save as',
+
+          result:
+            'Result',
+
+          done:
+            'Done'
+        },
+
+
+        page: {
+
+          title:
+            'Workshop Utility BY KITTO',
+
+          heading:
+            'File Management Tools',
+
+          subtitle:
+            'Convert and edit images/PDFs entirely in your browser. No files are uploaded to any server.',
+
+          footer:
+            'Everything runs in your browser — no files are sent anywhere.',
+
+          notepadTitle:
+            'Open Online Notepad'
+        },
+
+
+        image: {
+
+          convertTitle:
+            'Convert & Resize',
+
+          convertHint:
+            'Convert file formats (PNG / JPG / WEBP), resize, adjust quality, rotate and flip images — process multiple files at once.',
+
+          cropTitle:
+            'Crop Image',
+
+          cropHint:
+            'Select the area you want to crop, adjust the frame freely, and download the result.',
+
+          bgRemoveTitle:
+            'Remove Background',
+
+          bgRemoveHint:
+            'Automatically remove image backgrounds with AI — everything is processed in your browser. No image uploads.',
+
+          compressTitle:
+            'Compress Image',
+
+          compressHint:
+            'Reduce image file size by adjusting quality and dimensions. Everything is processed in your browser.',
+
+          dropImage:
+            'Drop your image here',
+
+          chooseImage:
+            'Or click to choose a file',
+
+          supportedImages:
+            'Supports multiple files (JPG · PNG · WEBP · GIF · BMP)',
+
+          addMultiple:
+            'Add multiple images',
+
+          cropSeparately:
+            'Each image is cropped separately',
+
+          cropInstruction:
+            'Drag the frame to crop',
+
+          outputTransparent:
+            'Output as PNG with transparent background',
+
+          compressSupported:
+            'Supports JPG · PNG · WEBP and multiple files',
+
+          task:
+            'Jobs',
+
+          convertAll:
+            'Convert All',
+
+          compressAll:
+            'Compress All',
+
+          removeBackgroundAll:
+            'Remove All Backgrounds',
+
+          downloadZip:
+            'Download All (.zip)',
+
+          allFormats:
+            'Apply format to all',
+
+          choosePerFile:
+            '— Choose per file —',
+
+          convertTo:
+            'Convert to',
+
+          dimensions:
+            'Size (px)',
+
+          rotateFlip:
+            'Rotate / Flip',
+
+          rotateLeft:
+            'Rotate left 90°',
+
+          rotateRight:
+            'Rotate right 90°',
+
+          flipHorizontal:
+            'Flip horizontally',
+
+          flipVertical:
+            'Flip vertically',
+
+          lockAspect:
+            'Lock aspect ratio',
+
+          aspectRatio:
+            'Aspect ratio',
+
+          free:
+            'Free',
+
+          crop:
+            'Crop',
+
+          saveFormat:
+            'Save as',
+
+          waitingConvert:
+            'Waiting',
+
+          waitingCrop:
+            'Drag the frame to crop',
+
+          waitingBackground:
+            'Waiting for background removal',
+
+          removeBackground:
+            'Remove Background',
+
+          waitingCompress:
+            'Waiting for compression',
+
+          compress:
+            'Compress',
+
+          afterCompress:
+            'After compression',
+
+          savings:
+            'Saved',
+
+          modelFirstUse:
+            'The first use downloads an AI model of about 40MB. It is cached by the browser for faster future use. Processing time depends on your device.'
+        },
+
+
+        pdf: {
+
+          fromImagesTitle:
+            'Images to PDF',
+
+          fromImagesHint:
+            'Combine multiple images into a single PDF and arrange the page order.',
+
+          toImagesTitle:
+            'PDF → Images',
+
+          toImagesHint:
+            'Convert every page of a PDF into image files. Choose the format and resolution.',
+
+          pagesTitle:
+            'Manage PDF Pages',
+
+          pagesHint:
+            'Delete pages, reorder them, or export selected pages as a new PDF.',
+
+          mergeTitle:
+            'Merge PDF',
+
+          mergeHint:
+            'Combine multiple PDF files into one and reorder them before merging.',
+
+          watermarkTitle:
+            'Watermark PDF',
+
+          watermarkHint:
+            'Add text or PNG watermarks to every PDF page. Supports Thai text and transparent PNGs.',
+
+          pageNumbersTitle:
+            'Add Page Numbers',
+
+          pageNumbersHint:
+            'Automatically add page numbers to every PDF page. Choose the position and text format.',
+
+          dropPdf:
+            'Drop your PDF here',
+
+          dropPdfMultiple:
+            'Drop multiple PDF files here',
+
+          clickChoosePdf:
+            'Or click to choose files',
+
+          oneFile:
+            'One file at a time',
+
+          multipleFiles:
+            'Add multiple files',
+
+          imagesToPdfOrder:
+            'The order added becomes the PDF page order (you can change it later).',
+
+          mergeOrder:
+            'Reorder files before merging below.',
+
+          pageSize:
+            'Page size',
+
+          fitToImage:
+            'Fit image',
+
+          buildPdf:
+            'Create PDF',
+
+          mergeFiles:
+            'Merge Files',
+
+          mergedSuccess:
+            'PDFs merged successfully',
+
+          createdSuccess:
+            'PDF created successfully',
+
+          downloadPdf:
+            'Download PDF',
+
+          downloadMergedPdf:
+            'Download Merged PDF',
+
+          imageFormat:
+            'Format',
+
+          resolution:
+            'Resolution',
+
+          renderAllPages:
+            'Convert All Pages',
+
+          pageProgress:
+            'Page {current}/{total}',
+
+          manageInstructions:
+            'Use ✕ to delete pages, ↑ ↓ to reorder them, and check pages to export separately.',
+
+          downloadPdfOrdered:
+            'Download PDF (current order)',
+
+          downloadSelected:
+            'Download Selected',
+
+          deleteThisPage:
+            'Delete this page',
+
+          moveUp:
+            'Move up',
+
+          moveDown:
+            'Move down',
+
+          watermarkText:
+            'Watermark text',
+
+          watermarkImage:
+            'Watermark PNG',
+
+          watermarkImagePlaceholder:
+            'Leave empty if using image only',
+
+          noImageSelected:
+            'No image selected',
+
+          fontSize:
+            'Font size',
+
+          watermarkImageSize:
+            'Watermark image size',
+
+          opacity:
+            'Opacity',
+
+          angle:
+            'Rotation angle',
+
+          watermarkCombination:
+            'You can use text only, PNG only, or both text and PNG together.',
+
+          readyWatermark:
+            'Ready to add watermark',
+
+          applyWatermark:
+            'Add Watermark',
+
+          pageNumberFormat:
+            'Text format',
+
+          startCountingAt:
+            'Start counting at',
+
+          position:
+            'Position',
+
+          bottomCenter:
+            'Bottom center',
+
+          bottomRight:
+            'Bottom right',
+
+          bottomLeft:
+            'Bottom left',
+
+          topCenter:
+            'Top center',
+
+          topRight:
+            'Top right',
+
+          readyPageNumber:
+            'Ready to add page numbers',
+
+          applyPageNumber:
+            'Add Page Numbers',
+
+          pageNumberHelp:
+            'Use {n} for the page number and {total} for the total number of pages.'
+        },
+
+
+        dropzone: {
+
+          image:
+            'Drag and drop an image here, or click to choose a file',
+
+          pdf:
+            'Drag and drop a PDF here',
+
+          pdfMultiple:
+            'Drag and drop multiple PDF files here',
+
+          imageOnly:
+            'Drag and drop image files here',
+
+          pdfOne:
+            'Drag and drop a PDF here'
+        },
+
+
+        errors: {
+
+          downloadDataNotFound:
+            'No data was found for download.',
+
+          fileNotFound:
+            'File not found.',
+
+          fileReadFailed:
+            'Failed to read the file.',
+
+          fileReadAborted:
+            'File reading was aborted.',
+
+          imageLoadFailed:
+            'Failed to load the image.',
+
+          unsupportedFile:
+            'This file type is not supported.',
+
+          processingFailed:
+            'Failed to process the file.',
+
+          somethingWentWrong:
+            'Something went wrong. Please try again.'
+        },
+
+
+        file: {
+
+          size:
+            'File size: {size}',
+
+          largeWarning:
+            'A file this large may take longer to process and use a significant amount of memory.',
+
+          continueQuestion:
+            'Do you want to continue?',
+
+          original:
+            'Original'
+        },
+
+
+        utils: {
+
+          cacheHandlerFailed:
+            'clearCache handler failed'
+        }
+
       }
     },
+
+
+    // ==========================================================
+    // JAPANESE
+    // ==========================================================
 
     ja: {
+
       name: 'Japanese',
+
       nativeName: '日本語',
+
       dir: 'ltr',
 
-      common: {
-        upload: 'アップロード',
-        chooseFile: 'ファイルを選択',
-        download: 'ダウンロード',
-        downloadAll: 'すべてダウンロード',
-        clear: 'すべてクリア',
-        cancel: 'キャンセル',
-        delete: '削除',
-        remove: '取り除く',
-        process: '処理する',
-        processing: '処理中...',
-        completed: '完了',
-        failed: '失敗しました',
-        loading: '読み込み中...',
-        ready: '準備完了',
-        retry: 'もう一度試す',
-        close: '閉じる',
-        save: '保存',
-        reset: 'リセット',
-        continue: '続行',
-        confirm: '確認',
-        yes: 'はい',
-        no: 'いいえ',
-        files: 'ファイル',
-        file: 'ファイル',
-        items: '項目',
-        pages: 'ページ',
-        page: 'ページ'
-      },
+      messages: {
 
-      errors: {
-        downloadDataNotFound:
-          'ダウンロードするデータが見つかりません。',
+        common: {
 
-        fileNotFound:
-          'ファイルが見つかりません。',
+          home:
+            'ホーム',
 
-        fileReadFailed:
-          'ファイルの読み込みに失敗しました。',
+          image:
+            '画像',
 
-        fileReadAborted:
-          'ファイルの読み込みが中止されました。',
+          images:
+            '画像',
 
-        imageLoadFailed:
-          '画像の読み込みに失敗しました。',
+          pdf:
+            'PDF',
 
-        unsupportedFile:
-          'このファイル形式には対応していません。',
+          notepad:
+            'メモ帳',
 
-        processingFailed:
-          'ファイルの処理に失敗しました。',
+          upload:
+            'アップロード',
 
-        somethingWentWrong:
-          'エラーが発生しました。もう一度お試しください。'
-      },
+          chooseFile:
+            'ファイルを選択',
 
-      file: {
-        size:
-          'ファイルサイズ: {size}',
+          chooseFiles:
+            'ファイルを選択',
 
-        largeWarning:
-          'このサイズのファイルは処理に時間がかかり、メモリを多く使用する可能性があります。',
+          download:
+            'ダウンロード',
 
-        continueQuestion:
-          '続行しますか？'
-      },
+          downloadAll:
+            'すべてダウンロード',
 
-      accessibility: {
-        dropzone:
-          'ここにファイルをドラッグ＆ドロップするか、クリックしてファイルを選択してください'
-      },
+          clear:
+            'すべてクリア',
 
-      utils: {
-        cacheHandlerFailed:
-          'clearCache ハンドラーの実行に失敗しました'
+          cancel:
+            'キャンセル',
+
+          delete:
+            '削除',
+
+          remove:
+            '削除',
+
+          process:
+            '処理する',
+
+          processing:
+            '処理中...',
+
+          completed:
+            '完了',
+
+          failed:
+            '失敗',
+
+          loading:
+            '読み込み中...',
+
+          ready:
+            '準備完了',
+
+          retry:
+            '再試行',
+
+          close:
+            '閉じる',
+
+          save:
+            '保存',
+
+          reset:
+            'リセット',
+
+          continue:
+            '続行',
+
+          confirm:
+            '確認',
+
+          selectAll:
+            'すべて選択',
+
+          items:
+            '項目',
+
+          files:
+            'ファイル',
+
+          file:
+            'ファイル',
+
+          pages:
+            'ページ',
+
+          page:
+            'ページ',
+
+          jobs:
+            'ジョブ',
+
+          original:
+            '元のファイル',
+
+          format:
+            '形式',
+
+          size:
+            'サイズ',
+
+          quality:
+            '品質',
+
+          width:
+            '幅',
+
+          height:
+            '高さ',
+
+          saveAs:
+            '保存形式',
+
+          result:
+            '結果',
+
+          done:
+            '完了'
+        },
+
+
+        page: {
+
+          title:
+            'Workshop Utility BY KITTO',
+
+          heading:
+            'ファイル管理ツール',
+
+          subtitle:
+            'ブラウザ上ですべての画像/PDFを変換・編集できます。サーバーへファイルをアップロードしません。',
+
+          footer:
+            'すべてブラウザ上で処理されます — ファイルは外部へ送信されません。',
+
+          notepadTitle:
+            'オンラインメモ帳を開く'
+        },
+
+
+        image: {
+
+          convertTitle:
+            '形式変換＆サイズ変更',
+
+          convertHint:
+            'ファイル形式（PNG / JPG / WEBP）を変換し、サイズ、品質、回転、反転を調整できます。複数ファイルに対応。',
+
+          cropTitle:
+            '画像を切り抜く',
+
+          cropHint:
+            '画像上で切り抜く範囲を選択し、自由に調整して結果をダウンロードできます。',
+
+          bgRemoveTitle:
+            '背景を削除',
+
+          bgRemoveHint:
+            'AIで画像の背景を自動削除します。すべてブラウザ上で処理され、画像はサーバーへアップロードされません。',
+
+          compressTitle:
+            '画像を圧縮',
+
+          compressHint:
+            '品質と画像サイズを調整してファイルサイズを小さくします。すべてブラウザ上で処理されます。',
+
+          dropImage:
+            'ここに画像をドロップ',
+
+          chooseImage:
+            'またはクリックしてファイルを選択',
+
+          supportedImages:
+            '複数ファイル対応（JPG · PNG · WEBP · GIF · BMP）',
+
+          addMultiple:
+            '複数の画像を追加できます',
+
+          cropSeparately:
+            '画像ごとに個別に切り抜きます',
+
+          cropInstruction:
+            '枠をドラッグして切り抜き',
+
+          outputTransparent:
+            '透明背景のPNGとして出力',
+
+          compressSupported:
+            'JPG · PNG · WEBP、複数ファイル対応',
+
+          task:
+            'ジョブ',
+
+          convertAll:
+            'すべて変換',
+
+          compressAll:
+            'すべて圧縮',
+
+          removeBackgroundAll:
+            'すべて背景削除',
+
+          downloadZip:
+            'すべてダウンロード (.zip)',
+
+          allFormats:
+            'すべての形式',
+
+          choosePerFile:
+            '— ファイルごとに選択 —',
+
+          convertTo:
+            '変換先',
+
+          dimensions:
+            'サイズ (px)',
+
+          rotateFlip:
+            '回転 / 反転',
+
+          rotateLeft:
+            '左に90°回転',
+
+          rotateRight:
+            '右に90°回転',
+
+          flipHorizontal:
+            '左右反転',
+
+          flipVertical:
+            '上下反転',
+
+          lockAspect:
+            '縦横比を固定',
+
+          aspectRatio:
+            'アスペクト比',
+
+          free:
+            '自由',
+
+          crop:
+            '切り抜く',
+
+          saveFormat:
+            '保存形式',
+
+          waitingConvert:
+            '変換待ち',
+
+          waitingCrop:
+            '枠をドラッグして切り抜き',
+
+          waitingBackground:
+            '背景削除待ち',
+
+          removeBackground:
+            '背景を削除',
+
+          waitingCompress:
+            '圧縮待ち',
+
+          compress:
+            '圧縮',
+
+          afterCompress:
+            '圧縮後',
+
+          savings:
+            '削減量',
+
+          modelFirstUse:
+            '初回使用時に約40MBのAIモデルを読み込みます。ブラウザにキャッシュされるため、次回からは高速になります。処理時間は端末の性能によって異なります。'
+        },
+
+
+        pdf: {
+
+          fromImagesTitle:
+            '画像をPDFに結合',
+
+          fromImagesHint:
+            '複数の画像を1つのPDFにまとめ、ページ順を自由に並べ替えられます。',
+
+          toImagesTitle:
+            'PDF → 画像',
+
+          toImagesHint:
+            'PDFのすべてのページを画像ファイルに変換します。形式と解像度を選択できます。',
+
+          pagesTitle:
+            'PDFページを管理',
+
+          pagesHint:
+            'ページを削除、並べ替え、選択したページだけを新しいPDFとして保存できます。',
+
+          mergeTitle:
+            'PDFを結合',
+
+          mergeHint:
+            '複数のPDFを1つに結合し、結合前に順番を並べ替えられます。',
+
+          watermarkTitle:
+            'PDFに透かし',
+
+          watermarkHint:
+            'PDFの各ページにテキストまたはPNGの透かしを追加します。',
+
+          pageNumbersTitle:
+            'ページ番号を追加',
+
+          pageNumbersHint:
+            'PDFの各ページに自動でページ番号を追加します。位置と形式を選択できます。',
+
+          dropPdf:
+            'ここにPDFをドロップ',
+
+          dropPdfMultiple:
+            'ここに複数のPDFをドロップ',
+
+          clickChoosePdf:
+            'またはクリックしてファイルを選択',
+
+          oneFile:
+            '1ファイルずつ',
+
+          multipleFiles:
+            '複数ファイルを追加',
+
+          imagesToPdfOrder:
+            '追加した順番がPDFのページ順になります。後から変更できます。',
+
+          mergeOrder:
+            '下で結合前の順番を変更できます。',
+
+          pageSize:
+            'ページサイズ',
+
+          fitToImage:
+            '画像に合わせる',
+
+          buildPdf:
+            'PDFを作成',
+
+          mergeFiles:
+            'ファイルを結合',
+
+          mergedSuccess:
+            'PDFの結合が完了しました',
+
+          createdSuccess:
+            'PDFを作成しました',
+
+          downloadPdf:
+            'PDFをダウンロード',
+
+          downloadMergedPdf:
+            '結合したPDFをダウンロード',
+
+          imageFormat:
+            '形式',
+
+          resolution:
+            '解像度',
+
+          renderAllPages:
+            'すべてのページを変換',
+
+          pageProgress:
+            'ページ {current}/{total}',
+
+          manageInstructions:
+            '✕でページを削除し、↑ ↓で並べ替え、チェックを入れたページを別PDFとして保存できます。',
+
+          downloadPdfOrdered:
+            'PDFをダウンロード（現在の順序）',
+
+          downloadSelected:
+            '選択したページをダウンロード',
+
+          deleteThisPage:
+            'このページを削除',
+
+          moveUp:
+            '上へ移動',
+
+          moveDown:
+            '下へ移動',
+
+          watermarkText:
+            '透かし文字',
+
+          watermarkImage:
+            '透かしPNG',
+
+          watermarkImagePlaceholder:
+            '画像のみ使用する場合は空欄にしてください',
+
+          noImageSelected:
+            '画像が選択されていません',
+
+          fontSize:
+            '文字サイズ',
+
+          watermarkImageSize:
+            '透かし画像サイズ',
+
+          opacity:
+            '透明度',
+
+          angle:
+            '回転角度',
+
+          watermarkCombination:
+            '文字のみ、PNGのみ、または文字とPNGの両方を使用できます。',
+
+          readyWatermark:
+            '透かしを追加する準備ができました',
+
+          applyWatermark:
+            '透かしを追加',
+
+          pageNumberFormat:
+            'テキスト形式',
+
+          startCountingAt:
+            '開始番号',
+
+          position:
+            '位置',
+
+          bottomCenter:
+            '下中央',
+
+          bottomRight:
+            '右下',
+
+          bottomLeft:
+            '左下',
+
+          topCenter:
+            '上中央',
+
+          topRight:
+            '右上',
+
+          readyPageNumber:
+            'ページ番号を追加する準備ができました',
+
+          applyPageNumber:
+            'ページ番号を追加',
+
+          pageNumberHelp:
+            '{n} はページ番号、{total} は総ページ数です。'
+        },
+
+
+        dropzone: {
+
+          image:
+            'ここに画像をドラッグ＆ドロップするか、クリックしてファイルを選択してください',
+
+          pdf:
+            'ここにPDFをドラッグ＆ドロップしてください',
+
+          pdfMultiple:
+            'ここに複数のPDFをドラッグ＆ドロップしてください',
+
+          imageOnly:
+            'ここに画像ファイルをドラッグ＆ドロップしてください',
+
+          pdfOne:
+            'ここにPDFをドラッグ＆ドロップしてください'
+        },
+
+
+        errors: {
+
+          downloadDataNotFound:
+            'ダウンロードするデータが見つかりません。',
+
+          fileNotFound:
+            'ファイルが見つかりません。',
+
+          fileReadFailed:
+            'ファイルの読み込みに失敗しました。',
+
+          fileReadAborted:
+            'ファイルの読み込みが中止されました。',
+
+          imageLoadFailed:
+            '画像の読み込みに失敗しました。',
+
+          unsupportedFile:
+            'このファイル形式には対応していません。',
+
+          processingFailed:
+            'ファイルの処理に失敗しました。',
+
+          somethingWentWrong:
+            'エラーが発生しました。もう一度お試しください。'
+        },
+
+
+        file: {
+
+          size:
+            'ファイルサイズ: {size}',
+
+          largeWarning:
+            'このサイズのファイルは処理に時間がかかり、メモリを多く使用する可能性があります。',
+
+          continueQuestion:
+            '続行しますか？',
+
+          original:
+            '元のファイル'
+        },
+
+
+        utils: {
+
+          cacheHandlerFailed:
+            'clearCache ハンドラーの実行に失敗しました'
+        }
+
       }
     },
+
+
+    // ==========================================================
+    // KOREAN
+    // ==========================================================
 
     ko: {
+
       name: 'Korean',
+
       nativeName: '한국어',
+
       dir: 'ltr',
 
-      common: {
-        upload: '업로드',
-        chooseFile: '파일 선택',
-        download: '다운로드',
-        downloadAll: '모두 다운로드',
-        clear: '모두 지우기',
-        cancel: '취소',
-        delete: '삭제',
-        remove: '제거',
-        process: '처리',
-        processing: '처리 중...',
-        completed: '완료',
-        failed: '실패',
-        loading: '불러오는 중...',
-        ready: '준비 완료',
-        retry: '다시 시도',
-        close: '닫기',
-        save: '저장',
-        reset: '초기화',
-        continue: '계속',
-        confirm: '확인',
-        yes: '예',
-        no: '아니요',
-        files: '파일',
-        file: '파일',
-        items: '항목',
-        pages: '페이지',
-        page: '페이지'
-      },
+      messages: {
 
-      errors: {
-        downloadDataNotFound:
-          '다운로드할 데이터를 찾을 수 없습니다.',
+        common: {
 
-        fileNotFound:
-          '파일을 찾을 수 없습니다.',
+          home:
+            '홈',
 
-        fileReadFailed:
-          '파일을 읽지 못했습니다.',
+          image:
+            '이미지',
 
-        fileReadAborted:
-          '파일 읽기가 중단되었습니다.',
+          images:
+            '이미지',
 
-        imageLoadFailed:
-          '이미지를 불러오지 못했습니다.',
+          pdf:
+            'PDF',
 
-        unsupportedFile:
-          '지원되지 않는 파일 형식입니다.',
+          notepad:
+            '메모장',
 
-        processingFailed:
-          '파일 처리에 실패했습니다.',
+          upload:
+            '업로드',
 
-        somethingWentWrong:
-          '오류가 발생했습니다. 다시 시도해 주세요.'
-      },
+          chooseFile:
+            '파일 선택',
 
-      file: {
-        size:
-          '파일 크기: {size}',
+          chooseFiles:
+            '파일 선택',
 
-        largeWarning:
-          '이 정도 크기의 파일은 처리 시간이 길어지고 메모리를 많이 사용할 수 있습니다.',
+          download:
+            '다운로드',
 
-        continueQuestion:
-          '계속하시겠습니까?'
-      },
+          downloadAll:
+            '모두 다운로드',
 
-      accessibility: {
-        dropzone:
-          '여기에 파일을 드래그 앤 드롭하거나 클릭하여 파일을 선택하세요'
-      },
+          clear:
+            '모두 지우기',
 
-      utils: {
-        cacheHandlerFailed:
-          'clearCache 핸들러 실행에 실패했습니다'
+          cancel:
+            '취소',
+
+          delete:
+            '삭제',
+
+          remove:
+            '제거',
+
+          process:
+            '처리',
+
+          processing:
+            '처리 중...',
+
+          completed:
+            '완료',
+
+          failed:
+            '실패',
+
+          loading:
+            '불러오는 중...',
+
+          ready:
+            '준비 완료',
+
+          retry:
+            '다시 시도',
+
+          close:
+            '닫기',
+
+          save:
+            '저장',
+
+          reset:
+            '초기화',
+
+          continue:
+            '계속',
+
+          confirm:
+            '확인',
+
+          selectAll:
+            '모두 선택',
+
+          items:
+            '항목',
+
+          files:
+            '파일',
+
+          file:
+            '파일',
+
+          pages:
+            '페이지',
+
+          page:
+            '페이지',
+
+          jobs:
+            '작업',
+
+          original:
+            '원본',
+
+          format:
+            '형식',
+
+          size:
+            '크기',
+
+          quality:
+            '품질',
+
+          width:
+            '너비',
+
+          height:
+            '높이',
+
+          saveAs:
+            '다른 이름으로 저장',
+
+          result:
+            '결과',
+
+          done:
+            '완료'
+        },
+
+
+        page: {
+
+          title:
+            'Workshop Utility BY KITTO',
+
+          heading:
+            '파일 관리 도구',
+
+          subtitle:
+            '모든 이미지와 PDF를 브라우저에서 변환하고 편집하세요. 서버에 파일을 업로드하지 않습니다.',
+
+          footer:
+            '모든 작업은 브라우저에서 처리됩니다 — 파일은 외부로 전송되지 않습니다.',
+
+          notepadTitle:
+            '온라인 메모장 열기'
+        },
+
+
+        image: {
+
+          convertTitle:
+            '변환 및 크기 조정',
+
+          convertHint:
+            '파일 형식(PNG / JPG / WEBP)을 변환하고 크기, 품질, 회전, 뒤집기를 조정할 수 있습니다. 여러 파일을 한 번에 처리할 수 있습니다.',
+
+          cropTitle:
+            '이미지 자르기',
+
+          cropHint:
+            '이미지에서 원하는 영역을 선택하고 자유롭게 조정한 후 결과를 다운로드하세요.',
+
+          bgRemoveTitle:
+            '배경 제거',
+
+          bgRemoveHint:
+            'AI로 이미지 배경을 자동으로 제거합니다. 모든 작업은 브라우저에서 처리되며 이미지가 서버로 업로드되지 않습니다.',
+
+          compressTitle:
+            '이미지 압축',
+
+          compressHint:
+            '품질과 이미지 크기를 조정하여 파일 크기를 줄입니다. 모든 작업은 브라우저에서 처리됩니다.',
+
+          dropImage:
+            '여기에 이미지를 놓으세요',
+
+          chooseImage:
+            '또는 클릭하여 파일 선택',
+
+          supportedImages:
+            '여러 파일 지원 (JPG · PNG · WEBP · GIF · BMP)',
+
+          addMultiple:
+            '여러 이미지 추가',
+
+          cropSeparately:
+            '각 이미지는 개별적으로 자릅니다',
+
+          cropInstruction:
+            '프레임을 드래그하여 자르기',
+
+          outputTransparent:
+            '투명 배경 PNG로 출력',
+
+          compressSupported:
+            'JPG · PNG · WEBP 및 여러 파일 지원',
+
+          task:
+            '작업',
+
+          convertAll:
+            '모두 변환',
+
+          compressAll:
+            '모두 압축',
+
+          removeBackgroundAll:
+            '모든 배경 제거',
+
+          downloadZip:
+            '모두 다운로드 (.zip)',
+
+          allFormats:
+            '전체 형식',
+
+          choosePerFile:
+            '— 파일별 선택 —',
+
+          convertTo:
+            '변환 형식',
+
+          dimensions:
+            '크기 (px)',
+
+          rotateFlip:
+            '회전 / 뒤집기',
+
+          rotateLeft:
+            '왼쪽으로 90° 회전',
+
+          rotateRight:
+            '오른쪽으로 90° 회전',
+
+          flipHorizontal:
+            '좌우 뒤집기',
+
+          flipVertical:
+            '상하 뒤집기',
+
+          lockAspect:
+            '가로세로 비율 잠금',
+
+          aspectRatio:
+            '가로세로 비율',
+
+          free:
+            '자유',
+
+          crop:
+            '자르기',
+
+          saveFormat:
+            '저장 형식',
+
+          waitingConvert:
+            '대기 중',
+
+          waitingCrop:
+            '프레임을 드래그하여 자르세요',
+
+          waitingBackground:
+            '배경 제거 대기 중',
+
+          removeBackground:
+            '배경 제거',
+
+          waitingCompress:
+            '압축 대기 중',
+
+          compress:
+            '압축',
+
+          afterCompress:
+            '압축 후',
+
+          savings:
+            '절감',
+
+          modelFirstUse:
+            '처음 사용하면 약 40MB의 AI 모델을 다운로드합니다. 브라우저에 캐시되어 다음 사용부터 더 빨라집니다. 처리 시간은 기기 성능에 따라 달라집니다.'
+        },
+
+
+        pdf: {
+
+          fromImagesTitle:
+            '이미지를 PDF로',
+
+          fromImagesHint:
+            '여러 이미지를 하나의 PDF로 만들고 페이지 순서를 변경할 수 있습니다.',
+
+          toImagesTitle:
+            'PDF → 이미지',
+
+          toImagesHint:
+            'PDF의 모든 페이지를 이미지 파일로 변환합니다. 형식과 해상도를 선택할 수 있습니다.',
+
+          pagesTitle:
+            'PDF 페이지 관리',
+
+          pagesHint:
+            '페이지를 삭제하거나 순서를 변경하고 선택한 페이지만 새 PDF로 저장할 수 있습니다.',
+
+          mergeTitle:
+            'PDF 병합',
+
+          mergeHint:
+            '여러 PDF 파일을 하나로 병합하고 병합 전에 순서를 변경할 수 있습니다.',
+
+          watermarkTitle:
+            'PDF 워터마크',
+
+          watermarkHint:
+            'PDF의 모든 페이지에 텍스트 또는 PNG 워터마크를 추가합니다.',
+
+          pageNumbersTitle:
+            '페이지 번호 추가',
+
+          pageNumbersHint:
+            'PDF의 모든 페이지에 페이지 번호를 자동으로 추가합니다.',
+
+          dropPdf:
+            '여기에 PDF를 놓으세요',
+
+          dropPdfMultiple:
+            '여기에 여러 PDF 파일을 놓으세요',
+
+          clickChoosePdf:
+            '또는 클릭하여 파일 선택',
+
+          oneFile:
+            '한 번에 한 파일',
+
+          multipleFiles:
+            '여러 파일 추가',
+
+          imagesToPdfOrder:
+            '추가한 순서가 PDF 페이지 순서가 됩니다.',
+
+          mergeOrder:
+            '아래에서 병합 전에 순서를 변경할 수 있습니다.',
+
+          pageSize:
+            '페이지 크기',
+
+          fitToImage:
+            '이미지에 맞추기',
+
+          buildPdf:
+            'PDF 만들기',
+
+          mergeFiles:
+            '파일 병합',
+
+          mergedSuccess:
+            'PDF 병합 완료',
+
+          createdSuccess:
+            'PDF 생성 완료',
+
+          downloadPdf:
+            'PDF 다운로드',
+
+          downloadMergedPdf:
+            '병합된 PDF 다운로드',
+
+          imageFormat:
+            '형식',
+
+          resolution:
+            '해상도',
+
+          renderAllPages:
+            '모든 페이지 변환',
+
+          pageProgress:
+            '페이지 {current}/{total}',
+
+          manageInstructions:
+            '✕로 페이지를 삭제하고 ↑ ↓로 순서를 변경할 수 있습니다.',
+
+          downloadPdfOrdered:
+            'PDF 다운로드 (현재 순서)',
+
+          downloadSelected:
+            '선택 항목 다운로드',
+
+          deleteThisPage:
+            '이 페이지 삭제',
+
+          moveUp:
+            '위로 이동',
+
+          moveDown:
+            '아래로 이동',
+
+          watermarkText:
+            '워터마크 텍스트',
+
+          watermarkImage:
+            '워터마크 PNG',
+
+          watermarkImagePlaceholder:
+            '이미지만 사용할 경우 비워두세요',
+
+          noImageSelected:
+            '이미지가 선택되지 않았습니다',
+
+          fontSize:
+            '글자 크기',
+
+          watermarkImageSize:
+            '워터마크 이미지 크기',
+
+          opacity:
+            '투명도',
+
+          angle:
+            '회전 각도',
+
+          watermarkCombination:
+            '텍스트만, PNG만 또는 둘 다 사용할 수 있습니다.',
+
+          readyWatermark:
+            '워터마크를 추가할 준비가 되었습니다',
+
+          applyWatermark:
+            '워터마크 추가',
+
+          pageNumberFormat:
+            '텍스트 형식',
+
+          startCountingAt:
+            '시작 번호',
+
+          position:
+            '위치',
+
+          bottomCenter:
+            '하단 중앙',
+
+          bottomRight:
+            '오른쪽 아래',
+
+          bottomLeft:
+            '왼쪽 아래',
+
+          topCenter:
+            '상단 중앙',
+
+          topRight:
+            '오른쪽 위',
+
+          readyPageNumber:
+            '페이지 번호를 추가할 준비가 되었습니다',
+
+          applyPageNumber:
+            '페이지 번호 추가',
+
+          pageNumberHelp:
+            '{n}은 페이지 번호, {total}은 전체 페이지 수입니다.'
+        },
+
+
+        dropzone: {
+
+          image:
+            '이미지 파일을 여기에 드래그 앤 드롭하거나 클릭하여 선택하세요',
+
+          pdf:
+            'PDF 파일을 여기에 드래그 앤 드롭하세요',
+
+          pdfMultiple:
+            '여기에 여러 PDF 파일을 드래그 앤 드롭하세요',
+
+          imageOnly:
+            '여기에 이미지 파일을 드래그 앤 드롭하세요',
+
+          pdfOne:
+            '여기에 PDF를 드래그 앤 드롭하세요'
+        },
+
+
+        errors: {
+
+          downloadDataNotFound:
+            '다운로드할 데이터를 찾을 수 없습니다.',
+
+          fileNotFound:
+            '파일을 찾을 수 없습니다.',
+
+          fileReadFailed:
+            '파일을 읽지 못했습니다.',
+
+          fileReadAborted:
+            '파일 읽기가 중단되었습니다.',
+
+          imageLoadFailed:
+            '이미지를 불러오지 못했습니다.',
+
+          unsupportedFile:
+            '지원되지 않는 파일 형식입니다.',
+
+          processingFailed:
+            '파일 처리에 실패했습니다.',
+
+          somethingWentWrong:
+            '오류가 발생했습니다. 다시 시도해 주세요.'
+        },
+
+
+        file: {
+
+          size:
+            '파일 크기: {size}',
+
+          largeWarning:
+            '이 정도 크기의 파일은 처리 시간이 길어지고 메모리를 많이 사용할 수 있습니다.',
+
+          continueQuestion:
+            '계속하시겠습니까?',
+
+          original:
+            '원본'
+        },
+
+
+        utils: {
+
+          cacheHandlerFailed:
+            'clearCache 핸들러 실행에 실패했습니다'
+        }
+
       }
     },
+
+
+    // ==========================================================
+    // SIMPLIFIED CHINESE
+    // ==========================================================
 
     'zh-CN': {
+
       name: 'Chinese Simplified',
+
       nativeName: '简体中文',
+
       dir: 'ltr',
 
-      common: {
-        upload: '上传',
-        chooseFile: '选择文件',
-        download: '下载',
-        downloadAll: '全部下载',
-        clear: '全部清除',
-        cancel: '取消',
-        delete: '删除',
-        remove: '移除',
-        process: '开始处理',
-        processing: '处理中...',
-        completed: '完成',
-        failed: '失败',
-        loading: '加载中...',
-        ready: '准备就绪',
-        retry: '重试',
-        close: '关闭',
-        save: '保存',
-        reset: '重置',
-        continue: '继续',
-        confirm: '确认',
-        yes: '是',
-        no: '否',
-        files: '个文件',
-        file: '文件',
-        items: '项',
-        pages: '页',
-        page: '页'
-      },
+      messages: {
 
-      errors: {
-        downloadDataNotFound:
-          '未找到可下载的数据。',
+        common: {
 
-        fileNotFound:
-          '未找到文件。',
+          home:
+            '首页',
 
-        fileReadFailed:
-          '读取文件失败。',
+          image:
+            '图片',
 
-        fileReadAborted:
-          '文件读取已中止。',
+          images:
+            '图片',
 
-        imageLoadFailed:
-          '加载图片失败。',
+          pdf:
+            'PDF',
 
-        unsupportedFile:
-          '不支持此文件类型。',
+          notepad:
+            '记事本',
 
-        processingFailed:
-          '文件处理失败。',
+          upload:
+            '上传',
 
-        somethingWentWrong:
-          '发生错误，请重试。'
-      },
+          chooseFile:
+            '选择文件',
 
-      file: {
-        size:
-          '文件大小：{size}',
+          chooseFiles:
+            '选择文件',
 
-        largeWarning:
-          '此大小的文件可能需要更长的处理时间，并占用较多内存。',
+          download:
+            '下载',
 
-        continueQuestion:
-          '是否继续？'
-      },
+          downloadAll:
+            '全部下载',
 
-      accessibility: {
-        dropzone:
-          '将文件拖放到这里，或点击选择文件'
-      },
+          clear:
+            '全部清除',
 
-      utils: {
-        cacheHandlerFailed:
-          'clearCache 处理程序执行失败'
+          cancel:
+            '取消',
+
+          delete:
+            '删除',
+
+          remove:
+            '移除',
+
+          process:
+            '开始处理',
+
+          processing:
+            '处理中...',
+
+          completed:
+            '完成',
+
+          failed:
+            '失败',
+
+          loading:
+            '加载中...',
+
+          ready:
+            '准备就绪',
+
+          retry:
+            '重试',
+
+          close:
+            '关闭',
+
+          save:
+            '保存',
+
+          reset:
+            '重置',
+
+          continue:
+            '继续',
+
+          confirm:
+            '确认',
+
+          selectAll:
+            '全选',
+
+          items:
+            '项',
+
+          files:
+            '个文件',
+
+          file:
+            '文件',
+
+          pages:
+            '页',
+
+          page:
+            '页',
+
+          jobs:
+            '任务',
+
+          original:
+            '原始',
+
+          format:
+            '格式',
+
+          size:
+            '大小',
+
+          quality:
+            '质量',
+
+          width:
+            '宽度',
+
+          height:
+            '高度',
+
+          saveAs:
+            '保存为',
+
+          result:
+            '结果',
+
+          done:
+            '完成'
+        },
+
+
+        page: {
+
+          title:
+            'Workshop Utility BY KITTO',
+
+          heading:
+            '文件管理工具',
+
+          subtitle:
+            '在浏览器中转换和编辑图片/PDF。不会将文件上传到任何服务器。',
+
+          footer:
+            '全部在浏览器中处理 — 文件不会发送到任何地方。',
+
+          notepadTitle:
+            '打开在线记事本'
+        },
+
+
+        image: {
+
+          convertTitle:
+            '格式转换与调整大小',
+
+          convertHint:
+            '转换文件格式（PNG / JPG / WEBP），调整尺寸、质量、旋转和翻转。支持批量处理。',
+
+          cropTitle:
+            '裁剪图片',
+
+          cropHint:
+            '选择要裁剪的区域，自由调整裁剪框，然后下载结果。',
+
+          bgRemoveTitle:
+            '移除背景',
+
+          bgRemoveHint:
+            '使用 AI 自动移除图片背景。全部在浏览器中处理，不会上传图片。',
+
+          compressTitle:
+            '压缩图片',
+
+          compressHint:
+            '通过调整质量和尺寸减小图片文件大小。全部在浏览器中处理。',
+
+          dropImage:
+            '将图片拖放到这里',
+
+          chooseImage:
+            '或点击选择文件',
+
+          supportedImages:
+            '支持多个文件（JPG · PNG · WEBP · GIF · BMP）',
+
+          addMultiple:
+            '可添加多个图片',
+
+          cropSeparately:
+            '每张图片单独裁剪',
+
+          cropInstruction:
+            '拖动边框进行裁剪',
+
+          outputTransparent:
+            '输出为透明背景 PNG',
+
+          compressSupported:
+            '支持 JPG · PNG · WEBP 和多个文件',
+
+          task:
+            '任务',
+
+          convertAll:
+            '全部转换',
+
+          compressAll:
+            '全部压缩',
+
+          removeBackgroundAll:
+            '全部移除背景',
+
+          downloadZip:
+            '全部下载 (.zip)',
+
+          allFormats:
+            '全部格式',
+
+          choosePerFile:
+            '— 单独选择 —',
+
+          convertTo:
+            '转换为',
+
+          dimensions:
+            '尺寸 (px)',
+
+          rotateFlip:
+            '旋转 / 翻转',
+
+          rotateLeft:
+            '向左旋转 90°',
+
+          rotateRight:
+            '向右旋转 90°',
+
+          flipHorizontal:
+            '水平翻转',
+
+          flipVertical:
+            '垂直翻转',
+
+          lockAspect:
+            '锁定比例',
+
+          aspectRatio:
+            '宽高比',
+
+          free:
+            '自由',
+
+          crop:
+            '裁剪',
+
+          saveFormat:
+            '保存为',
+
+          waitingConvert:
+            '等待转换',
+
+          waitingCrop:
+            '拖动边框进行裁剪',
+
+          waitingBackground:
+            '等待移除背景',
+
+          removeBackground:
+            '移除背景',
+
+          waitingCompress:
+            '等待压缩',
+
+          compress:
+            '压缩',
+
+          afterCompress:
+            '压缩后',
+
+          savings:
+            '节省',
+
+          modelFirstUse:
+            '首次使用会加载约 40MB 的 AI 模型。浏览器会缓存模型，以便下次更快使用。处理时间取决于设备性能。'
+        },
+
+
+        pdf: {
+
+          fromImagesTitle:
+            '图片转 PDF',
+
+          fromImagesHint:
+            '将多个图片合并为一个 PDF，并调整页面顺序。',
+
+          toImagesTitle:
+            'PDF → 图片',
+
+          toImagesHint:
+            '将 PDF 的每一页转换为图片。可以选择格式和分辨率。',
+
+          pagesTitle:
+            '管理 PDF 页面',
+
+          pagesHint:
+            '删除页面、重新排序，或将选中的页面导出为新的 PDF。',
+
+          mergeTitle:
+            '合并 PDF',
+
+          mergeHint:
+            '将多个 PDF 合并为一个文件，并在合并前调整顺序。',
+
+          watermarkTitle:
+            'PDF 水印',
+
+          watermarkHint:
+            '在 PDF 每一页添加文字或 PNG 水印。',
+
+          pageNumbersTitle:
+            '添加页码',
+
+          pageNumbersHint:
+            '自动为 PDF 每一页添加页码，并选择位置和格式。',
+
+          dropPdf:
+            '将 PDF 拖放到这里',
+
+          dropPdfMultiple:
+            '将多个 PDF 拖放到这里',
+
+          clickChoosePdf:
+            '或点击选择文件',
+
+          oneFile:
+            '一次一个文件',
+
+          multipleFiles:
+            '可添加多个文件',
+
+          imagesToPdfOrder:
+            '添加顺序将成为 PDF 页面顺序。',
+
+          mergeOrder:
+            '可在下方重新排序后再合并。',
+
+          pageSize:
+            '页面大小',
+
+          fitToImage:
+            '适合图片',
+
+          buildPdf:
+            '创建 PDF',
+
+          mergeFiles:
+            '合并文件',
+
+          mergedSuccess:
+            'PDF 合并成功',
+
+          createdSuccess:
+            'PDF 创建成功',
+
+          downloadPdf:
+            '下载 PDF',
+
+          downloadMergedPdf:
+            '下载合并后的 PDF',
+
+          imageFormat:
+            '格式',
+
+          resolution:
+            '分辨率',
+
+          renderAllPages:
+            '转换所有页面',
+
+          pageProgress:
+            '第 {current}/{total} 页',
+
+          manageInstructions:
+            '使用 ✕ 删除页面，使用 ↑ ↓ 重新排序，并勾选要单独导出的页面。',
+
+          downloadPdfOrdered:
+            '下载 PDF（当前顺序）',
+
+          downloadSelected:
+            '下载选中页面',
+
+          deleteThisPage:
+            '删除此页面',
+
+          moveUp:
+            '上移',
+
+          moveDown:
+            '下移',
+
+          watermarkText:
+            '水印文字',
+
+          watermarkImage:
+            '水印 PNG',
+
+          watermarkImagePlaceholder:
+            '仅使用图片时可留空',
+
+          noImageSelected:
+            '尚未选择图片',
+
+          fontSize:
+            '字体大小',
+
+          watermarkImageSize:
+            '水印图片大小',
+
+          opacity:
+            '透明度',
+
+          angle:
+            '旋转角度',
+
+          watermarkCombination:
+            '可以只使用文字、只使用 PNG，或同时使用两者。',
+
+          readyWatermark:
+            '准备添加水印',
+
+          applyWatermark:
+            '添加水印',
+
+          pageNumberFormat:
+            '文字格式',
+
+          startCountingAt:
+            '起始页码',
+
+          position:
+            '位置',
+
+          bottomCenter:
+            '底部居中',
+
+          bottomRight:
+            '右下',
+
+          bottomLeft:
+            '左下',
+
+          topCenter:
+            '顶部居中',
+
+          topRight:
+            '右上',
+
+          readyPageNumber:
+            '准备添加页码',
+
+          applyPageNumber:
+            '添加页码',
+
+          pageNumberHelp:
+            '{n} 表示页码，{total} 表示总页数。'
+        },
+
+
+        dropzone: {
+
+          image:
+            '将图片文件拖放到这里，或点击选择文件',
+
+          pdf:
+            '将 PDF 拖放到这里',
+
+          pdfMultiple:
+            '将多个 PDF 拖放到这里',
+
+          imageOnly:
+            '将图片文件拖放到这里',
+
+          pdfOne:
+            '将 PDF 拖放到这里'
+        },
+
+
+        errors: {
+
+          downloadDataNotFound:
+            '找不到可下载的数据。',
+
+          fileNotFound:
+            '找不到文件。',
+
+          fileReadFailed:
+            '读取文件失败。',
+
+          fileReadAborted:
+            '文件读取已中止。',
+
+          imageLoadFailed:
+            '图片加载失败。',
+
+          unsupportedFile:
+            '不支持此文件类型。',
+
+          processingFailed:
+            '文件处理失败。',
+
+          somethingWentWrong:
+            '发生错误，请重试。'
+        },
+
+
+        file: {
+
+          size:
+            '文件大小：{size}',
+
+          largeWarning:
+            '此大小的文件可能需要更长的处理时间，并占用较多内存。',
+
+          continueQuestion:
+            '是否继续？',
+
+          original:
+            '原始'
+        },
+
+
+        utils: {
+
+          cacheHandlerFailed:
+            'clearCache 处理程序执行失败'
+        }
+
       }
     },
 
+
+    // ==========================================================
+    // TRADITIONAL CHINESE
+    // ==========================================================
+
     'zh-TW': {
+
       name: 'Chinese Traditional',
+
       nativeName: '繁體中文',
+
       dir: 'ltr',
 
-      common: {
-        upload: '上傳',
-        chooseFile: '選擇檔案',
-        download: '下載',
-        downloadAll: '全部下載',
-        clear: '全部清除',
-        cancel: '取消',
-        delete: '刪除',
-        remove: '移除',
-        process: '開始處理',
-        processing: '處理中...',
-        completed: '完成',
-        failed: '失敗',
-        loading: '載入中...',
-        ready: '準備完成',
-        retry: '重試',
-        close: '關閉',
-        save: '儲存',
-        reset: '重設',
-        continue: '繼續',
-        confirm: '確認',
-        yes: '是',
-        no: '否',
-        files: '個檔案',
-        file: '檔案',
-        items: '項目',
-        pages: '頁',
-        page: '頁'
-      },
+      messages: {
 
-      errors: {
-        downloadDataNotFound:
-          '找不到可下載的資料。',
+        common: {
 
-        fileNotFound:
-          '找不到檔案。',
+          home:
+            '首頁',
 
-        fileReadFailed:
-          '讀取檔案失敗。',
+          image:
+            '圖片',
 
-        fileReadAborted:
-          '檔案讀取已中止。',
+          images:
+            '圖片',
 
-        imageLoadFailed:
-          '載入圖片失敗。',
+          pdf:
+            'PDF',
 
-        unsupportedFile:
-          '不支援此檔案類型。',
+          notepad:
+            '記事本',
 
-        processingFailed:
-          '檔案處理失敗。',
+          upload:
+            '上傳',
 
-        somethingWentWrong:
-          '發生錯誤，請再試一次。'
-      },
+          chooseFile:
+            '選擇檔案',
 
-      file: {
-        size:
-          '檔案大小：{size}',
+          chooseFiles:
+            '選擇檔案',
 
-        largeWarning:
-          '此大小的檔案可能需要較長的處理時間，並使用較多記憶體。',
+          download:
+            '下載',
 
-        continueQuestion:
-          '是否要繼續？'
-      },
+          downloadAll:
+            '全部下載',
 
-      accessibility: {
-        dropzone:
-          '將檔案拖曳到這裡，或點擊選擇檔案'
-      },
+          clear:
+            '全部清除',
 
-      utils: {
-        cacheHandlerFailed:
-          'clearCache 處理程序執行失敗'
+          cancel:
+            '取消',
+
+          delete:
+            '刪除',
+
+          remove:
+            '移除',
+
+          process:
+            '開始處理',
+
+          processing:
+            '處理中...',
+
+          completed:
+            '完成',
+
+          failed:
+            '失敗',
+
+          loading:
+            '載入中...',
+
+          ready:
+            '準備完成',
+
+          retry:
+            '重試',
+
+          close:
+            '關閉',
+
+          save:
+            '儲存',
+
+          reset:
+            '重設',
+
+          continue:
+            '繼續',
+
+          confirm:
+            '確認',
+
+          selectAll:
+            '全選',
+
+          items:
+            '項目',
+
+          files:
+            '個檔案',
+
+          file:
+            '檔案',
+
+          pages:
+            '頁',
+
+          page:
+            '頁',
+
+          jobs:
+            '工作',
+
+          original:
+            '原始',
+
+          format:
+            '格式',
+
+          size:
+            '大小',
+
+          quality:
+            '品質',
+
+          width:
+            '寬度',
+
+          height:
+            '高度',
+
+          saveAs:
+            '另存為',
+
+          result:
+            '結果',
+
+          done:
+            '完成'
+        },
+
+
+        page: {
+
+          title:
+            'Workshop Utility BY KITTO',
+
+          heading:
+            '檔案管理工具',
+
+          subtitle:
+            '在瀏覽器中轉換和編輯圖片/PDF，不會將檔案上傳到任何伺服器。',
+
+          footer:
+            '全部在瀏覽器中處理 — 檔案不會傳送到任何地方。',
+
+          notepadTitle:
+            '開啟線上記事本'
+        },
+
+
+        image: {
+
+          convertTitle:
+            '格式轉換與調整大小',
+
+          convertHint:
+            '轉換檔案格式（PNG / JPG / WEBP），調整尺寸、品質、旋轉和翻轉。支援多個檔案。',
+
+          cropTitle:
+            '裁切圖片',
+
+          cropHint:
+            '選擇要裁切的區域，自由調整框線後下載結果。',
+
+          bgRemoveTitle:
+            '移除背景',
+
+          bgRemoveHint:
+            '使用 AI 自動移除圖片背景。全部在瀏覽器中處理，不會上傳圖片。',
+
+          compressTitle:
+            '壓縮圖片',
+
+          compressHint:
+            '透過調整品質和尺寸來縮小圖片檔案大小。全部在瀏覽器中處理。',
+
+          dropImage:
+            '將圖片拖曳到這裡',
+
+          chooseImage:
+            '或點擊選擇檔案',
+
+          supportedImages:
+            '支援多個檔案（JPG · PNG · WEBP · GIF · BMP）',
+
+          addMultiple:
+            '可新增多張圖片',
+
+          cropSeparately:
+            '每張圖片分別裁切',
+
+          cropInstruction:
+            '拖曳框線進行裁切',
+
+          outputTransparent:
+            '輸出為透明背景 PNG',
+
+          compressSupported:
+            '支援 JPG · PNG · WEBP 和多個檔案',
+
+          task:
+            '工作',
+
+          convertAll:
+            '全部轉換',
+
+          compressAll:
+            '全部壓縮',
+
+          removeBackgroundAll:
+            '全部移除背景',
+
+          downloadZip:
+            '全部下載 (.zip)',
+
+          allFormats:
+            '全部格式',
+
+          choosePerFile:
+            '— 個別選擇 —',
+
+          convertTo:
+            '轉換為',
+
+          dimensions:
+            '尺寸 (px)',
+
+          rotateFlip:
+            '旋轉 / 翻轉',
+
+          rotateLeft:
+            '向左旋轉 90°',
+
+          rotateRight:
+            '向右旋轉 90°',
+
+          flipHorizontal:
+            '水平翻轉',
+
+          flipVertical:
+            '垂直翻轉',
+
+          lockAspect:
+            '鎖定比例',
+
+          aspectRatio:
+            '長寬比',
+
+          free:
+            '自由',
+
+          crop:
+            '裁切',
+
+          saveFormat:
+            '儲存格式',
+
+          waitingConvert:
+            '等待轉換',
+
+          waitingCrop:
+            '拖曳框線進行裁切',
+
+          waitingBackground:
+            '等待移除背景',
+
+          removeBackground:
+            '移除背景',
+
+          waitingCompress:
+            '等待壓縮',
+
+          compress:
+            '壓縮',
+
+          afterCompress:
+            '壓縮後',
+
+          savings:
+            '節省',
+
+          modelFirstUse:
+            '第一次使用會載入約 40MB 的 AI 模型。瀏覽器會快取模型，之後使用會更快。處理時間取決於裝置效能。'
+        },
+
+
+        pdf: {
+
+          fromImagesTitle:
+            '圖片轉 PDF',
+
+          fromImagesHint:
+            '將多張圖片合併成一個 PDF，並可調整頁面順序。',
+
+          toImagesTitle:
+            'PDF → 圖片',
+
+          toImagesHint:
+            '將 PDF 的每一頁轉換為圖片檔案，可選擇格式與解析度。',
+
+          pagesTitle:
+            '管理 PDF 頁面',
+
+          pagesHint:
+            '刪除頁面、重新排序，或將選取的頁面輸出為新的 PDF。',
+
+          mergeTitle:
+            '合併 PDF',
+
+          mergeHint:
+            '將多個 PDF 合併成一個檔案，並可在合併前調整順序。',
+
+          watermarkTitle:
+            'PDF 浮水印',
+
+          watermarkHint:
+            '在 PDF 每一頁加入文字或 PNG 浮水印。',
+
+          pageNumbersTitle:
+            '加入頁碼',
+
+          pageNumbersHint:
+            '自動在 PDF 每一頁加入頁碼，並選擇位置與格式。',
+
+          dropPdf:
+            '將 PDF 拖曳到這裡',
+
+          dropPdfMultiple:
+            '將多個 PDF 拖曳到這裡',
+
+          clickChoosePdf:
+            '或點擊選擇檔案',
+
+          oneFile:
+            '一次一個檔案',
+
+          multipleFiles:
+            '可新增多個檔案',
+
+          imagesToPdfOrder:
+            '新增順序會成為 PDF 的頁面順序。',
+
+          mergeOrder:
+            '可在下方調整合併前的順序。',
+
+          pageSize:
+            '頁面大小',
+
+          fitToImage:
+            '符合圖片',
+
+          buildPdf:
+            '建立 PDF',
+
+          mergeFiles:
+            '合併檔案',
+
+          mergedSuccess:
+            'PDF 合併成功',
+
+          createdSuccess:
+            'PDF 建立成功',
+
+          downloadPdf:
+            '下載 PDF',
+
+          downloadMergedPdf:
+            '下載合併後的 PDF',
+
+          imageFormat:
+            '格式',
+
+          resolution:
+            '解析度',
+
+          renderAllPages:
+            '轉換所有頁面',
+
+          pageProgress:
+            '第 {current}/{total} 頁',
+
+          manageInstructions:
+            '使用 ✕ 刪除頁面，使用 ↑ ↓ 調整順序，並勾選要另外匯出的頁面。',
+
+          downloadPdfOrdered:
+            '下載 PDF（目前順序）',
+
+          downloadSelected:
+            '下載選取頁面',
+
+          deleteThisPage:
+            '刪除此頁',
+
+          moveUp:
+            '上移',
+
+          moveDown:
+            '下移',
+
+          watermarkText:
+            '浮水印文字',
+
+          watermarkImage:
+            '浮水印 PNG',
+
+          watermarkImagePlaceholder:
+            '只使用圖片時可留空',
+
+          noImageSelected:
+            '尚未選擇圖片',
+
+          fontSize:
+            '字體大小',
+
+          watermarkImageSize:
+            '浮水印圖片大小',
+
+          opacity:
+            '透明度',
+
+          angle:
+            '旋轉角度',
+
+          watermarkCombination:
+            '可以只使用文字、只使用 PNG，或同時使用兩者。',
+
+          readyWatermark:
+            '準備加入浮水印',
+
+          applyWatermark:
+            '加入浮水印',
+
+          pageNumberFormat:
+            '文字格式',
+
+          startCountingAt:
+            '起始頁碼',
+
+          position:
+            '位置',
+
+          bottomCenter:
+            '下方置中',
+
+          bottomRight:
+            '右下',
+
+          bottomLeft:
+            '左下',
+
+          topCenter:
+            '上方置中',
+
+          topRight:
+            '右上',
+
+          readyPageNumber:
+            '準備加入頁碼',
+
+          applyPageNumber:
+            '加入頁碼',
+
+          pageNumberHelp:
+            '{n} 代表頁碼，{total} 代表總頁數。'
+        },
+
+
+        dropzone: {
+
+          image:
+            '將圖片檔案拖曳到這裡，或點擊選擇檔案',
+
+          pdf:
+            '將 PDF 拖曳到這裡',
+
+          pdfMultiple:
+            '將多個 PDF 拖曳到這裡',
+
+          imageOnly:
+            '將圖片檔案拖曳到這裡',
+
+          pdfOne:
+            '將 PDF 拖曳到這裡'
+        },
+
+
+        errors: {
+
+          downloadDataNotFound:
+            '找不到可下載的資料。',
+
+          fileNotFound:
+            '找不到檔案。',
+
+          fileReadFailed:
+            '讀取檔案失敗。',
+
+          fileReadAborted:
+            '檔案讀取已中止。',
+
+          imageLoadFailed:
+            '圖片載入失敗。',
+
+          unsupportedFile:
+            '不支援此檔案類型。',
+
+          processingFailed:
+            '檔案處理失敗。',
+
+          somethingWentWrong:
+            '發生錯誤，請再試一次。'
+        },
+
+
+        file: {
+
+          size:
+            '檔案大小：{size}',
+
+          largeWarning:
+            '此大小的檔案可能需要較長的處理時間，並使用較多記憶體。',
+
+          continueQuestion:
+            '是否要繼續？',
+
+          original:
+            '原始'
+        },
+
+
+        utils: {
+
+          cacheHandlerFailed:
+            'clearCache 處理程序執行失敗'
+        }
+
       }
     }
+
   };
 
 
@@ -519,134 +3400,244 @@ window.I18n = (() => {
   // LANGUAGE HELPERS
   // ============================================================
 
-  function hasLanguage(lang) {
+  function hasLanguage(
+    language
+  ) {
     return Object.prototype.hasOwnProperty.call(
       LANGUAGES,
-      lang
+      language
     );
   }
 
 
-  function normalizeLanguage(lang) {
-    if (!lang) {
+  function normalizeLanguage(
+    language
+  ) {
+    if (!language) {
       return '';
     }
 
-    return String(lang)
+    return String(language)
       .trim()
-      .replace('_', '-');
+      .replace(/_/g, '-');
   }
 
 
-  function findBestLanguage(list) {
-    if (!Array.isArray(list)) {
+  function getBaseLanguage(
+    language
+  ) {
+    const normalized =
+      normalizeLanguage(language);
+
+    if (!normalized) {
+      return '';
+    }
+
+    return normalized
+      .split('-')[0]
+      .toLowerCase();
+  }
+
+
+  // ============================================================
+  // FIND BEST LANGUAGE
+  // ============================================================
+
+  function findBestLanguage(
+    languageList
+  ) {
+    if (
+      !Array.isArray(languageList)
+    ) {
       return null;
     }
 
-    for (const raw of list) {
-      const lang = normalizeLanguage(raw);
 
-      if (!lang) {
+    // ----------------------------------------------------------
+    // Exact match
+    // ----------------------------------------------------------
+
+    for (
+      const rawLanguage of languageList
+    ) {
+
+      const language =
+        normalizeLanguage(
+          rawLanguage
+        );
+
+      if (
+        hasLanguage(language)
+      ) {
+        return language;
+      }
+    }
+
+
+    // ----------------------------------------------------------
+    // Base language match
+    // เช่น:
+    // en-US -> en
+    // th-TH -> th
+    // ja-JP -> ja
+    // ----------------------------------------------------------
+
+    for (
+      const rawLanguage of languageList
+    ) {
+
+      const base =
+        getBaseLanguage(
+          rawLanguage
+        );
+
+      if (!base) {
         continue;
       }
 
-      // exact
-      if (hasLanguage(lang)) {
-        return lang;
-      }
-
-      // base language เช่น en-US -> en
-      const base = lang.split('-')[0];
-
-      if (hasLanguage(base)) {
+      if (
+        hasLanguage(base)
+      ) {
         return base;
       }
+    }
 
-      /*
-       * รองรับกรณี zh-Hant / zh-TW
-       */
+
+    // ----------------------------------------------------------
+    // Chinese special case
+    // ----------------------------------------------------------
+
+    for (
+      const rawLanguage of languageList
+    ) {
+
+      const language =
+        normalizeLanguage(
+          rawLanguage
+        ).toLowerCase();
+
       if (
-        base === 'zh' &&
-        (
-          lang.toLowerCase().includes('tw') ||
-          lang.toLowerCase().includes('hk') ||
-          lang.toLowerCase().includes('hant')
-        )
+        language === 'zh-tw' ||
+        language === 'zh-hk' ||
+        language === 'zh-mo' ||
+        language.includes('hant')
       ) {
-        if (hasLanguage('zh-TW')) {
+
+        if (
+          hasLanguage('zh-TW')
+        ) {
           return 'zh-TW';
         }
       }
 
       if (
-        base === 'zh' &&
-        (
-          lang.toLowerCase().includes('cn') ||
-          lang.toLowerCase().includes('sg') ||
-          lang.toLowerCase().includes('hans')
-        )
+        language === 'zh-cn' ||
+        language === 'zh-sg' ||
+        language === 'zh-my' ||
+        language.includes('hans')
       ) {
-        if (hasLanguage('zh-CN')) {
+
+        if (
+          hasLanguage('zh-CN')
+        ) {
           return 'zh-CN';
         }
       }
     }
 
+
     return null;
   }
 
 
+  // ============================================================
+  // DETECT BROWSER LANGUAGES
+  // ============================================================
+
   function getBrowserLanguages() {
-    const result = [];
+    const languages = [];
+
 
     if (
-      typeof navigator !== 'undefined' &&
-      Array.isArray(navigator.languages)
+      typeof navigator !==
+      'undefined'
     ) {
-      result.push(
-        ...navigator.languages
-      );
-    }
 
-    if (
-      typeof navigator !== 'undefined' &&
-      navigator.language
-    ) {
-      result.push(
+      if (
+        Array.isArray(
+          navigator.languages
+        )
+      ) {
+
+        languages.push(
+          ...navigator.languages
+        );
+      }
+
+
+      if (
         navigator.language
-      );
+      ) {
+
+        languages.push(
+          navigator.language
+        );
+      }
     }
 
-    return result;
+
+    return languages;
   }
 
 
-  function detectLanguage() {
-    // ----------------------------------------------------------
-    // 1. ภาษาที่ผู้ใช้เลือกเอง
-    // ----------------------------------------------------------
+  // ============================================================
+  // LOAD SAVED LANGUAGE
+  // ============================================================
 
-    let saved = null;
-
+  function getSavedLanguage() {
     try {
-      saved =
+
+      const saved =
         localStorage.getItem(
           STORAGE_KEY
         );
+
+      if (
+        saved &&
+        hasLanguage(saved)
+      ) {
+        return saved;
+      }
+
     } catch (_) {
-      saved = null;
+      // localStorage unavailable
     }
 
-    if (
-      saved &&
-      hasLanguage(saved)
-    ) {
+
+    return null;
+  }
+
+
+  // ============================================================
+  // DETECT LANGUAGE
+  // ============================================================
+
+  function detectLanguage() {
+
+    // ----------------------------------------------------------
+    // 1. User selected language
+    // ----------------------------------------------------------
+
+    const saved =
+      getSavedLanguage();
+
+    if (saved) {
       return saved;
     }
 
 
     // ----------------------------------------------------------
-    // 2. ภาษาของ Browser
+    // 2. Browser language
     // ----------------------------------------------------------
 
     const browserLanguages =
@@ -663,7 +3654,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // 3. fallback
+    // 3. Fallback
     // ----------------------------------------------------------
 
     return DEFAULT_LANGUAGE;
@@ -679,7 +3670,7 @@ window.I18n = (() => {
 
 
   // ============================================================
-  // GET TRANSLATION
+  // GET NESTED VALUE
   // ============================================================
 
   function getNestedValue(
@@ -693,23 +3684,28 @@ window.I18n = (() => {
       return undefined;
     }
 
+
     const parts =
       String(path).split('.');
+
 
     let current =
       source;
 
+
     for (
-      let i = 0;
-      i < parts.length;
-      i++
+      const key of parts
     ) {
-      const key =
-        parts[i];
 
       if (
         current === null ||
-        current === undefined ||
+        current === undefined
+      ) {
+        return undefined;
+      }
+
+
+      if (
         !Object.prototype.hasOwnProperty.call(
           current,
           key
@@ -718,73 +3714,114 @@ window.I18n = (() => {
         return undefined;
       }
 
+
       current =
         current[key];
     }
+
 
     return current;
   }
 
 
+  // ============================================================
+  // INTERPOLATE
+  // ============================================================
+
   function interpolate(
-    text,
-    values
+    value,
+    data
   ) {
     if (
-      !values ||
-      typeof values !== 'object'
+      typeof value !==
+      'string'
     ) {
-      return text;
+      return value;
     }
 
-    return String(text).replace(
+
+    if (
+      !data ||
+      typeof data !==
+      'object'
+    ) {
+      return value;
+    }
+
+
+    return value.replace(
       /\{([^}]+)\}/g,
       (
-        match,
+        full,
         key
       ) => {
+
         if (
           Object.prototype.hasOwnProperty.call(
-            values,
+            data,
             key
           )
         ) {
+
           return String(
-            values[key]
+            data[key]
           );
         }
 
-        return match;
+
+        return full;
       }
     );
   }
 
 
+  // ============================================================
+  // TRANSLATE
+  // ============================================================
+
   function t(
     key,
-    values
+    data
   ) {
-    const lang =
-      LANGUAGES[currentLanguage];
 
-    const fallback =
-      LANGUAGES[DEFAULT_LANGUAGE];
+    const currentMessages =
+      LANGUAGES[
+        currentLanguage
+      ]?.messages;
+
+
+    const fallbackMessages =
+      LANGUAGES[
+        DEFAULT_LANGUAGE
+      ]?.messages;
+
 
     let value =
       getNestedValue(
-        lang,
+        currentMessages,
         key
       );
+
+
+    // ----------------------------------------------------------
+    // fallback to English
+    // ----------------------------------------------------------
 
     if (
       value === undefined
     ) {
+
       value =
         getNestedValue(
-          fallback,
+          fallbackMessages,
           key
         );
     }
+
+
+    // ----------------------------------------------------------
+    // unknown key
+    // ----------------------------------------------------------
 
     if (
       value === undefined
@@ -792,51 +3829,370 @@ window.I18n = (() => {
       return String(key);
     }
 
-    if (
-      typeof value !== 'string'
-    ) {
-      return value;
-    }
+
+    // ----------------------------------------------------------
+    // interpolation
+    // ----------------------------------------------------------
 
     return interpolate(
       value,
-      values
+      data
     );
   }
 
 
   // ============================================================
-  // SET LANGUAGE
+  // APPLY DOCUMENT LANGUAGE
   // ============================================================
 
-  function setLanguage(lang) {
-    const normalized =
-      normalizeLanguage(lang);
+  function applyDocumentLanguage() {
 
     if (
-      !hasLanguage(normalized)
+      typeof document ===
+      'undefined'
+    ) {
+      return;
+    }
+
+
+    const info =
+      LANGUAGES[
+        currentLanguage
+      ];
+
+
+    if (!info) {
+      return;
+    }
+
+
+    document.documentElement.lang =
+      currentLanguage;
+
+
+    document.documentElement.dir =
+      info.dir || 'ltr';
+
+
+    document.documentElement.dataset.language =
+      currentLanguage;
+
+
+    document.documentElement.dataset.i18nReady =
+      'true';
+  }
+
+
+  // ============================================================
+  // ATTRIBUTE TRANSLATION
+  // ============================================================
+
+  function translateElement(
+    element
+  ) {
+    if (
+      !element ||
+      element.nodeType !== 1
+    ) {
+      return;
+    }
+
+
+    // ----------------------------------------------------------
+    // data-i18n
+    // ----------------------------------------------------------
+
+    if (
+      element.hasAttribute(
+        'data-i18n'
+      )
+    ) {
+
+      const key =
+        element.getAttribute(
+          'data-i18n'
+        );
+
+
+      if (key) {
+
+        element.textContent =
+          t(key);
+      }
+    }
+
+
+    // ----------------------------------------------------------
+    // data-i18n-html
+    //
+    // ใช้เฉพาะกรณีที่จำเป็นจริง ๆ
+    // ----------------------------------------------------------
+
+    if (
+      element.hasAttribute(
+        'data-i18n-html'
+      )
+    ) {
+
+      const key =
+        element.getAttribute(
+          'data-i18n-html'
+        );
+
+
+      if (key) {
+
+        element.innerHTML =
+          t(key);
+      }
+    }
+
+
+    // ----------------------------------------------------------
+    // placeholder
+    // ----------------------------------------------------------
+
+    if (
+      element.hasAttribute(
+        'data-i18n-placeholder'
+      )
+    ) {
+
+      const key =
+        element.getAttribute(
+          'data-i18n-placeholder'
+        );
+
+
+      if (key) {
+
+        element.setAttribute(
+          'placeholder',
+          t(key)
+        );
+      }
+    }
+
+
+    // ----------------------------------------------------------
+    // title
+    // ----------------------------------------------------------
+
+    if (
+      element.hasAttribute(
+        'data-i18n-title'
+      )
+    ) {
+
+      const key =
+        element.getAttribute(
+          'data-i18n-title'
+        );
+
+
+      if (key) {
+
+        element.setAttribute(
+          'title',
+          t(key)
+        );
+      }
+    }
+
+
+    // ----------------------------------------------------------
+    // aria-label
+    // ----------------------------------------------------------
+
+    if (
+      element.hasAttribute(
+        'data-i18n-aria-label'
+      )
+    ) {
+
+      const key =
+        element.getAttribute(
+          'data-i18n-aria-label'
+        );
+
+
+      if (key) {
+
+        element.setAttribute(
+          'aria-label',
+          t(key)
+        );
+      }
+    }
+
+
+    // ----------------------------------------------------------
+    // aria-description
+    // ----------------------------------------------------------
+
+    if (
+      element.hasAttribute(
+        'data-i18n-aria-description'
+      )
+    ) {
+
+      const key =
+        element.getAttribute(
+          'data-i18n-aria-description'
+        );
+
+
+      if (key) {
+
+        element.setAttribute(
+          'aria-description',
+          t(key)
+        );
+      }
+    }
+  }
+
+
+  // ============================================================
+  // APPLY HTML TRANSLATIONS
+  // ============================================================
+
+  function applyTranslations(
+    root
+  ) {
+    if (
+      typeof document ===
+      'undefined'
+    ) {
+      return;
+    }
+
+
+    const container =
+      root || document;
+
+
+    // ----------------------------------------------------------
+    // Root itself
+    // ----------------------------------------------------------
+
+    if (
+      container.nodeType === 1
+    ) {
+
+      translateElement(
+        container
+      );
+    }
+
+
+    // ----------------------------------------------------------
+    // Descendants
+    // ----------------------------------------------------------
+
+    if (
+      typeof container.querySelectorAll !==
+      'function'
+    ) {
+      return;
+    }
+
+
+    const elements =
+      container.querySelectorAll(
+        [
+          '[data-i18n]',
+          '[data-i18n-html]',
+          '[data-i18n-placeholder]',
+          '[data-i18n-title]',
+          '[data-i18n-aria-label]',
+          '[data-i18n-aria-description]'
+        ].join(',')
+      );
+
+
+    elements.forEach(
+      translateElement
+    );
+  }
+
+
+  // ============================================================
+  // CHANGE LANGUAGE
+  // ============================================================
+
+  function setLanguage(
+    language
+  ) {
+
+    const normalized =
+      normalizeLanguage(
+        language
+      );
+
+
+    if (
+      !hasLanguage(
+        normalized
+      )
     ) {
       return false;
     }
 
+
+    if (
+      normalized ===
+      currentLanguage
+    ) {
+
+      applyDocumentLanguage();
+
+      applyTranslations();
+
+      return true;
+    }
+
+
     currentLanguage =
       normalized;
 
+
+    // ----------------------------------------------------------
+    // Save choice
+    // ----------------------------------------------------------
+
     try {
+
       localStorage.setItem(
         STORAGE_KEY,
         currentLanguage
       );
+
     } catch (_) {
-      // ignore storage failure
+      // ignore
     }
+
+
+    // ----------------------------------------------------------
+    // Apply document attributes
+    // ----------------------------------------------------------
 
     applyDocumentLanguage();
 
-    /*
-     * ให้ Tool อื่น ๆ รู้ว่าภาษาเปลี่ยนแล้ว
-     */
+
+    // ----------------------------------------------------------
+    // Translate static HTML
+    // ----------------------------------------------------------
+
+    applyTranslations();
+
+
+    // ----------------------------------------------------------
+    // Notify app
+    // ----------------------------------------------------------
+
     try {
+
       document.dispatchEvent(
         new CustomEvent(
           'languagechange',
@@ -848,216 +4204,246 @@ window.I18n = (() => {
           }
         )
       );
+
     } catch (_) {}
+
 
     return true;
   }
 
 
   // ============================================================
-  // DOCUMENT LANGUAGE / RTL
+  // RESET LANGUAGE
+  //
+  // ล้างภาษาที่ผู้ใช้เลือกเอง
+  // แล้วกลับไปตรวจ Browser ใหม่
   // ============================================================
 
-  function applyDocumentLanguage() {
-    if (
-      typeof document === 'undefined'
-    ) {
-      return;
-    }
+  function resetLanguage() {
 
-    const langData =
-      LANGUAGES[currentLanguage];
+    try {
 
-    if (!langData) {
-      return;
-    }
+      localStorage.removeItem(
+        STORAGE_KEY
+      );
 
-    document.documentElement.lang =
-      currentLanguage;
+    } catch (_) {}
 
-    document.documentElement.dir =
-      langData.dir || 'ltr';
 
-    document.documentElement.dataset.language =
-      currentLanguage;
+    const detected =
+      findBestLanguage(
+        getBrowserLanguages()
+      ) ||
+      DEFAULT_LANGUAGE;
 
-    /*
-     * อัปเดต element ที่มี data-i18n
-     */
+
+    currentLanguage =
+      detected;
+
+
+    applyDocumentLanguage();
+
     applyTranslations();
+
+
+    try {
+
+      document.dispatchEvent(
+        new CustomEvent(
+          'languagechange',
+          {
+            detail: {
+              language:
+                currentLanguage
+            }
+          }
+        )
+      );
+
+    } catch (_) {}
+
+
+    return currentLanguage;
   }
 
 
   // ============================================================
-  // HTML AUTO TRANSLATION
+  // GET CURRENT LANGUAGE
   // ============================================================
 
-  function applyTranslations(
-    root
-  ) {
-    if (
-      typeof document === 'undefined'
-    ) {
-      return;
-    }
-
-    const container =
-      root || document;
-
-    // ----------------------------------------------------------
-    // textContent
-    // ----------------------------------------------------------
-
-    const textNodes =
-      container.querySelectorAll
-        ? container.querySelectorAll(
-            '[data-i18n]'
-          )
-        : [];
-
-    textNodes.forEach(
-      element => {
-        const key =
-          element.getAttribute(
-            'data-i18n'
-          );
-
-        if (!key) {
-          return;
-        }
-
-        element.textContent =
-          t(key);
-      }
-    );
-
-
-    // ----------------------------------------------------------
-    // placeholder
-    // ----------------------------------------------------------
-
-    const placeholders =
-      container.querySelectorAll
-        ? container.querySelectorAll(
-            '[data-i18n-placeholder]'
-          )
-        : [];
-
-    placeholders.forEach(
-      element => {
-        const key =
-          element.getAttribute(
-            'data-i18n-placeholder'
-          );
-
-        if (!key) {
-          return;
-        }
-
-        element.setAttribute(
-          'placeholder',
-          t(key)
-        );
-      }
-    );
-
-
-    // ----------------------------------------------------------
-    // title
-    // ----------------------------------------------------------
-
-    const titles =
-      container.querySelectorAll
-        ? container.querySelectorAll(
-            '[data-i18n-title]'
-          )
-        : [];
-
-    titles.forEach(
-      element => {
-        const key =
-          element.getAttribute(
-            'data-i18n-title'
-          );
-
-        if (!key) {
-          return;
-        }
-
-        element.setAttribute(
-          'title',
-          t(key)
-        );
-      }
-    );
-
-
-    // ----------------------------------------------------------
-    // aria-label
-    // ----------------------------------------------------------
-
-    const ariaLabels =
-      container.querySelectorAll
-        ? container.querySelectorAll(
-            '[data-i18n-aria-label]'
-          )
-        : [];
-
-    ariaLabels.forEach(
-      element => {
-        const key =
-          element.getAttribute(
-            'data-i18n-aria-label'
-          );
-
-        if (!key) {
-          return;
-        }
-
-        element.setAttribute(
-          'aria-label',
-          t(key)
-        );
-      }
-    );
+  function getLanguage() {
+    return currentLanguage;
   }
 
 
   // ============================================================
-  // LANGUAGE SELECTOR
+  // LANGUAGE INFO
   // ============================================================
 
   function getLanguageInfo(
-    lang
+    language
   ) {
-    return LANGUAGES[lang]
-      ? {
-          code: lang,
-          name:
-            LANGUAGES[lang].name,
-          nativeName:
-            LANGUAGES[lang].nativeName,
-          dir:
-            LANGUAGES[lang].dir
-        }
-      : null;
+
+    const code =
+      language ||
+      currentLanguage;
+
+
+    const info =
+      LANGUAGES[code];
+
+
+    if (!info) {
+      return null;
+    }
+
+
+    return {
+
+      code,
+
+      name:
+        info.name,
+
+      nativeName:
+        info.nativeName,
+
+      dir:
+        info.dir || 'ltr'
+    };
   }
 
 
+  // ============================================================
+  // GET ALL LANGUAGES
+  // ============================================================
+
   function getLanguages() {
+
     return Object.keys(
       LANGUAGES
     ).map(
-      code => ({
-        code,
-        name:
-          LANGUAGES[code].name,
-        nativeName:
-          LANGUAGES[code].nativeName,
-        dir:
-          LANGUAGES[code].dir
-      })
+      code => {
+
+        const info =
+          LANGUAGES[code];
+
+
+        return {
+
+          code,
+
+          name:
+            info.name,
+
+          nativeName:
+            info.nativeName,
+
+          dir:
+            info.dir || 'ltr'
+        };
+      }
     );
+  }
+
+
+  // ============================================================
+  // OBSERVER
+  // ============================================================
+
+  let observer =
+    null;
+
+
+  function startObserver() {
+
+    if (
+      typeof MutationObserver ===
+      'undefined'
+    ) {
+      return;
+    }
+
+
+    if (observer) {
+      return;
+    }
+
+
+    observer =
+      new MutationObserver(
+        mutations => {
+
+          for (
+            const mutation of mutations
+          ) {
+
+            // ------------------------------------------------
+            // Added nodes
+            // ------------------------------------------------
+
+            if (
+              mutation.type ===
+              'childList'
+            ) {
+
+              mutation.addedNodes
+                .forEach(
+                  node => {
+
+                    if (
+                      node.nodeType !==
+                      1
+                    ) {
+                      return;
+                    }
+
+
+                    /*
+                     * แปลเฉพาะ node ที่มี
+                     * data-i18n ต่าง ๆ
+                     */
+                    translateElement(
+                      node
+                    );
+
+
+                    applyTranslations(
+                      node
+                    );
+                  }
+                );
+            }
+          }
+        }
+      );
+
+
+    observer.observe(
+      document.body,
+      {
+        childList: true,
+        subtree: true
+      }
+    );
+  }
+
+
+  // ============================================================
+  // STOP OBSERVER
+  // ============================================================
+
+  function stopObserver() {
+
+    if (!observer) {
+      return;
+    }
+
+
+    observer.disconnect();
+
+    observer =
+      null;
   }
 
 
@@ -1065,24 +4451,37 @@ window.I18n = (() => {
   // AUTO INIT
   // ============================================================
 
+  function init() {
+
+    applyDocumentLanguage();
+
+    applyTranslations();
+
+    startObserver();
+  }
+
+
   if (
-    typeof document !== 'undefined'
+    typeof document !==
+    'undefined'
   ) {
+
     if (
       document.readyState ===
       'loading'
     ) {
+
       document.addEventListener(
         'DOMContentLoaded',
-        () => {
-          applyDocumentLanguage();
-        },
+        init,
         {
           once: true
         }
       );
+
     } else {
-      applyDocumentLanguage();
+
+      init();
     }
   }
 
@@ -1092,19 +4491,27 @@ window.I18n = (() => {
   // ============================================================
 
   return {
+
     t,
 
     setLanguage,
 
-    getLanguage: () =>
-      currentLanguage,
+    resetLanguage,
 
-    detectLanguage,
-
-    getLanguages,
+    getLanguage,
 
     getLanguageInfo,
 
-    applyTranslations
+    getLanguages,
+
+    detectLanguage,
+
+    applyTranslations,
+
+    startObserver,
+
+    stopObserver
+
   };
+
 })();
