@@ -1,3 +1,10 @@
+/* ============================================================
+   ONLINE NOTEPAD
+   notepad.js
+   ============================================================ */
+
+/* global window, document, localStorage, navigator, Blob, URL */
+
 (() => {
   'use strict';
 
@@ -27,6 +34,21 @@
     }
 
     return String(key);
+  }
+
+
+  function getLanguage() {
+
+    if (
+      I18n &&
+      typeof I18n.getLanguage === 'function'
+    ) {
+
+      return I18n.getLanguage();
+
+    }
+
+    return 'en';
   }
 
 
@@ -171,6 +193,34 @@
     false;
 
 
+  /*
+   * เก็บสถานะล่าสุดของ status
+   * เพื่อให้เปลี่ยนภาษาแล้วแปลถูกข้อความ
+   */
+  let currentStatusKey =
+    'notepad.status.saved';
+
+  let currentStatusType =
+    'saved';
+
+  let currentStatusValues =
+    null;
+
+
+  /*
+   * เก็บ search state
+   */
+  let currentSearchState =
+    'idle';
+
+
+  /*
+   * เก็บ timeout ของ temporary button
+   */
+  const tempButtonTimers =
+    new WeakMap();
+
+
   // ============================================================
   // STATUS
   // ============================================================
@@ -180,6 +230,16 @@
     type = '',
     values
   ) {
+
+    currentStatusKey =
+      key;
+
+    currentStatusType =
+      type;
+
+    currentStatusValues =
+      values || null;
+
 
     if (saveStatus) {
 
@@ -234,6 +294,16 @@
   }
 
 
+  function refreshStatusLanguage() {
+
+    setStatus(
+      currentStatusKey,
+      currentStatusType,
+      currentStatusValues
+    );
+  }
+
+
   // ============================================================
   // STORAGE
   // ============================================================
@@ -284,14 +354,14 @@
       );
 
 
+      isSaving =
+        false;
+
+
       setStatus(
         'notepad.status.saved',
         'saved'
       );
-
-
-      isSaving =
-        false;
 
     } catch (
       error
@@ -322,14 +392,14 @@
     );
 
 
+    isSaving =
+      true;
+
+
     setStatus(
       'notepad.status.saving',
       'saving'
     );
-
-
-    isSaving =
-      true;
 
 
     saveTimer =
@@ -378,6 +448,10 @@
     }
 
 
+    /*
+     * UTF-8 BOM
+     * รองรับการเปิดภาษาไทยใน Windows Notepad
+     */
     const BOM =
       '\uFEFF';
 
@@ -468,23 +542,15 @@
 
   function getCountLocale() {
 
-    if (
-      I18n &&
-      typeof I18n.getLanguage ===
-        'function'
-    ) {
-
-      const lang =
-        I18n.getLanguage();
+    const lang =
+      getLanguage();
 
 
-      if (lang) {
-        return lang;
-      }
-    }
-
-
-    return 'en';
+    /*
+     * zh-CN / zh-TW ใช้ locale ได้โดยตรง
+     * ส่วนภาษาที่เหลือก็ใช้ code เดิม
+     */
+    return lang || 'en';
   }
 
 
@@ -535,7 +601,7 @@
           );
 
 
-        const thaiBlocks =
+        const whitespaceBlocks =
           trimmed
             .split(/\s+/)
             .filter(
@@ -547,9 +613,9 @@
           englishWords
             ? Math.max(
                 englishWords.length,
-                thaiBlocks.length
+                whitespaceBlocks.length
               )
-            : thaiBlocks.length;
+            : whitespaceBlocks.length;
       }
 
 
@@ -616,8 +682,7 @@
 
     if (
       historyIndex >= 0 &&
-      history[historyIndex] ===
-        value
+      history[historyIndex] === value
     ) {
 
       return;
@@ -773,8 +838,7 @@
     ) {
 
       undoBtn.disabled =
-        historyIndex <=
-        0;
+        historyIndex <= 0;
     }
 
 
@@ -820,8 +884,38 @@
     }
 
 
-    const originalHTML =
-      button.innerHTML;
+    /*
+     * ยกเลิก timeout เดิม
+     */
+    const oldTimer =
+      tempButtonTimers.get(
+        button
+      );
+
+
+    if (
+      oldTimer
+    ) {
+
+      clearTimeout(
+        oldTimer
+      );
+    }
+
+
+    /*
+     * ไม่เก็บ HTML เดิมแบบ string
+     * เพราะถ้าเปลี่ยนภาษาระหว่างนี้
+     * เราต้องให้ i18n แปลใหม่ได้
+     */
+    button.dataset.tempI18nKey =
+      key;
+
+
+    button.dataset.tempI18nValues =
+      values
+        ? JSON.stringify(values)
+        : '';
 
 
     button.innerHTML =
@@ -835,25 +929,100 @@
       true;
 
 
-    setTimeout(
-      () => {
+    const timer =
+      setTimeout(
+        () => {
+
+          button.removeAttribute(
+            'data-temp-i18n-key'
+          );
+
+          button.removeAttribute(
+            'data-temp-i18n-values'
+          );
+
+
+          /*
+           * คืนปุ่มด้วย I18n
+           * แทนการคืน HTML ภาษาเก่า
+           */
+          if (
+            I18n &&
+            typeof I18n.applyTranslations ===
+              'function'
+          ) {
+
+            I18n.applyTranslations(
+              button
+            );
+
+          }
+
+
+          button.disabled =
+            false;
+
+
+          tempButtonTimers.delete(
+            button
+          );
+
+        },
+        1200
+      );
+
+
+    tempButtonTimers.set(
+      button,
+      timer
+    );
+  }
+
+
+  function refreshTemporaryButtons() {
+
+    [
+      copyBtn,
+      saveTxtBtn
+    ].forEach(
+      button => {
+
+        if (
+          !button ||
+          !button.dataset.tempI18nKey
+        ) {
+          return;
+        }
+
+
+        let values = null;
+
+
+        if (
+          button.dataset.tempI18nValues
+        ) {
+
+          try {
+
+            values =
+              JSON.parse(
+                button.dataset.tempI18nValues
+              );
+
+          } catch (_) {
+
+            values =
+              null;
+          }
+        }
+
 
         button.innerHTML =
-          originalHTML;
-
-
-        /*
-         * สำคัญ:
-         * ถ้าเปลี่ยนภาษาในช่วงเวลาที่ปุ่ม
-         * กำลังแสดง temporary state
-         * ครั้งถัดไปจะใช้ภาษาใหม่
-         */
-
-        button.disabled =
-          false;
-
-      },
-      1200
+          `<span>${t(
+            button.dataset.tempI18nKey,
+            values
+          )}</span>`;
+      }
     );
   }
 
@@ -868,7 +1037,9 @@
       textarea.value;
 
 
-    if (!text) {
+    if (
+      !text
+    ) {
 
       showTemporaryButtonText(
         copyBtn,
@@ -997,7 +1168,6 @@
 
     temp.focus();
 
-
     temp.select();
 
 
@@ -1103,6 +1273,7 @@
     if (
       !confirmModal
     ) {
+
       return;
     }
 
@@ -1143,6 +1314,7 @@
     if (
       !searchInput
     ) {
+
       return;
     }
 
@@ -1156,6 +1328,7 @@
     if (
       !searchBox
     ) {
+
       return;
     }
 
@@ -1177,6 +1350,7 @@
     if (
       !searchInput
     ) {
+
       return;
     }
 
@@ -1191,6 +1365,16 @@
     if (
       !query
     ) {
+
+      currentSearchState =
+        'idle';
+
+
+      searchInput.removeAttribute(
+        'aria-label'
+      );
+
+
       return;
     }
 
@@ -1202,6 +1386,19 @@
     if (
       !text
     ) {
+
+      currentSearchState =
+        'notFound';
+
+
+      searchInput.setAttribute(
+        'aria-label',
+        t(
+          'notepad.search.notFound'
+        )
+      );
+
+
       return;
     }
 
@@ -1228,6 +1425,10 @@
       index === -1
     ) {
 
+      currentSearchState =
+        'notFound';
+
+
       searchInput.setAttribute(
         'aria-label',
         t(
@@ -1238,6 +1439,10 @@
 
       return;
     }
+
+
+    currentSearchState =
+      'found';
 
 
     searchInput.setAttribute(
@@ -1264,12 +1469,17 @@
     if (
       !searchInput
     ) {
+
       return;
     }
 
 
     searchInput.value =
       '';
+
+
+    currentSearchState =
+      'idle';
 
 
     updateSearchUI();
@@ -1281,6 +1491,43 @@
 
 
     focusTextarea();
+  }
+
+
+  function refreshSearchLanguage() {
+
+    if (
+      !searchInput
+    ) {
+
+      return;
+    }
+
+
+    if (
+      currentSearchState ===
+      'found'
+    ) {
+
+      searchInput.setAttribute(
+        'aria-label',
+        t(
+          'notepad.search.found'
+        )
+      );
+
+    } else if (
+      currentSearchState ===
+      'notFound'
+    ) {
+
+      searchInput.setAttribute(
+        'aria-label',
+        t(
+          'notepad.search.notFound'
+        )
+      );
+    }
   }
 
 
@@ -1313,7 +1560,7 @@
 
 
     // ----------------------------------------------------------
-    // Ctrl/Cmd + Z
+    // Ctrl / Cmd + Z
     // ----------------------------------------------------------
 
     if (
@@ -1398,6 +1645,7 @@
     if (
       !isSaving
     ) {
+
       return;
     }
 
@@ -1417,85 +1665,8 @@
 
   function refreshLanguage() {
 
-    updateCounters();
-
-
     /*
-     * สถานะปัจจุบัน
-     */
-    if (
-      isSaving
-    ) {
-
-      setStatus(
-        'notepad.status.saving',
-        'saving'
-      );
-
-    } else {
-
-      setStatus(
-        'notepad.status.saved',
-        'saved'
-      );
-    }
-
-
-    /*
-     * Search aria-label
-     */
-    if (
-      searchInput
-    ) {
-
-      const label =
-        searchInput.getAttribute(
-          'aria-label'
-        );
-
-
-      if (
-        label
-      ) {
-
-        const foundText =
-          t(
-            'notepad.search.found'
-          );
-
-        const notFoundText =
-          t(
-            'notepad.search.notFound'
-          );
-
-
-        if (
-          label ===
-          foundText
-        ) {
-
-          searchInput.setAttribute(
-            'aria-label',
-            foundText
-          );
-
-        } else if (
-          label ===
-          notFoundText
-        ) {
-
-          searchInput.setAttribute(
-            'aria-label',
-            notFoundText
-          );
-        }
-      }
-    }
-
-
-    /*
-     * ถ้า HTML มี data-i18n
-     * ให้ระบบกลางแปลต่อด้วย
+     * แปล static HTML ใหม่
      */
     if (
       I18n &&
@@ -1505,6 +1676,37 @@
 
       I18n.applyTranslations();
     }
+
+
+    /*
+     * Counter ต้อง format ตาม locale ใหม่
+     */
+    updateCounters();
+
+
+    /*
+     * Status ปัจจุบัน
+     */
+    refreshStatusLanguage();
+
+
+    /*
+     * Search aria-label
+     */
+    refreshSearchLanguage();
+
+
+    /*
+     * Temporary button
+     */
+    refreshTemporaryButtons();
+
+
+    /*
+     * เก็บภาษาไว้ที่ html
+     */
+    document.documentElement.dataset.language =
+      getLanguage();
   }
 
 
@@ -1736,6 +1938,9 @@
   );
 
 
+  /*
+   * ให้ textarea พร้อมพิมพ์ทันที
+   */
   setTimeout(
     () => {
 
