@@ -18,6 +18,7 @@
       I18n &&
       typeof I18n.t === 'function'
     ) {
+
       return I18n.t(
         key,
         values
@@ -37,7 +38,6 @@
     ) {
 
       return I18n.getLanguage();
-
     }
 
     return 'en';
@@ -82,9 +82,9 @@
 
   const TOOL_META = {
 
-    // ==========================================================
+    // ----------------------------------------------------------
     // IMAGE
-    // ==========================================================
+    // ----------------------------------------------------------
 
     'img-convert': {
       kind: 'image',
@@ -107,9 +107,9 @@
     },
 
 
-    // ==========================================================
+    // ----------------------------------------------------------
     // PDF
-    // ==========================================================
+    // ----------------------------------------------------------
 
     'pdf-from-images': {
       kind: 'pdf',
@@ -142,6 +142,24 @@
     }
 
   };
+
+
+  // ============================================================
+  // GET TOOL META
+  // ============================================================
+
+  function getToolMeta(
+    tool
+  ) {
+
+    return (
+      TOOL_META[tool] ||
+      {
+        kind: 'image',
+        key: 'common.ready'
+      }
+    );
+  }
 
 
   // ============================================================
@@ -193,7 +211,7 @@
       chipGroups.find(
         group =>
           group.dataset.catGroup ===
-          cat
+            cat
       );
 
 
@@ -303,22 +321,8 @@
 
 
   // ============================================================
-  // CUTE TOOL UI
+  // CUTE CHARACTER
   // ============================================================
-
-  function getToolMeta(
-    tool
-  ) {
-
-    return (
-      TOOL_META[tool] ||
-      {
-        kind: 'image',
-        key: 'common.ready'
-      }
-    );
-  }
-
 
   function updateCuteCharacterText(
     panel
@@ -355,25 +359,20 @@
     }
 
 
-    const translated =
-      t(
-        meta.key
-      );
-
-
-    /*
-     * เก็บ key ไว้ด้วย
-     * เผื่อเปลี่ยนภาษาอีกครั้ง
-     */
-
     copy.dataset.i18n =
       meta.key;
 
 
     copy.textContent =
-      translated;
+      t(
+        meta.key
+      );
   }
 
+
+  // ============================================================
+  // CUTE PROGRESS
+  // ============================================================
 
   function updateCuteProgressText(
     panel,
@@ -409,9 +408,12 @@
       );
 
 
+    // ----------------------------------------------------------
+    // DONE
+    // ----------------------------------------------------------
+
     if (
-      mode ===
-      'done'
+      mode === 'done'
     ) {
 
       if (strong) {
@@ -432,13 +434,20 @@
       }
 
 
+      progress.classList.add(
+        'is-done'
+      );
+
       return;
     }
 
 
+    // ----------------------------------------------------------
+    // PROCESSING
+    // ----------------------------------------------------------
+
     if (
-      mode ===
-      'processing'
+      mode === 'processing'
     ) {
 
       if (strong) {
@@ -475,18 +484,27 @@
       }
 
 
+      progress.classList.remove(
+        'is-done'
+      );
+
       return;
     }
 
 
-    /*
-     * idle
-     */
+    // ----------------------------------------------------------
+    // IDLE
+    // ----------------------------------------------------------
+
     progress.classList.remove(
       'is-done'
     );
   }
 
+
+  // ============================================================
+  // CREATE CHARACTER
+  // ============================================================
 
   function createCuteCharacter(
     panel
@@ -523,6 +541,10 @@
     );
   }
 
+
+  // ============================================================
+  // CREATE EMPTY STATE
+  // ============================================================
 
   function createCuteEmptyState(
     dz
@@ -567,6 +589,10 @@
     );
   }
 
+
+  // ============================================================
+  // CREATE PROGRESS
+  // ============================================================
 
   function createCuteProgress(
     dz
@@ -621,6 +647,10 @@
   }
 
 
+  // ============================================================
+  // SETUP CUTE UI
+  // ============================================================
+
   function setupCuteToolUI() {
 
     panels.forEach(
@@ -647,18 +677,10 @@
           meta.kind;
 
 
-        // ------------------------------------------------------
-        // Character
-        // ------------------------------------------------------
-
         createCuteCharacter(
           panel
         );
 
-
-        // ------------------------------------------------------
-        // Dropzone
-        // ------------------------------------------------------
 
         const dz =
           panel.querySelector(
@@ -671,10 +693,6 @@
         }
 
 
-        // ------------------------------------------------------
-        // Empty state
-        // ------------------------------------------------------
-
         createCuteEmptyState(
           dz
         );
@@ -684,10 +702,6 @@
           panel
         );
 
-
-        // ------------------------------------------------------
-        // Progress
-        // ------------------------------------------------------
 
         createCuteProgress(
           dz
@@ -719,7 +733,10 @@
           dz.addEventListener(
             'dragenter',
             () => {
-              setDrag(true);
+
+              setDrag(
+                true
+              );
             }
           );
 
@@ -727,7 +744,10 @@
           dz.addEventListener(
             'dragover',
             () => {
-              setDrag(true);
+
+              setDrag(
+                true
+              );
             }
           );
 
@@ -753,7 +773,10 @@
           dz.addEventListener(
             'drop',
             () => {
-              setDrag(false);
+
+              setDrag(
+                false
+              );
             }
           );
         }
@@ -761,10 +784,6 @@
     );
 
 
-    /*
-     * สำคัญ:
-     * แปลข้อความ Cute UI หลังสร้างทั้งหมด
-     */
     refreshCuteLanguage();
 
     refreshCuteStates();
@@ -772,7 +791,7 @@
 
 
   // ============================================================
-  // LANGUAGE REFRESH
+  // REFRESH LANGUAGE
   // ============================================================
 
   function refreshCuteLanguage() {
@@ -785,10 +804,6 @@
         );
 
 
-        /*
-         * อย่าเดาข้อความจากภาษาเก่า
-         * ใช้ I18n.t() ทุกครั้ง
-         */
         const progress =
           panel.querySelector(
             '.cute-progress'
@@ -825,9 +840,7 @@
           );
 
 
-        if (
-          resultVisible
-        ) {
+        if (resultVisible) {
 
           updateCuteProgressText(
             panel,
@@ -835,9 +848,7 @@
             cards.length
           );
 
-        } else if (
-          processing
-        ) {
+        } else if (processing) {
 
           updateCuteProgressText(
             panel,
@@ -845,27 +856,18 @@
             cards.length
           );
 
+        } else {
+
+          updateCuteProgressText(
+            panel,
+            'idle',
+            cards.length
+          );
         }
       }
     );
 
 
-    /*
-     * เรียก I18n แปล static HTML อีกครั้ง
-     */
-    if (
-      I18n &&
-      typeof I18n.applyTranslations ===
-        'function'
-    ) {
-
-      I18n.applyTranslations();
-    }
-
-
-    /*
-     * sync ภาษาไว้ที่ document
-     */
     document.documentElement.dataset.language =
       currentLanguage();
   }
@@ -897,10 +899,6 @@
     }
 
 
-    /*
-     * ถ้า Tool ไหนกำหนด class is-processing
-     * ให้เชื่อก่อน
-     */
     if (
       card.classList.contains(
         'is-processing'
@@ -918,9 +916,8 @@
       ).toLowerCase();
 
 
-    /*
-     * Thai
-     */
+    // Thai
+
     if (
       /กำลัง|ประมวลผล|จัดทำ|กำลังทำงาน/.test(
         text
@@ -931,9 +928,8 @@
     }
 
 
-    /*
-     * English
-     */
+    // English
+
     if (
       /processing|converting|removing|loading|building|merging|exporting|saving|working|creating|compressing|cropping/.test(
         text
@@ -944,9 +940,8 @@
     }
 
 
-    /*
-     * Japanese
-     */
+    // Japanese
+
     if (
       /処理中|変換中|読み込み中|作成中|保存中|圧縮中|切り抜き中/.test(
         text
@@ -957,11 +952,10 @@
     }
 
 
-    /*
-     * Korean
-     */
+    // Korean
+
     if (
-      /처리 중|변환 중|불러오는 중|생성 중|저장 중|압축 중/.test(
+      /처리 중|변환 중|불러오는 중|생성 중|저장 중|압축 중|자르는 중/.test(
         text
       )
     ) {
@@ -970,9 +964,8 @@
     }
 
 
-    /*
-     * Chinese
-     */
+    // Chinese
+
     if (
       /处理中|转换中|加载中|创建中|保存中|压缩中|裁剪中/.test(
         text
@@ -988,7 +981,7 @@
 
 
   // ============================================================
-  // CUTE STATE REFRESH
+  // REFRESH CUTE STATES
   // ============================================================
 
   function refreshCuteStates() {
@@ -1085,15 +1078,27 @@
             );
 
 
-            if (
-              busy
-            ) {
+            if (busy) {
 
               processing =
                 true;
             }
           }
         );
+
+
+        // ------------------------------------------------------
+        // Form processing
+        // ------------------------------------------------------
+
+        if (
+          panel.dataset.processing ===
+          'true'
+        ) {
+
+          processing =
+            true;
+        }
 
 
         // ------------------------------------------------------
@@ -1122,9 +1127,7 @@
           );
 
 
-        if (
-          progress
-        ) {
+        if (progress) {
 
           progress.classList.toggle(
             'is-visible',
@@ -1137,11 +1140,6 @@
             hasFiles
           ) {
 
-            progress.classList.add(
-              'is-done'
-            );
-
-
             updateCuteProgressText(
               panel,
               'done',
@@ -1152,11 +1150,6 @@
             processing
           ) {
 
-            progress.classList.remove(
-              'is-done'
-            );
-
-
             updateCuteProgressText(
               panel,
               'processing',
@@ -1165,15 +1158,17 @@
 
           } else {
 
-            progress.classList.remove(
-              'is-done'
+            updateCuteProgressText(
+              panel,
+              'idle',
+              cards.length
             );
           }
         }
 
 
         // ------------------------------------------------------
-        // Busy
+        // Busy dropzone
         // ------------------------------------------------------
 
         dz.classList.toggle(
@@ -1241,14 +1236,18 @@
   // LANGUAGE CHANGE
   // ============================================================
 
-  /*
-   * ใช้ capture=true ด้วย
-   * เพื่อให้แน่ใจว่ารับ event ได้
-   */
-
   document.addEventListener(
     'languagechange',
     () => {
+
+      /*
+       * สำคัญ:
+       * ไม่สร้าง element ใหม่
+       * ไม่ลบ state
+       * ไม่แตะไฟล์ของผู้ใช้
+       *
+       * แค่เปลี่ยนข้อความ UI
+       */
 
       refreshCuteLanguage();
 
@@ -1288,8 +1287,8 @@
 
 
           for (
-            const mutation
-            of mutations
+            const mutation of
+            mutations
           ) {
 
             if (
@@ -1303,7 +1302,6 @@
 
               relevant =
                 true;
-
 
               break;
             }
@@ -1334,7 +1332,6 @@
 
                 relevant =
                   true;
-
 
                 break;
               }
@@ -1476,10 +1473,7 @@
       document.activeElement;
 
 
-    if (
-      !active
-    ) {
-
+    if (!active) {
       return false;
     }
 
@@ -1595,6 +1589,7 @@
   // ============================================================
 
   setupCuteToolUI();
+
 
   showCategory(
     'image'
