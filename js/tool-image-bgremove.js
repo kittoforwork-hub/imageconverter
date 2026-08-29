@@ -1,8 +1,18 @@
+/* global window, document, URL, JSZip */
+
 (() => {
   'use strict';
 
-  const U = window.Utils;
-  const I18n = window.I18n || null;
+
+  // ============================================================
+  // GLOBALS
+  // ============================================================
+
+  const U =
+    window.Utils;
+
+  const I18n =
+    window.I18n || null;
 
 
   // ============================================================
@@ -13,17 +23,22 @@
     key,
     values
   ) {
+
     if (
       I18n &&
       typeof I18n.t === 'function'
     ) {
+
       return I18n.t(
         key,
         values
       );
+
     }
 
-    return String(key);
+    return String(
+      key
+    );
   }
 
 
@@ -92,7 +107,9 @@
     !jobsEl ||
     !jobTemplate
   ) {
+
     return;
+
   }
 
 
@@ -103,7 +120,8 @@
   let jobSeq =
     0;
 
-  const jobs = [];
+  const jobs =
+    [];
 
 
   // ============================================================
@@ -121,12 +139,15 @@
     null;
 
 
-  /*
-   * โหลด library ตอนเริ่มใช้งานเท่านั้น
-   */
+  // ============================================================
+  // LOAD LIBRARY
+  // ============================================================
+
   async function loadLibrary() {
 
-    if (!libPromise) {
+    if (
+      !libPromise
+    ) {
 
       libPromise =
         import(
@@ -147,6 +168,7 @@
                     'errors.backgroundFunctionNotFound'
                   )
                 );
+
               }
 
 
@@ -155,6 +177,7 @@
 
 
               return removeBackgroundFn;
+
             }
           )
           .catch(
@@ -173,10 +196,13 @@
                   {
                     message:
                       err?.message ||
-                      err
+                      String(
+                        err
+                      )
                   }
                 )
               );
+
             }
           );
     }
@@ -186,9 +212,10 @@
   }
 
 
-  /*
-   * ปล่อย reference ที่ application ถืออยู่
-   */
+  // ============================================================
+  // RELEASE LIBRARY REFERENCE
+  // ============================================================
+
   function releaseLibraryReference() {
 
     removeBackgroundFn =
@@ -238,7 +265,9 @@
         jobTemplate
           .content
           .firstElementChild
-          .cloneNode(true);
+          .cloneNode(
+            true
+          );
 
 
       this.buildDom();
@@ -315,24 +344,38 @@
         );
 
 
-      if (filenameEl) {
+      if (
+        filenameEl
+      ) {
 
         filenameEl.textContent =
           this.file.name;
+
       }
 
 
-      if (sizeEl) {
+      if (
+        sizeEl
+      ) {
 
         sizeEl.textContent =
           U.formatBytes(
             this.file.size
           );
+
       }
 
 
       this.beforeImg.src =
         this.objectUrl;
+
+
+      // ------------------------------------------------------
+      // Processing state
+      // ------------------------------------------------------
+
+      el.dataset.processing =
+        'false';
 
 
       // ------------------------------------------------------
@@ -342,7 +385,9 @@
       this.processBtn.addEventListener(
         'click',
         () => {
+
           this.process();
+
         }
       );
 
@@ -357,36 +402,44 @@
         );
 
 
-      removeJobBtn.addEventListener(
-        'click',
-        () => {
+      if (
+        removeJobBtn
+      ) {
 
-          this.dispose();
+        removeJobBtn.addEventListener(
+          'click',
+          () => {
 
-
-          el.remove();
-
-
-          const idx =
-            jobs.indexOf(
-              this
-            );
+            this.dispose();
 
 
-          if (
-            idx >= 0
-          ) {
+            el.remove();
 
-            jobs.splice(
-              idx,
-              1
-            );
+
+            const idx =
+              jobs.indexOf(
+                this
+              );
+
+
+            if (
+              idx >= 0
+            ) {
+
+              jobs.splice(
+                idx,
+                1
+              );
+
+            }
+
+
+            updateBulkUI();
+
           }
+        );
 
-
-          updateBulkUI();
-        }
-      );
+      }
 
 
       // ------------------------------------------------------
@@ -406,22 +459,28 @@
       if (
         !this.statusEl
       ) {
+
         return;
+
       }
 
 
+      /*
+       * ตอนกำลัง process
+       * progress callback จะเป็นคนกำหนดข้อความ
+       */
       if (
         this.isProcessing
       ) {
 
-        /*
-         * ระหว่าง process progress callback
-         * จะเป็นคนกำหนดข้อความเอง
-         */
         return;
+
       }
 
 
+      /*
+       * Success
+       */
       if (
         this.resultBlob
       ) {
@@ -437,14 +496,47 @@
             }
           );
 
+
+        this.statusEl.classList.remove(
+          'is-error'
+        );
+
+
+        this.statusEl.classList.add(
+          'is-ready'
+        );
+
+
         return;
       }
 
 
+      /*
+       * Error
+       */
+      if (
+        this.statusEl.classList.contains(
+          'is-error'
+        )
+      ) {
+
+        return;
+
+      }
+
+
+      /*
+       * Waiting
+       */
       this.statusEl.textContent =
         t(
           'image.waitingBackground'
         );
+
+
+      this.statusEl.classList.remove(
+        'is-ready'
+      );
     }
 
 
@@ -459,7 +551,9 @@
       if (
         !this.progressFill
       ) {
+
         return;
+
       }
 
 
@@ -468,7 +562,9 @@
           0,
           Math.min(
             100,
-            Number(pct) || 0
+            Number(
+              pct
+            ) || 0
           )
         );
 
@@ -489,17 +585,27 @@
         this.resultBlob ||
         this.isProcessing
       ) {
+
         return;
+
       }
 
 
-      if (!this.file) {
+      if (
+        !this.file
+      ) {
+
         return;
+
       }
 
 
       this.isProcessing =
         true;
+
+
+      this.el.dataset.processing =
+        'true';
 
 
       this.processBtn.disabled =
@@ -529,15 +635,11 @@
           await loadLibrary();
 
 
-        /*
-         * ใช้ proxyToWorker
-         * เพื่อย้ายงานหนักออกจาก main thread
-         */
-
         const blob =
           await removeBackground(
             this.file,
             {
+
               proxyToWorker:
                 true,
 
@@ -552,8 +654,12 @@
                 total
               ) => {
 
-                if (!total) {
+                if (
+                  !total
+                ) {
+
                   return;
+
                 }
 
 
@@ -668,10 +774,6 @@
         );
 
 
-        // ----------------------------------------------------
-        // Success
-        // ----------------------------------------------------
-
         this.statusEl.textContent =
           t(
             'image.readyDownload',
@@ -684,9 +786,15 @@
           );
 
 
+        this.statusEl.classList.remove(
+          'is-error'
+        );
+
+
         this.statusEl.classList.add(
           'is-ready'
         );
+
 
       } catch (
         err
@@ -704,9 +812,16 @@
             {
               message:
                 err?.message ||
-                err
+                String(
+                  err
+                )
             }
           );
+
+
+        this.statusEl.classList.remove(
+          'is-ready'
+        );
 
 
         this.statusEl.classList.add(
@@ -724,19 +839,17 @@
           false;
 
 
+        this.el.dataset.processing =
+          'false';
+
+
         this.processBtn.disabled =
           false;
 
 
-        /*
-         * ปล่อย reference
-         */
         releaseLibraryReference();
 
 
-        /*
-         * คืนเวลาให้ browser
-         */
         await U.yieldToUI();
       }
     }
@@ -747,6 +860,20 @@
     // ========================================================
 
     dispose() {
+
+      this.isProcessing =
+        false;
+
+
+      if (
+        this.el
+      ) {
+
+        this.el.dataset.processing =
+          'false';
+
+      }
+
 
       if (
         this.objectUrl
@@ -820,7 +947,9 @@
 
     jobs.forEach(
       job => {
+
         job.updateLanguageUI();
+
       }
     );
   }
@@ -863,6 +992,7 @@
           jobsEl.appendChild(
             job.el
           );
+
         }
       );
 
@@ -881,7 +1011,9 @@
 
       jobs.forEach(
         job => {
+
           job.dispose();
+
         }
       );
 
@@ -898,6 +1030,7 @@
 
 
       updateBulkUI();
+
     }
   );
 
@@ -913,7 +1046,9 @@
       if (
         !jobs.length
       ) {
+
         return;
+
       }
 
 
@@ -931,17 +1066,20 @@
 
         /*
          * ประมวลผลทีละรูป
-         * เพื่อไม่ให้ browser ใช้ RAM หนักเกินไป
+         * เพื่อควบคุม RAM
          */
 
         for (
-          const job of jobs
+          const job of
+          jobs
         ) {
 
           if (
             job.resultBlob
           ) {
+
             continue;
+
           }
 
 
@@ -949,6 +1087,7 @@
 
 
           await U.yieldToUI();
+
         }
 
       } finally {
@@ -976,6 +1115,7 @@
               !!job.resultBlob
           )
         );
+
       }
     }
   );
@@ -999,7 +1139,9 @@
       if (
         !ready.length
       ) {
+
         return;
+
       }
 
 
@@ -1048,6 +1190,7 @@
 
               name =
                 `${base}-nobg-${n++}.png`;
+
             }
 
 
@@ -1060,6 +1203,7 @@
               name,
               job.resultBlob
             );
+
           }
         );
 
@@ -1067,7 +1211,8 @@
         const content =
           await zip.generateAsync(
             {
-              type: 'blob'
+              type:
+                'blob'
             }
           );
 
@@ -1077,6 +1222,7 @@
           'no-background.zip'
         );
 
+
       } catch (
         err
       ) {
@@ -1085,6 +1231,7 @@
           'Background removal ZIP failed:',
           err
         );
+
 
       } finally {
 
@@ -1096,6 +1243,7 @@
           t(
             'image.downloadZip'
           );
+
       }
     }
   );
@@ -1121,7 +1269,9 @@
 
       jobs.forEach(
         job => {
+
           job.dispose();
+
         }
       );
 
@@ -1138,6 +1288,7 @@
 
 
       updateBulkUI();
+
     }
   );
 
@@ -1151,7 +1302,7 @@
     () => {
 
       /*
-       * ปุ่มหลัก
+       * Bulk buttons
        */
 
       if (
@@ -1162,6 +1313,7 @@
           t(
             'image.removeBackgroundAll'
           );
+
       }
 
 
@@ -1173,18 +1325,22 @@
           t(
             'image.downloadZip'
           );
+
       }
 
 
       /*
-       * Update all jobs
+       * Job statuses
        */
 
       jobs.forEach(
         job => {
+
           job.updateLanguageUI();
+
         }
       );
+
     }
   );
 
