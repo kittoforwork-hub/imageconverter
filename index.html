@@ -1,28 +1,68 @@
 <!DOCTYPE html>
 <html lang="th">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Workshop Utility BY KITTO</title>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin>
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title data-i18n="page.title">
+  Workshop Utility BY KITTO
+</title>
+
+
+<link
+  rel="preconnect"
+  href="https://fonts.googleapis.com"
+>
+
+<link
+  rel="preconnect"
+  href="https://fonts.gstatic.com"
+  crossorigin
+>
+
+<link
+  rel="preconnect"
+  href="https://raw.githubusercontent.com"
+  crossorigin
+>
+
+<link
+  rel="preconnect"
+  href="https://cdnjs.cloudflare.com"
+  crossorigin
+>
+
+<link
+  rel="preconnect"
+  href="https://cdn.jsdelivr.net"
+  crossorigin
+>
+
 
 <link
   href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
   rel="stylesheet"
 >
 
-<link rel="stylesheet" href="css/style.css">
+
+<link
+  rel="stylesheet"
+  href="css/style.css"
+>
 
 </head>
+
 
 <body>
 
 <div class="sheet">
+
 
   <!-- ============================================================ -->
   <!-- HEADER                                                        -->
@@ -36,13 +76,91 @@
         WORKSHOP UTILITY BY KITTO
       </div>
 
+
+      <!-- ======================================================== -->
+      <!-- LANGUAGE SELECTOR                                         -->
+      <!-- ======================================================== -->
+
+      <div class="language-switcher">
+
+        <label
+          class="language-label"
+          for="language-select"
+          data-i18n-aria-label="common.language"
+        >
+
+          <span aria-hidden="true">
+            🌐
+          </span>
+
+        </label>
+
+
+        <select
+          id="language-select"
+          class="mono-select"
+          aria-label="Language"
+          data-i18n-aria-label="common.language"
+        >
+
+          <option
+            value="th"
+            data-i18n="language.th"
+          >
+            ไทย
+          </option>
+
+          <option
+            value="en"
+            data-i18n="language.en"
+          >
+            English
+          </option>
+
+          <option
+            value="ja"
+            data-i18n="language.ja"
+          >
+            日本語
+          </option>
+
+          <option
+            value="ko"
+            data-i18n="language.ko"
+          >
+            한국어
+          </option>
+
+          <option
+            value="zh-CN"
+            data-i18n="language.zhCN"
+          >
+            简体中文
+          </option>
+
+          <option
+            value="zh-TW"
+            data-i18n="language.zhTW"
+          >
+            繁體中文
+          </option>
+
+        </select>
+
+      </div>
+
     </div>
 
-    <h1>
+
+    <h1 data-i18n="page.heading">
       ชุดเครื่องมือจัดการไฟล์
     </h1>
 
-    <p class="sub">
+
+    <p
+      class="sub"
+      data-i18n="page.subtitle"
+    >
       แปลงและแก้ไขรูปภาพ/PDF ทั้งหมดในเบราว์เซอร์ของคุณ
       ไม่มีการอัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์ใดๆ
     </p>
@@ -54,7 +172,11 @@
   <!-- CATEGORY SWITCHER                                             -->
   <!-- ============================================================ -->
 
-  <nav class="cat-bar" id="catBar">
+  <nav
+    class="cat-bar"
+    id="catBar"
+  >
+
 
     <!-- ========================================================== -->
     <!-- IMAGE                                                       -->
@@ -73,6 +195,7 @@
         fill="none"
         stroke="currentColor"
         stroke-width="1.6"
+        aria-hidden="true"
       >
 
         <rect
@@ -89,11 +212,15 @@
           r="1.5"
         />
 
-        <path d="M21 15l-5-5-9 9"/>
+        <path
+          d="M21 15l-5-5-9 9"
+        />
 
       </svg>
 
-      รูปภาพ
+      <span data-i18n="common.image">
+        รูปภาพ
+      </span>
 
     </button>
 
@@ -115,17 +242,22 @@
         fill="none"
         stroke="currentColor"
         stroke-width="1.6"
+        aria-hidden="true"
       >
 
         <path
           d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
         />
 
-        <path d="M14 2v6h6"/>
+        <path
+          d="M14 2v6h6"
+        />
 
       </svg>
 
-      PDF
+      <span data-i18n="common.pdf">
+        PDF
+      </span>
 
     </button>
 
@@ -139,6 +271,7 @@
       id="open-notepad"
       type="button"
       title="เปิด Online Notepad"
+      data-i18n-title="page.notepadTitle"
     >
 
       <svg
@@ -148,23 +281,34 @@
         fill="none"
         stroke="currentColor"
         stroke-width="1.6"
+        aria-hidden="true"
       >
 
         <path
           d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
         />
 
-        <path d="M14 2v6h6"/>
+        <path
+          d="M14 2v6h6"
+        />
 
-        <path d="M8 13h8"/>
+        <path
+          d="M8 13h8"
+        />
 
-        <path d="M8 17h6"/>
+        <path
+          d="M8 17h6"
+        />
 
-        <path d="M8 9h4"/>
+        <path
+          d="M8 9h4"
+        />
 
       </svg>
 
-      Notepad
+      <span data-i18n="common.notepad">
+        Notepad
+      </span>
 
     </button>
 
@@ -185,7 +329,9 @@
       data-tool="img-convert"
       type="button"
     >
-      แปลงนามสกุล &amp; ปรับขนาด
+      <span data-i18n="image.convertTitle">
+        แปลงนามสกุล &amp; ปรับขนาด
+      </span>
     </button>
 
 
@@ -194,7 +340,9 @@
       data-tool="img-crop"
       type="button"
     >
-      ครอบตัดรูปภาพ
+      <span data-i18n="image.cropTitle">
+        ครอบตัดรูปภาพ
+      </span>
     </button>
 
 
@@ -203,20 +351,20 @@
       data-tool="img-bgremove"
       type="button"
     >
-      ลบพื้นหลัง
+      <span data-i18n="image.bgRemoveTitle">
+        ลบพื้นหลัง
+      </span>
     </button>
 
-
-    <!-- ======================================================== -->
-    <!-- IMAGE COMPRESS                                              -->
-    <!-- ======================================================== -->
 
     <button
       class="tool-chip"
       data-tool="img-compress"
       type="button"
     >
-      ลดขนาดรูปภาพ
+      <span data-i18n="image.compressTitle">
+        ลดขนาดรูปภาพ
+      </span>
     </button>
 
   </nav>
@@ -236,7 +384,9 @@
       data-tool="pdf-from-images"
       type="button"
     >
-      รวมรูปเป็น PDF
+      <span data-i18n="pdf.fromImagesTitle">
+        รวมรูปเป็น PDF
+      </span>
     </button>
 
 
@@ -245,7 +395,9 @@
       data-tool="pdf-to-images"
       type="button"
     >
-      PDF → รูปภาพ
+      <span data-i18n="pdf.toImagesTitle">
+        PDF → รูปภาพ
+      </span>
     </button>
 
 
@@ -254,7 +406,9 @@
       data-tool="pdf-pages"
       type="button"
     >
-      จัดการหน้า PDF
+      <span data-i18n="pdf.pagesTitle">
+        จัดการหน้า PDF
+      </span>
     </button>
 
 
@@ -263,7 +417,9 @@
       data-tool="pdf-merge"
       type="button"
     >
-      รวมไฟล์ PDF
+      <span data-i18n="pdf.mergeTitle">
+        รวมไฟล์ PDF
+      </span>
     </button>
 
 
@@ -272,7 +428,9 @@
       data-tool="pdf-watermark"
       type="button"
     >
-      ใส่ลายน้ำ
+      <span data-i18n="pdf.watermarkTitle">
+        ใส่ลายน้ำ
+      </span>
     </button>
 
 
@@ -281,7 +439,9 @@
       data-tool="pdf-pagenumbers"
       type="button"
     >
-      ใส่เลขหน้า
+      <span data-i18n="pdf.pageNumbersTitle">
+        ใส่เลขหน้า
+      </span>
     </button>
 
   </nav>
@@ -304,7 +464,10 @@
       data-cat="image"
     >
 
-      <p class="panel-hint">
+      <p
+        class="panel-hint"
+        data-i18n="image.convertHint"
+      >
         แปลงนามสกุลไฟล์ (PNG / JPG / WEBP)
         ปรับขนาด คุณภาพ หมุน และพลิกรูปภาพ — ทำได้หลายไฟล์พร้อมกัน
       </p>
@@ -316,6 +479,7 @@
         tabindex="0"
         role="button"
         aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์"
+        data-i18n-aria-label="dropzone.image"
       >
 
         <span class="mark tl"></span>
@@ -334,6 +498,7 @@
             fill="none"
             stroke="currentColor"
             stroke-width="1.4"
+            aria-hidden="true"
           >
 
             <rect
@@ -350,17 +515,25 @@
               r="1.5"
             />
 
-            <path d="M21 15l-5-5-9 9"/>
+            <path
+              d="M21 15l-5-5-9 9"
+            />
 
           </svg>
 
 
-          <div class="dz-title">
+          <div
+            class="dz-title"
+            data-i18n="image.dropImage"
+          >
             วางรูปภาพที่นี่
           </div>
 
 
-          <div class="dz-note">
+          <div
+            class="dz-note"
+            data-i18n="image.supportedImages"
+          >
             หรือคลิกเพื่อเลือกไฟล์ —
             รองรับหลายไฟล์ (JPG · PNG · WEBP · GIF · BMP)
           </div>
@@ -386,7 +559,10 @@
 
         <div class="bulk-left">
 
-          <span class="count-label">
+          <span
+            class="count-label"
+            data-i18n="image.task"
+          >
             งาน:
           </span>
 
@@ -397,7 +573,10 @@
             0
           </span>
 
-          <span class="count-label">
+          <span
+            class="count-label"
+            data-i18n="common.items"
+          >
             รายการ
           </span>
 
@@ -408,16 +587,20 @@
 
           <label class="field-inline">
 
-            <span>
+            <span data-i18n="image.allFormats">
               นามสกุลทั้งหมด
             </span>
+
 
             <select
               id="bulkFormat-img-convert"
               class="mono-select"
             >
 
-              <option value="">
+              <option
+                value=""
+                data-i18n="image.choosePerFile"
+              >
                 — เลือกทีละไฟล์ —
               </option>
 
@@ -443,7 +626,9 @@
             id="clearAll-img-convert"
             type="button"
           >
-            ล้างทั้งหมด
+            <span data-i18n="common.clear">
+              ล้างทั้งหมด
+            </span>
           </button>
 
 
@@ -452,7 +637,9 @@
             id="convertAll-img-convert"
             type="button"
           >
-            แปลงทั้งหมด
+            <span data-i18n="image.convertAll">
+              แปลงทั้งหมด
+            </span>
           </button>
 
 
@@ -461,7 +648,9 @@
             id="downloadZip-img-convert"
             type="button"
           >
-            ดาวน์โหลดทั้งหมด (.zip)
+            <span data-i18n="image.downloadZip">
+              ดาวน์โหลดทั้งหมด (.zip)
+            </span>
           </button>
 
         </div>
@@ -495,11 +684,16 @@
 
               <div class="spec-row spec-name">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="common.file"
+                >
                   ไฟล์
                 </span>
 
-                <span class="spec-value js-filename mono">
+                <span
+                  class="spec-value js-filename mono"
+                >
                   —
                 </span>
 
@@ -508,7 +702,10 @@
 
               <div class="spec-row">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="common.original"
+                >
                   ต้นฉบับ
                 </span>
 
@@ -540,7 +737,10 @@
 
               <div class="control-row">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="image.convertTo"
+                >
                   แปลงเป็น
                 </span>
 
@@ -580,7 +780,10 @@
 
               <div class="control-row">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="image.dimensions"
+                >
                   ขนาด (px)
                 </span>
 
@@ -592,6 +795,7 @@
                     class="dim-input js-width"
                     min="1"
                     placeholder="กว้าง"
+                    data-i18n-placeholder="common.width"
                   >
 
 
@@ -600,6 +804,8 @@
                     class="lock-btn js-lock is-locked"
                     title="ล็อกสัดส่วนภาพ"
                     aria-label="ล็อกสัดส่วนภาพ"
+                    data-i18n-title="image.lockAspect"
+                    data-i18n-aria-label="image.lockAspect"
                   >
 
                     <svg
@@ -609,6 +815,7 @@
                       fill="none"
                       stroke="currentColor"
                       stroke-width="2"
+                      aria-hidden="true"
                     >
 
                       <rect
@@ -619,7 +826,9 @@
                         rx="1.5"
                       />
 
-                      <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                      <path
+                        d="M8 11V7a4 4 0 0 1 8 0v4"
+                      />
 
                     </svg>
 
@@ -631,6 +840,7 @@
                     class="dim-input js-height"
                     min="1"
                     placeholder="สูง"
+                    data-i18n-placeholder="common.height"
                   >
 
                 </div>
@@ -640,7 +850,10 @@
 
               <div class="control-row">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="image.rotateFlip"
+                >
                   หมุน/พลิก
                 </span>
 
@@ -652,6 +865,7 @@
                     class="seg-btn"
                     data-action="rotate-left"
                     title="หมุนซ้าย 90°"
+                    data-i18n-title="image.rotateLeft"
                   >
                     ⟲
                   </button>
@@ -662,6 +876,7 @@
                     class="seg-btn"
                     data-action="rotate-right"
                     title="หมุนขวา 90°"
+                    data-i18n-title="image.rotateRight"
                   >
                     ⟳
                   </button>
@@ -672,6 +887,7 @@
                     class="seg-btn"
                     data-action="flip-h"
                     title="พลิกแนวนอน"
+                    data-i18n-title="image.flipHorizontal"
                   >
                     ⇋
                   </button>
@@ -682,6 +898,7 @@
                     class="seg-btn"
                     data-action="flip-v"
                     title="พลิกแนวตั้ง"
+                    data-i18n-title="image.flipVertical"
                   >
                     ⇵
                   </button>
@@ -693,7 +910,10 @@
 
               <div class="control-row js-quality-row">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="common.quality"
+                >
                   คุณภาพ
                 </span>
 
@@ -721,7 +941,10 @@
 
               <div class="ticket-footer">
 
-                <span class="status js-status mono">
+                <span
+                  class="status js-status mono"
+                  data-i18n="image.waitingConvert"
+                >
                   รอแปลง
                 </span>
 
@@ -732,7 +955,9 @@
                     type="button"
                     class="btn btn-small btn-primary js-convert-btn"
                   >
-                    แปลง
+                    <span data-i18n="image.convertTo">
+                      แปลง
+                    </span>
                   </button>
 
 
@@ -740,7 +965,9 @@
                     class="btn btn-small btn-accent js-download-btn hidden"
                     download
                   >
-                    ดาวน์โหลด
+                    <span data-i18n="common.download">
+                      ดาวน์โหลด
+                    </span>
                   </a>
 
 
@@ -749,6 +976,7 @@
                     class="btn btn-small btn-ghost js-remove-btn"
                     title="ลบ"
                     aria-label="ลบรายการนี้"
+                    data-i18n-title="common.delete"
                   >
                     ✕
                   </button>
@@ -778,7 +1006,10 @@
       data-cat="image"
     >
 
-      <p class="panel-hint">
+      <p
+        class="panel-hint"
+        data-i18n="image.cropHint"
+      >
         ลากเลือกพื้นที่ที่ต้องการบนรูปภาพเพื่อครอบตัด
         ปรับกรอบได้อย่างอิสระ แล้วดาวน์โหลดผลลัพธ์
       </p>
@@ -790,6 +1021,7 @@
         tabindex="0"
         role="button"
         aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์"
+        data-i18n-aria-label="dropzone.image"
       >
 
         <span class="mark tl"></span>
@@ -808,21 +1040,32 @@
             fill="none"
             stroke="currentColor"
             stroke-width="1.4"
+            aria-hidden="true"
           >
 
-            <path d="M6 2v14a2 2 0 0 0 2 2h14"/>
+            <path
+              d="M6 2v14a2 2 0 0 0 2 2h14"
+            />
 
-            <path d="M18 22V8a2 2 0 0 0-2-2H2"/>
+            <path
+              d="M18 22V8a2 2 0 0 0-2-2H2"
+            />
 
           </svg>
 
 
-          <div class="dz-title">
+          <div
+            class="dz-title"
+            data-i18n="image.dropImage"
+          >
             วางรูปภาพที่นี่
           </div>
 
 
-          <div class="dz-note">
+          <div
+            class="dz-note"
+            data-i18n="image.addMultiple"
+          >
             หรือคลิกเพื่อเลือกไฟล์ —
             เพิ่มได้หลายรูป แต่ละรูปครอบตัดแยกกัน
           </div>
@@ -865,7 +1108,9 @@
               />
 
 
-              <div class="crop-box js-crop-box">
+              <div
+                class="crop-box js-crop-box"
+              >
 
                 <span
                   class="crop-handle nw"
@@ -899,11 +1144,16 @@
 
               <div class="spec-row spec-name">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="common.file"
+                >
                   ไฟล์
                 </span>
 
-                <span class="spec-value js-filename mono">
+                <span
+                  class="spec-value js-filename mono"
+                >
                   —
                 </span>
 
@@ -912,11 +1162,16 @@
 
               <div class="spec-row">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="common.original"
+                >
                   ต้นฉบับ
                 </span>
 
-                <span class="spec-value mono js-origdim">
+                <span
+                  class="spec-value mono js-origdim"
+                >
                   —
                 </span>
 
@@ -925,11 +1180,17 @@
 
               <div class="spec-row">
 
-                <span class="spec-label">
-                  พื้นที่ตัด
+                <span
+                  class="spec-label"
+                >
+                  <span data-i18n="image.crop">
+                    พื้นที่ตัด
+                  </span>
                 </span>
 
-                <span class="spec-value mono js-cropdim">
+                <span
+                  class="spec-value mono js-cropdim"
+                >
                   —
                 </span>
 
@@ -941,7 +1202,10 @@
 
               <div class="control-row">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="image.aspectRatio"
+                >
                   อัตราส่วน
                 </span>
 
@@ -953,7 +1217,9 @@
                     class="seg-btn is-active"
                     data-ratio="free"
                   >
-                    อิสระ
+                    <span data-i18n="image.free">
+                      อิสระ
+                    </span>
                   </button>
 
 
@@ -990,7 +1256,10 @@
 
               <div class="control-row">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="image.saveFormat"
+                >
                   บันทึกเป็น
                 </span>
 
@@ -1021,7 +1290,10 @@
 
               <div class="ticket-footer">
 
-                <span class="status js-status mono">
+                <span
+                  class="status js-status mono"
+                  data-i18n="image.waitingCrop"
+                >
                   ลากกรอบเพื่อครอบตัด
                 </span>
 
@@ -1032,7 +1304,9 @@
                     type="button"
                     class="btn btn-small btn-primary js-crop-btn"
                   >
-                    ตัด
+                    <span data-i18n="image.crop">
+                      ตัด
+                    </span>
                   </button>
 
 
@@ -1040,13 +1314,17 @@
                     class="btn btn-small btn-accent js-download-btn hidden"
                     download
                   >
-                    ดาวน์โหลด
+                    <span data-i18n="common.download">
+                      ดาวน์โหลด
+                    </span>
                   </a>
 
 
                   <button
                     type="button"
                     class="btn btn-small btn-ghost js-remove-btn"
+                    title="ลบ"
+                    data-i18n-title="common.delete"
                   >
                     ✕
                   </button>
@@ -1076,7 +1354,10 @@
       data-cat="image"
     >
 
-      <p class="panel-hint">
+      <p
+        class="panel-hint"
+        data-i18n="image.bgRemoveHint"
+      >
         ลบพื้นหลังรูปภาพอัตโนมัติด้วย AI —
         ประมวลผลในเบราว์เซอร์ทั้งหมด
         ไม่มีการอัปโหลดรูปขึ้นเซิร์ฟเวอร์
@@ -1092,6 +1373,7 @@
           fill="none"
           stroke="currentColor"
           stroke-width="1.6"
+          aria-hidden="true"
         >
 
           <circle
@@ -1100,14 +1382,18 @@
             r="10"
           />
 
-          <path d="M12 16v-4"/>
+          <path
+            d="M12 16v-4"
+          />
 
-          <path d="M12 8h.01"/>
+          <path
+            d="M12 8h.01"
+          />
 
         </svg>
 
 
-        <span>
+        <span data-i18n="image.modelFirstUse">
           ครั้งแรกที่ใช้งานจะโหลดโมเดล AI ขนาดประมาณ 40MB
           (ครั้งเดียว เบราว์เซอร์จะแคชไว้ให้ครั้งถัดไปเร็วขึ้น)
           และใช้เวลาประมวลผลต่อรูปสักครู่ขึ้นอยู่กับสเปกเครื่อง
@@ -1122,6 +1408,7 @@
         tabindex="0"
         role="button"
         aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์"
+        data-i18n-aria-label="dropzone.image"
       >
 
         <span class="mark tl"></span>
@@ -1140,9 +1427,12 @@
             fill="none"
             stroke="currentColor"
             stroke-width="1.4"
+            aria-hidden="true"
           >
 
-            <path d="M3 3l18 18"/>
+            <path
+              d="M3 3l18 18"
+            />
 
             <path
               d="M10.5 4.5H19a2 2 0 0 1 2 2v11.5"
@@ -1161,12 +1451,18 @@
           </svg>
 
 
-          <div class="dz-title">
+          <div
+            class="dz-title"
+            data-i18n="image.dropImage"
+          >
             วางรูปภาพที่นี่
           </div>
 
 
-          <div class="dz-note">
+          <div
+            class="dz-note"
+            data-i18n="image.outputTransparent"
+          >
             หรือคลิกเพื่อเลือกไฟล์ —
             เพิ่มได้หลายรูป ผลลัพธ์เป็น PNG พื้นหลังโปร่งใส
           </div>
@@ -1192,9 +1488,13 @@
 
         <div class="bulk-left">
 
-          <span class="count-label">
+          <span
+            class="count-label"
+            data-i18n="image.task"
+          >
             งาน:
           </span>
+
 
           <span
             class="count"
@@ -1203,7 +1503,11 @@
             0
           </span>
 
-          <span class="count-label">
+
+          <span
+            class="count-label"
+            data-i18n="common.items"
+          >
             รายการ
           </span>
 
@@ -1217,7 +1521,9 @@
             id="clearAll-img-bgremove"
             type="button"
           >
-            ล้างทั้งหมด
+            <span data-i18n="common.clear">
+              ล้างทั้งหมด
+            </span>
           </button>
 
 
@@ -1226,7 +1532,9 @@
             id="processAll-img-bgremove"
             type="button"
           >
-            ลบพื้นหลังทั้งหมด
+            <span data-i18n="image.removeBackgroundAll">
+              ลบพื้นหลังทั้งหมด
+            </span>
           </button>
 
 
@@ -1235,7 +1543,9 @@
             id="downloadZip-img-bgremove"
             type="button"
           >
-            ดาวน์โหลดทั้งหมด (.zip)
+            <span data-i18n="image.downloadZip">
+              ดาวน์โหลดทั้งหมด (.zip)
+            </span>
           </button>
 
         </div>
@@ -1275,11 +1585,16 @@
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2"
+                aria-hidden="true"
               >
 
-                <path d="M5 12h14"/>
+                <path
+                  d="M5 12h14"
+                />
 
-                <path d="M13 6l6 6-6 6"/>
+                <path
+                  d="M13 6l6 6-6 6"
+                />
 
               </svg>
 
@@ -1297,11 +1612,16 @@
 
               <div class="spec-row spec-name">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="common.file"
+                >
                   ไฟล์
                 </span>
 
-                <span class="spec-value js-filename mono">
+                <span
+                  class="spec-value js-filename mono"
+                >
                   —
                 </span>
 
@@ -1310,11 +1630,16 @@
 
               <div class="spec-row">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="common.original"
+                >
                   ต้นฉบับ
                 </span>
 
-                <span class="spec-value mono js-origsize">
+                <span
+                  class="spec-value mono js-origsize"
+                >
                   —
                 </span>
 
@@ -1326,14 +1651,19 @@
 
               <div class="progress-track">
 
-                <div class="progress-fill js-progress"></div>
+                <div
+                  class="progress-fill js-progress"
+                ></div>
 
               </div>
 
 
               <div class="ticket-footer">
 
-                <span class="status js-status mono">
+                <span
+                  class="status js-status mono"
+                  data-i18n="image.waitingBackground"
+                >
                   รอลบพื้นหลัง
                 </span>
 
@@ -1344,7 +1674,9 @@
                     type="button"
                     class="btn btn-small btn-primary js-remove-bg-btn"
                   >
-                    ลบพื้นหลัง
+                    <span data-i18n="image.removeBackground">
+                      ลบพื้นหลัง
+                    </span>
                   </button>
 
 
@@ -1352,13 +1684,17 @@
                     class="btn btn-small btn-accent js-download-btn hidden"
                     download
                   >
-                    ดาวน์โหลด
+                    <span data-i18n="common.download">
+                      ดาวน์โหลด
+                    </span>
                   </a>
 
 
                   <button
                     type="button"
                     class="btn btn-small btn-ghost js-remove-job-btn"
+                    title="ลบ"
+                    data-i18n-title="common.delete"
                   >
                     ✕
                   </button>
@@ -1388,7 +1724,10 @@
       data-cat="image"
     >
 
-      <p class="panel-hint">
+      <p
+        class="panel-hint"
+        data-i18n="image.compressHint"
+      >
         ลดขนาดไฟล์รูปภาพโดยปรับคุณภาพและขนาดภาพ
         ประมวลผลทั้งหมดในเบราว์เซอร์ของคุณ
       </p>
@@ -1400,6 +1739,7 @@
         tabindex="0"
         role="button"
         aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์"
+        data-i18n-aria-label="dropzone.image"
       >
 
         <span class="mark tl"></span>
@@ -1418,6 +1758,7 @@
             fill="none"
             stroke="currentColor"
             stroke-width="1.4"
+            aria-hidden="true"
           >
 
             <rect
@@ -1434,17 +1775,25 @@
               r="1.5"
             />
 
-            <path d="M21 15l-5-5-9 9"/>
+            <path
+              d="M21 15l-5-5-9 9"
+            />
 
           </svg>
 
 
-          <div class="dz-title">
+          <div
+            class="dz-title"
+            data-i18n="image.dropImage"
+          >
             วางรูปภาพที่นี่
           </div>
 
 
-          <div class="dz-note">
+          <div
+            class="dz-note"
+            data-i18n="image.compressSupported"
+          >
             หรือคลิกเพื่อเลือกไฟล์ —
             รองรับ JPG · PNG · WEBP และหลายไฟล์พร้อมกัน
           </div>
@@ -1463,10 +1812,6 @@
       </section>
 
 
-      <!-- ======================================================== -->
-      <!-- COMPRESS BULK BAR                                         -->
-      <!-- ======================================================== -->
-
       <section
         class="bulkbar hidden"
         id="bulk-img-compress"
@@ -1474,7 +1819,10 @@
 
         <div class="bulk-left">
 
-          <span class="count-label">
+          <span
+            class="count-label"
+            data-i18n="image.task"
+          >
             งาน:
           </span>
 
@@ -1487,7 +1835,10 @@
           </span>
 
 
-          <span class="count-label">
+          <span
+            class="count-label"
+            data-i18n="common.items"
+          >
             รายการ
           </span>
 
@@ -1496,11 +1847,12 @@
 
         <div class="bulk-right">
 
+
           <!-- QUALITY -->
 
           <label class="field-inline">
 
-            <span>
+            <span data-i18n="common.quality">
               คุณภาพ
             </span>
 
@@ -1546,7 +1898,7 @@
 
           <label class="field-inline">
 
-            <span>
+            <span data-i18n="common.height">
               สูงสุดด้านยาว
             </span>
 
@@ -1556,7 +1908,10 @@
               class="mono-select"
             >
 
-              <option value="0">
+              <option
+                value="0"
+                data-i18n="common.unlimited"
+              >
                 ไม่จำกัด
               </option>
 
@@ -1592,7 +1947,7 @@
 
           <label class="field-inline">
 
-            <span>
+            <span data-i18n="common.format">
               รูปแบบ
             </span>
 
@@ -1631,7 +1986,9 @@
             id="clearAll-img-compress"
             type="button"
           >
-            ล้างทั้งหมด
+            <span data-i18n="common.clear">
+              ล้างทั้งหมด
+            </span>
           </button>
 
 
@@ -1642,7 +1999,9 @@
             id="compressAll-img-compress"
             type="button"
           >
-            ลดขนาดทั้งหมด
+            <span data-i18n="image.compressAll">
+              ลดขนาดทั้งหมด
+            </span>
           </button>
 
 
@@ -1653,7 +2012,9 @@
             id="downloadZip-img-compress"
             type="button"
           >
-            ดาวน์โหลดทั้งหมด (.zip)
+            <span data-i18n="image.downloadZip">
+              ดาวน์โหลดทั้งหมด (.zip)
+            </span>
           </button>
 
         </div>
@@ -1661,19 +2022,11 @@
       </section>
 
 
-      <!-- ======================================================== -->
-      <!-- COMPRESS JOBS                                             -->
-      <!-- ======================================================== -->
-
       <section
         class="jobs"
         id="jobs-img-compress"
       ></section>
 
-
-      <!-- ======================================================== -->
-      <!-- COMPRESS TEMPLATE                                         -->
-      <!-- ======================================================== -->
 
       <template id="tpl-img-compress">
 
@@ -1683,6 +2036,7 @@
 
 
           <div class="ticket-body">
+
 
             <!-- THUMB -->
 
@@ -1700,11 +2054,15 @@
 
             <div class="ticket-spec">
 
+
               <!-- FILE NAME -->
 
               <div class="spec-row spec-name">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="common.file"
+                >
                   ไฟล์
                 </span>
 
@@ -1722,7 +2080,10 @@
 
               <div class="spec-row">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="common.original"
+                >
                   ต้นฉบับ
                 </span>
 
@@ -1751,7 +2112,10 @@
 
               <div class="spec-row">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="image.afterCompress"
+                >
                   หลังลด
                 </span>
 
@@ -1777,7 +2141,10 @@
 
               <div class="control-row">
 
-                <span class="spec-label">
+                <span
+                  class="spec-label"
+                  data-i18n="image.savings"
+                >
                   ลดไป
                 </span>
 
@@ -1808,6 +2175,7 @@
 
                 <span
                   class="status js-status mono"
+                  data-i18n="image.waitingCompress"
                 >
                   รอลดขนาด
                 </span>
@@ -1815,13 +2183,16 @@
 
                 <div class="ticket-actions">
 
+
                   <!-- COMPRESS -->
 
                   <button
                     type="button"
                     class="btn btn-small btn-primary js-compress-btn"
                   >
-                    ลดขนาด
+                    <span data-i18n="image.compress">
+                      ลดขนาด
+                    </span>
                   </button>
 
 
@@ -1831,7 +2202,9 @@
                     class="btn btn-small btn-accent js-download-btn hidden"
                     download
                   >
-                    ดาวน์โหลด
+                    <span data-i18n="common.download">
+                      ดาวน์โหลด
+                    </span>
                   </a>
 
 
@@ -1841,7 +2214,7 @@
                     type="button"
                     class="btn btn-small btn-ghost js-remove-btn"
                     title="ลบ"
-                    aria-label="ลบรายการนี้"
+                    data-i18n-title="common.delete"
                   >
                     ✕
                   </button>
@@ -1871,7 +2244,10 @@
       data-cat="pdf"
     >
 
-      <p class="panel-hint">
+      <p
+        class="panel-hint"
+        data-i18n="pdf.fromImagesHint"
+      >
         รวมรูปภาพหลายไฟล์เป็น PDF เล่มเดียว
         เรียงลำดับหน้าได้ตามใจ
       </p>
@@ -1883,6 +2259,7 @@
         tabindex="0"
         role="button"
         aria-label="ลากไฟล์รูปภาพมาวางที่นี่"
+        data-i18n-aria-label="dropzone.imageOnly"
       >
 
         <span class="mark tl"></span>
@@ -1901,6 +2278,7 @@
             fill="none"
             stroke="currentColor"
             stroke-width="1.4"
+            aria-hidden="true"
           >
 
             <rect
@@ -1917,17 +2295,25 @@
               r="1.5"
             />
 
-            <path d="M21 15l-5-5-9 9"/>
+            <path
+              d="M21 15l-5-5-9 9"
+            />
 
           </svg>
 
 
-          <div class="dz-title">
+          <div
+            class="dz-title"
+            data-i18n="image.dropImage"
+          >
             วางรูปภาพที่นี่
           </div>
 
 
-          <div class="dz-note">
+          <div
+            class="dz-note"
+            data-i18n="pdf.imagesToPdfOrder"
+          >
             เพิ่มได้หลายไฟล์ —
             ลำดับที่เพิ่มจะเป็นลำดับหน้าใน PDF
             (ปรับได้ทีหลัง)
@@ -1954,9 +2340,13 @@
 
         <div class="bulk-left">
 
-          <span class="count-label">
+          <span
+            class="count-label"
+            data-i18n="common.images"
+          >
             รูป:
           </span>
+
 
           <span
             class="count"
@@ -1965,7 +2355,11 @@
             0
           </span>
 
-          <span class="count-label">
+
+          <span
+            class="count-label"
+            data-i18n="common.files"
+          >
             ไฟล์
           </span>
 
@@ -1976,7 +2370,7 @@
 
           <label class="field-inline">
 
-            <span>
+            <span data-i18n="pdf.pageSize">
               ขนาดหน้า
             </span>
 
@@ -1989,6 +2383,7 @@
               <option
                 value="fit"
                 selected
+                data-i18n="pdf.fitToImage"
               >
                 พอดีกับรูปภาพ
               </option>
@@ -2013,7 +2408,9 @@
             id="clearAll-pdf-from-images"
             type="button"
           >
-            ล้างทั้งหมด
+            <span data-i18n="common.clear">
+              ล้างทั้งหมด
+            </span>
           </button>
 
 
@@ -2022,7 +2419,9 @@
             id="build-pdf-from-images"
             type="button"
           >
-            สร้าง PDF
+            <span data-i18n="pdf.buildPdf">
+              สร้าง PDF
+            </span>
           </button>
 
         </div>
@@ -2044,6 +2443,7 @@
         <span
           class="status is-ready mono"
           id="resultStatus-pdf-from-images"
+          data-i18n="pdf.createdSuccess"
         >
           สร้าง PDF สำเร็จ
         </span>
@@ -2054,7 +2454,9 @@
           id="resultDownload-pdf-from-images"
           download
         >
-          ดาวน์โหลด PDF
+          <span data-i18n="pdf.downloadPdf">
+            ดาวน์โหลด PDF
+          </span>
         </a>
 
       </div>
@@ -2065,9 +2467,7 @@
         <li class="file-row">
 
           <span class="file-thumb">
-
             <img alt="">
-
           </span>
 
 
@@ -2091,6 +2491,7 @@
               type="button"
               class="icon-btn js-move-up"
               title="ย้ายขึ้น"
+              data-i18n-title="pdf.moveUp"
             >
               ↑
             </button>
@@ -2100,6 +2501,7 @@
               type="button"
               class="icon-btn js-move-down"
               title="ย้ายลง"
+              data-i18n-title="pdf.moveDown"
             >
               ↓
             </button>
@@ -2109,6 +2511,7 @@
               type="button"
               class="icon-btn js-remove"
               title="ลบ"
+              data-i18n-title="common.delete"
             >
               ✕
             </button>
@@ -2132,7 +2535,10 @@
       data-cat="pdf"
     >
 
-      <p class="panel-hint">
+      <p
+        class="panel-hint"
+        data-i18n="pdf.toImagesHint"
+      >
         แปลงทุกหน้าของไฟล์ PDF ให้เป็นไฟล์รูปภาพ
         เลือกนามสกุลและความละเอียดได้
       </p>
@@ -2144,6 +2550,7 @@
         tabindex="0"
         role="button"
         aria-label="ลากไฟล์ PDF มาวางที่นี่"
+        data-i18n-aria-label="dropzone.pdf"
       >
 
         <span class="mark tl"></span>
@@ -2162,25 +2569,38 @@
             fill="none"
             stroke="currentColor"
             stroke-width="1.4"
+            aria-hidden="true"
           >
 
             <path
               d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
             />
 
-            <path d="M14 2v6h6"/>
+            <path
+              d="M14 2v6h6"
+            />
 
           </svg>
 
 
-          <div class="dz-title">
+          <div
+            class="dz-title"
+            data-i18n="pdf.dropPdf"
+          >
             วางไฟล์ PDF ที่นี่
           </div>
 
 
           <div class="dz-note">
-            หรือคลิกเพื่อเลือกไฟล์ —
-            รองรับได้ทีละไฟล์
+
+            <span data-i18n="pdf.clickChoosePdf">
+              หรือคลิกเพื่อเลือกไฟล์ —
+            </span>
+
+            <span data-i18n="pdf.oneFile">
+              รองรับได้ทีละไฟล์
+            </span>
+
           </div>
 
         </div>
@@ -2203,7 +2623,9 @@
 
         <div class="bulk-left">
 
-          <span class="count-label mono js-pdfname">
+          <span
+            class="count-label mono js-pdfname"
+          >
             —
           </span>
 
@@ -2214,7 +2636,7 @@
 
           <label class="field-inline">
 
-            <span>
+            <span data-i18n="pdf.imageFormat">
               นามสกุล
             </span>
 
@@ -2240,7 +2662,7 @@
 
           <label class="field-inline">
 
-            <span>
+            <span data-i18n="pdf.resolution">
               ความละเอียด
             </span>
 
@@ -2277,7 +2699,9 @@
             id="render-pdf-to-images"
             type="button"
           >
-            แปลงทุกหน้า
+            <span data-i18n="pdf.renderAllPages">
+              แปลงทุกหน้า
+            </span>
           </button>
 
 
@@ -2286,7 +2710,9 @@
             id="downloadZip-pdf-to-images"
             type="button"
           >
-            ดาวน์โหลดทั้งหมด (.zip)
+            <span data-i18n="common.downloadAll">
+              ดาวน์โหลดทั้งหมด (.zip)
+            </span>
           </button>
 
         </div>
@@ -2306,7 +2732,10 @@
         </div>
 
 
-        <span class="mono js-progress-label">
+        <span
+          class="mono js-progress-label"
+          data-i18n="pdf.pageProgress"
+        >
           หน้า 0/0
         </span>
 
@@ -2332,7 +2761,10 @@
 
           <div class="page-foot">
 
-            <span class="mono js-pagelabel">
+            <span
+              class="mono js-pagelabel"
+              data-i18n="common.page"
+            >
               หน้า 1
             </span>
 
@@ -2341,7 +2773,9 @@
               class="btn btn-small btn-accent js-download"
               download
             >
-              ดาวน์โหลด
+              <span data-i18n="common.download">
+                ดาวน์โหลด
+              </span>
             </a>
 
           </div>
@@ -2363,7 +2797,10 @@
       data-cat="pdf"
     >
 
-      <p class="panel-hint">
+      <p
+        class="panel-hint"
+        data-i18n="pdf.pagesHint"
+      >
         ลบหน้า เรียงลำดับใหม่
         หรือแยกเฉพาะหน้าที่เลือกออกมาเป็น PDF ใหม่
       </p>
@@ -2375,6 +2812,7 @@
         tabindex="0"
         role="button"
         aria-label="ลากไฟล์ PDF มาวางที่นี่"
+        data-i18n-aria-label="dropzone.pdf"
       >
 
         <span class="mark tl"></span>
@@ -2393,23 +2831,32 @@
             fill="none"
             stroke="currentColor"
             stroke-width="1.4"
+            aria-hidden="true"
           >
 
             <path
               d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
             />
 
-            <path d="M14 2v6h6"/>
+            <path
+              d="M14 2v6h6"
+            />
 
           </svg>
 
 
-          <div class="dz-title">
+          <div
+            class="dz-title"
+            data-i18n="pdf.dropPdf"
+          >
             วางไฟล์ PDF ที่นี่
           </div>
 
 
-          <div class="dz-note">
+          <div
+            class="dz-note"
+            data-i18n="pdf.oneFile"
+          >
             หรือคลิกเพื่อเลือกไฟล์ — ทีละไฟล์
           </div>
 
@@ -2433,7 +2880,9 @@
 
         <div class="bulk-left">
 
-          <span class="count-label mono js-pdfname">
+          <span
+            class="count-label mono js-pdfname"
+          >
             —
           </span>
 
@@ -2451,7 +2900,10 @@
           </span>
 
 
-          <span class="count-label">
+          <span
+            class="count-label"
+            data-i18n="common.pages"
+          >
             หน้า
           </span>
 
@@ -2468,7 +2920,7 @@
             />
 
 
-            <span>
+            <span data-i18n="common.selectAll">
               เลือกทั้งหมด
             </span>
 
@@ -2480,7 +2932,9 @@
             id="download-pdf-pages"
             type="button"
           >
-            ดาวน์โหลด PDF (ตามลำดับ/ลบแล้ว)
+            <span data-i18n="pdf.downloadPdfOrdered">
+              ดาวน์โหลด PDF (ตามลำดับ/ลบแล้ว)
+            </span>
           </button>
 
 
@@ -2489,7 +2943,9 @@
             id="downloadSelected-pdf-pages"
             type="button"
           >
-            ดาวน์โหลดเฉพาะที่เลือก
+            <span data-i18n="pdf.downloadSelected">
+              ดาวน์โหลดเฉพาะที่เลือก
+            </span>
           </button>
 
         </div>
@@ -2500,6 +2956,7 @@
       <p
         class="panel-note hidden"
         id="note-pdf-pages"
+        data-i18n="pdf.manageInstructions"
       >
         ทำเครื่องหมาย ✕ เพื่อลบหน้าออกจากไฟล์หลัก
         ใช้ ↑ ↓ เพื่อสลับลำดับ
@@ -2538,7 +2995,9 @@
 
           <div class="page-foot">
 
-            <span class="mono js-pagelabel">
+            <span
+              class="mono js-pagelabel"
+            >
               หน้า 1
             </span>
 
@@ -2549,6 +3008,7 @@
                 type="button"
                 class="icon-btn js-move-up"
                 title="ย้ายขึ้น"
+                data-i18n-title="pdf.moveUp"
               >
                 ↑
               </button>
@@ -2558,6 +3018,7 @@
                 type="button"
                 class="icon-btn js-move-down"
                 title="ย้ายลง"
+                data-i18n-title="pdf.moveDown"
               >
                 ↓
               </button>
@@ -2567,6 +3028,7 @@
                 type="button"
                 class="icon-btn js-delete"
                 title="ลบหน้านี้"
+                data-i18n-title="pdf.deleteThisPage"
               >
                 ✕
               </button>
@@ -2592,7 +3054,10 @@
       data-cat="pdf"
     >
 
-      <p class="panel-hint">
+      <p
+        class="panel-hint"
+        data-i18n="pdf.mergeHint"
+      >
         รวมไฟล์ PDF หลายไฟล์เป็นเล่มเดียว
         เรียงลำดับไฟล์ได้ก่อนรวม
       </p>
@@ -2604,6 +3069,7 @@
         tabindex="0"
         role="button"
         aria-label="ลากไฟล์ PDF หลายไฟล์มาวางที่นี่"
+        data-i18n-aria-label="dropzone.pdfMultiple"
       >
 
         <span class="mark tl"></span>
@@ -2622,25 +3088,38 @@
             fill="none"
             stroke="currentColor"
             stroke-width="1.4"
+            aria-hidden="true"
           >
 
             <path
               d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
             />
 
-            <path d="M14 2v6h6"/>
+            <path
+              d="M14 2v6h6"
+            />
 
           </svg>
 
 
-          <div class="dz-title">
+          <div
+            class="dz-title"
+            data-i18n="pdf.dropPdf"
+          >
             วางไฟล์ PDF ที่นี่
           </div>
 
 
           <div class="dz-note">
-            เพิ่มได้หลายไฟล์ —
-            เรียงลำดับก่อนรวมได้ด้านล่าง
+
+            <span data-i18n="pdf.multipleFiles">
+              เพิ่มได้หลายไฟล์ —
+            </span>
+
+            <span data-i18n="pdf.mergeOrder">
+              เรียงลำดับก่อนรวมได้ด้านล่าง
+            </span>
+
           </div>
 
         </div>
@@ -2664,7 +3143,10 @@
 
         <div class="bulk-left">
 
-          <span class="count-label">
+          <span
+            class="count-label"
+            data-i18n="common.files"
+          >
             ไฟล์:
           </span>
 
@@ -2686,7 +3168,9 @@
             id="clearAll-pdf-merge"
             type="button"
           >
-            ล้างทั้งหมด
+            <span data-i18n="common.clear">
+              ล้างทั้งหมด
+            </span>
           </button>
 
 
@@ -2695,7 +3179,9 @@
             id="build-pdf-merge"
             type="button"
           >
-            รวมไฟล์
+            <span data-i18n="pdf.mergeFiles">
+              รวมไฟล์
+            </span>
           </button>
 
         </div>
@@ -2714,7 +3200,10 @@
         id="result-pdf-merge"
       >
 
-        <span class="status is-ready mono">
+        <span
+          class="status is-ready mono"
+          data-i18n="pdf.mergedSuccess"
+        >
           รวมไฟล์สำเร็จ
         </span>
 
@@ -2724,7 +3213,9 @@
           id="resultDownload-pdf-merge"
           download
         >
-          ดาวน์โหลด PDF ที่รวมแล้ว
+          <span data-i18n="pdf.downloadMergedPdf">
+            ดาวน์โหลด PDF ที่รวมแล้ว
+          </span>
         </a>
 
       </div>
@@ -2742,7 +3233,10 @@
       data-cat="pdf"
     >
 
-      <p class="panel-hint">
+      <p
+        class="panel-hint"
+        data-i18n="pdf.watermarkHint"
+      >
         ใส่ลายน้ำข้อความหรือรูป PNG ทับทุกหน้าของ PDF
         รองรับข้อความภาษาไทยและ PNG พื้นหลังโปร่งใส
       </p>
@@ -2754,6 +3248,7 @@
         tabindex="0"
         role="button"
         aria-label="ลากไฟล์ PDF มาวางที่นี่"
+        data-i18n-aria-label="dropzone.pdf"
       >
 
         <span class="mark tl"></span>
@@ -2772,23 +3267,32 @@
             fill="none"
             stroke="currentColor"
             stroke-width="1.4"
+            aria-hidden="true"
           >
 
             <path
               d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
             />
 
-            <path d="M14 2v6h6"/>
+            <path
+              d="M14 2v6h6"
+            />
 
           </svg>
 
 
-          <div class="dz-title">
+          <div
+            class="dz-title"
+            data-i18n="pdf.dropPdf"
+          >
             วางไฟล์ PDF ที่นี่
           </div>
 
 
-          <div class="dz-note">
+          <div
+            class="dz-note"
+            data-i18n="pdf.oneFile"
+          >
             หรือคลิกเพื่อเลือกไฟล์ — ทีละไฟล์
           </div>
 
@@ -2822,7 +3326,7 @@
 
           <label class="form-field">
 
-            <span>
+            <span data-i18n="pdf.watermarkText">
               ข้อความลายน้ำ
             </span>
 
@@ -2832,6 +3336,7 @@
               id="text-pdf-watermark"
               value="ตัวอย่างเอกสาร"
               placeholder="เว้นว่างได้ หากใช้รูปอย่างเดียว"
+              data-i18n-placeholder="pdf.watermarkImagePlaceholder"
             />
 
           </label>
@@ -2839,7 +3344,7 @@
 
           <label class="form-field">
 
-            <span>
+            <span data-i18n="pdf.watermarkImage">
               รูปลายน้ำ PNG
             </span>
 
@@ -2854,6 +3359,7 @@
             <span
               class="mono js-watermark-image-name"
               style="font-size:12px; opacity:.65;"
+              data-i18n="pdf.noImageSelected"
             >
               ยังไม่ได้เลือกรูป
             </span>
@@ -2863,7 +3369,7 @@
 
           <label class="form-field">
 
-            <span>
+            <span data-i18n="pdf.fontSize">
               ขนาดตัวอักษร
             </span>
 
@@ -2881,7 +3387,7 @@
 
           <label class="form-field">
 
-            <span>
+            <span data-i18n="pdf.watermarkImageSize">
               ขนาดรูปลายน้ำ
             </span>
 
@@ -2911,7 +3417,7 @@
 
           <label class="form-field">
 
-            <span>
+            <span data-i18n="pdf.opacity">
               ความโปร่งใส
             </span>
 
@@ -2939,7 +3445,7 @@
 
           <label class="form-field">
 
-            <span>
+            <span data-i18n="pdf.angle">
               มุมหมุน (องศา)
             </span>
 
@@ -2957,7 +3463,10 @@
         </div>
 
 
-        <p class="panel-note">
+        <p
+          class="panel-note"
+          data-i18n="pdf.watermarkCombination"
+        >
           สามารถใช้ข้อความอย่างเดียว,
           ใช้ PNG อย่างเดียว
           หรือใช้ข้อความและ PNG พร้อมกันได้
@@ -2966,7 +3475,10 @@
 
         <div class="ticket-footer">
 
-          <span class="status js-status mono">
+          <span
+            class="status js-status mono"
+            data-i18n="pdf.readyWatermark"
+          >
             พร้อมใส่ลายน้ำ
           </span>
 
@@ -2978,7 +3490,9 @@
               id="apply-pdf-watermark"
               type="button"
             >
-              ใส่ลายน้ำ
+              <span data-i18n="pdf.applyWatermark">
+                ใส่ลายน้ำ
+              </span>
             </button>
 
 
@@ -2987,7 +3501,9 @@
               id="download-pdf-watermark"
               download
             >
-              ดาวน์โหลด PDF
+              <span data-i18n="common.download">
+                ดาวน์โหลด PDF
+              </span>
             </a>
 
           </div>
@@ -3009,7 +3525,10 @@
       data-cat="pdf"
     >
 
-      <p class="panel-hint">
+      <p
+        class="panel-hint"
+        data-i18n="pdf.pageNumbersHint"
+      >
         ใส่เลขหน้าอัตโนมัติทุกหน้าของ PDF
         เลือกตำแหน่งและรูปแบบข้อความได้
       </p>
@@ -3021,6 +3540,7 @@
         tabindex="0"
         role="button"
         aria-label="ลากไฟล์ PDF มาวางที่นี่"
+        data-i18n-aria-label="dropzone.pdf"
       >
 
         <span class="mark tl"></span>
@@ -3039,23 +3559,32 @@
             fill="none"
             stroke="currentColor"
             stroke-width="1.4"
+            aria-hidden="true"
           >
 
             <path
               d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
             />
 
-            <path d="M14 2v6h6"/>
+            <path
+              d="M14 2v6h6"
+            />
 
           </svg>
 
 
-          <div class="dz-title">
+          <div
+            class="dz-title"
+            data-i18n="pdf.dropPdf"
+          >
             วางไฟล์ PDF ที่นี่
           </div>
 
 
-          <div class="dz-note">
+          <div
+            class="dz-note"
+            data-i18n="pdf.oneFile"
+          >
             หรือคลิกเพื่อเลือกไฟล์ — ทีละไฟล์
           </div>
 
@@ -3089,7 +3618,7 @@
 
           <label class="form-field">
 
-            <span>
+            <span data-i18n="pdf.pageNumberFormat">
               รูปแบบข้อความ
             </span>
 
@@ -3105,7 +3634,7 @@
 
           <label class="form-field">
 
-            <span>
+            <span data-i18n="pdf.startCountingAt">
               เริ่มนับที่
             </span>
 
@@ -3121,7 +3650,7 @@
 
           <label class="form-field">
 
-            <span>
+            <span data-i18n="pdf.position">
               ตำแหน่ง
             </span>
 
@@ -3134,27 +3663,40 @@
               <option
                 value="bottom-center"
                 selected
+                data-i18n="pdf.bottomCenter"
               >
                 ล่างกึ่งกลาง
               </option>
 
 
-              <option value="bottom-right">
+              <option
+                value="bottom-right"
+                data-i18n="pdf.bottomRight"
+              >
                 ล่างขวา
               </option>
 
 
-              <option value="bottom-left">
+              <option
+                value="bottom-left"
+                data-i18n="pdf.bottomLeft"
+              >
                 ล่างซ้าย
               </option>
 
 
-              <option value="top-center">
+              <option
+                value="top-center"
+                data-i18n="pdf.topCenter"
+              >
                 บนกึ่งกลาง
               </option>
 
 
-              <option value="top-right">
+              <option
+                value="top-right"
+                data-i18n="pdf.topRight"
+              >
                 บนขวา
               </option>
 
@@ -3165,7 +3707,7 @@
 
           <label class="form-field">
 
-            <span>
+            <span data-i18n="pdf.fontSize">
               ขนาดตัวอักษร
             </span>
 
@@ -3185,18 +3727,23 @@
 
         <p class="panel-note">
 
-          ใช้
-          <code class="mono">{n}</code>
-          แทนเลขหน้า และ
-          <code class="mono">{total}</code>
-          แทนจำนวนหน้าทั้งหมด
+          <span data-i18n="pdf.pageNumberHelp">
+            ใช้
+            {n}
+            แทนเลขหน้า และ
+            {total}
+            แทนจำนวนหน้าทั้งหมด
+          </span>
 
         </p>
 
 
         <div class="ticket-footer">
 
-          <span class="status js-status mono">
+          <span
+            class="status js-status mono"
+            data-i18n="pdf.readyPageNumber"
+          >
             พร้อมใส่เลขหน้า
           </span>
 
@@ -3208,7 +3755,9 @@
               id="apply-pdf-pagenumbers"
               type="button"
             >
-              ใส่เลขหน้า
+              <span data-i18n="pdf.applyPageNumber">
+                ใส่เลขหน้า
+              </span>
             </button>
 
 
@@ -3217,7 +3766,9 @@
               id="download-pdf-pagenumbers"
               download
             >
-              ดาวน์โหลด PDF
+              <span data-i18n="common.download">
+                ดาวน์โหลด PDF
+              </span>
             </a>
 
           </div>
@@ -3237,7 +3788,10 @@
 
   <footer class="foot">
 
-    <span class="mono">
+    <span
+      class="mono"
+      data-i18n="page.footer"
+    >
       ทำงานในเบราว์เซอร์ของคุณทั้งหมด —
       ไม่มีไฟล์ถูกส่งออกไปที่ใด
     </span>
@@ -3286,7 +3840,10 @@
 
     create(width, height) {
 
-      if (width <= 0 || height <= 0) {
+      if (
+        width <= 0 ||
+        height <= 0
+      ) {
 
         throw new Error(
           "Invalid canvas size"
@@ -3296,7 +3853,9 @@
 
 
       const canvas =
-        document.createElement("canvas");
+        document.createElement(
+          "canvas"
+        );
 
 
       canvas.width =
@@ -3401,13 +3960,17 @@
       }
 
 
-      canvasAndContext.canvas.width = 1;
+      canvasAndContext.canvas.width =
+        1;
 
-      canvasAndContext.canvas.height = 1;
+      canvasAndContext.canvas.height =
+        1;
 
-      canvasAndContext.canvas = null;
+      canvasAndContext.canvas =
+        null;
 
-      canvasAndContext.context = null;
+      canvasAndContext.context =
+        null;
 
     }
 
@@ -3420,6 +3983,11 @@
 <!-- APPLICATION SCRIPTS                                            -->
 <!-- ============================================================ -->
 
+<!-- IMPORTANT:
+     i18n.js ต้องมาก่อน utils.js -->
+
+<script src="js/i18n.js"></script>
+
 <script src="js/utils.js"></script>
 
 <script src="js/pdf-worker-client.js"></script>
@@ -3431,10 +3999,6 @@
 <script src="js/tool-image-crop.js"></script>
 
 <script src="js/tool-image-bgremove.js"></script>
-
-<!-- ============================================================ -->
-<!-- IMAGE COMPRESS                                                 -->
-<!-- ============================================================ -->
 
 <script src="js/tool-image-compress.js"></script>
 
@@ -3449,6 +4013,109 @@
 <script src="js/tool-pdf-watermark.js"></script>
 
 <script src="js/tool-pdf-pagenumbers.js"></script>
+
+
+<!-- ============================================================ -->
+<!-- LANGUAGE SELECTOR                                             -->
+<!-- ============================================================ -->
+
+<script>
+
+  (() => {
+
+    'use strict';
+
+
+    const select =
+      document.getElementById(
+        'language-select'
+      );
+
+
+    if (!select) {
+      return;
+    }
+
+
+    // ----------------------------------------------------------
+    // Initial language
+    // ----------------------------------------------------------
+
+    if (
+      window.I18n &&
+      typeof window.I18n.getLanguage ===
+        'function'
+    ) {
+
+      select.value =
+        window.I18n.getLanguage();
+
+    }
+
+
+    // ----------------------------------------------------------
+    // Manual change
+    // ----------------------------------------------------------
+
+    select.addEventListener(
+      'change',
+      () => {
+
+        const language =
+          select.value;
+
+
+        if (
+          window.I18n &&
+          typeof window.I18n.setLanguage ===
+            'function'
+        ) {
+
+          window.I18n.setLanguage(
+            language
+          );
+
+        }
+
+      }
+    );
+
+
+    // ----------------------------------------------------------
+    // Keep selector synced
+    // ----------------------------------------------------------
+
+    document.addEventListener(
+      'languagechange',
+      event => {
+
+        const language =
+          event &&
+          event.detail &&
+          event.detail.language;
+
+
+        if (!language) {
+          return;
+        }
+
+
+        if (
+          select.value !==
+          language
+        ) {
+
+          select.value =
+            language;
+
+        }
+
+      }
+    );
+
+  })();
+
+</script>
 
 
 <!-- ============================================================ -->
@@ -3489,4 +4156,5 @@
 
 
 </body>
+
 </html>
