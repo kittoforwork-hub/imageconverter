@@ -34,11 +34,13 @@
         </button>
 
 
+        <!-- NOTE ICON -->
         <div class="notepad-icon">
           📝
         </div>
 
 
+        <!-- TITLE -->
         <div>
 
           <h1>
@@ -54,6 +56,7 @@
       </div>
 
 
+      <!-- SAVE STATUS -->
       <div class="notepad-status">
 
         <span class="status-dot"></span>
@@ -72,48 +75,101 @@
     ========================================================== -->
     <section class="notepad-toolbar">
 
+      <!-- =======================================================
+           MAIN ACTIONS
+      ======================================================== -->
       <div class="toolbar-group">
 
+        <!-- NEW -->
         <button
           type="button"
           class="notepad-btn"
           id="btn-new-note"
           title="สร้างโน้ตใหม่"
         >
-          <span>📄</span>
-          <span>ใหม่</span>
+
+          <span>
+            📄
+          </span>
+
+          <span>
+            ใหม่
+          </span>
+
         </button>
 
 
+        <!-- COPY -->
         <button
           type="button"
           class="notepad-btn"
           id="btn-copy-note"
           title="คัดลอกข้อความทั้งหมด"
         >
-          <span>📋</span>
-          <span>คัดลอก</span>
+
+          <span>
+            📋
+          </span>
+
+          <span>
+            คัดลอก
+          </span>
+
         </button>
 
 
+        <!-- SAVE TXT -->
+        <button
+          type="button"
+          class="notepad-btn"
+          id="btn-save-txt"
+          title="บันทึกข้อความเป็นไฟล์ TXT"
+        >
+
+          <span>
+            💾
+          </span>
+
+          <span>
+            บันทึก .TXT
+          </span>
+
+        </button>
+
+
+        <!-- CLEAR -->
         <button
           type="button"
           class="notepad-btn"
           id="btn-clear-note"
           title="ล้างข้อความ"
         >
-          <span>🗑️</span>
-          <span>ล้าง</span>
+
+          <span>
+            🗑️
+          </span>
+
+          <span>
+            ล้าง
+          </span>
+
         </button>
 
       </div>
 
 
+      <!-- =======================================================
+           DIVIDER
+      ======================================================== -->
       <div class="toolbar-divider"></div>
 
 
+      <!-- =======================================================
+           UNDO / REDO
+      ======================================================== -->
       <div class="toolbar-group">
 
+        <!-- UNDO -->
         <button
           type="button"
           class="notepad-btn icon-only"
@@ -125,6 +181,7 @@
         </button>
 
 
+        <!-- REDO -->
         <button
           type="button"
           class="notepad-btn icon-only"
@@ -138,9 +195,15 @@
       </div>
 
 
+      <!-- =======================================================
+           DIVIDER
+      ======================================================== -->
       <div class="toolbar-divider"></div>
 
 
+      <!-- =======================================================
+           SEARCH
+      ======================================================== -->
       <div class="toolbar-group toolbar-search">
 
         <div class="search-box">
@@ -156,6 +219,7 @@
             placeholder="ค้นหา..."
             autocomplete="off"
             spellcheck="false"
+            aria-label="ค้นหาในโน้ต"
           >
 
 
@@ -191,6 +255,7 @@
           autocomplete="off"
           autocorrect="off"
           autocapitalize="off"
+          aria-label="พื้นที่เขียนข้อความ"
         ></textarea>
 
       </div>
@@ -203,6 +268,7 @@
     ========================================================== -->
     <footer class="notepad-footer">
 
+      <!-- COUNTERS -->
       <div class="notepad-info">
 
         <span>
@@ -241,22 +307,8 @@
       </div>
 
 
+      <!-- SHORTCUTS -->
       <div class="notepad-shortcuts">
-
-        <span>
-
-          <kbd>
-            Ctrl
-          </kbd>
-
-          <kbd>
-            S
-          </kbd>
-
-          บันทึก
-
-        </span>
-
 
         <span>
 
@@ -269,6 +321,21 @@
           </kbd>
 
           ย้อนกลับ
+
+        </span>
+
+
+        <span>
+
+          <kbd>
+            Ctrl
+          </kbd>
+
+          <kbd>
+            Y
+          </kbd>
+
+          ทำซ้ำ
 
         </span>
 
@@ -288,9 +355,11 @@
     hidden
   >
 
+    <!-- BACKDROP -->
     <div class="notepad-modal-backdrop"></div>
 
 
+    <!-- MODAL -->
     <div
       class="notepad-modal-box"
       role="dialog"
@@ -353,6 +422,7 @@
     (() => {
 
       'use strict';
+
 
       const backHomeBtn =
         document.getElementById(
