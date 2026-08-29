@@ -10,11 +10,14 @@
      CONFIG
   ========================================================== */
 
-  const STORAGE_KEY = 'online-notepad-content-v1';
+  const STORAGE_KEY =
+    'online-notepad-content-v1';
 
-  const AUTO_SAVE_DELAY = 450;
+  const AUTO_SAVE_DELAY =
+    450;
 
-  const MAX_HISTORY = 100;
+  const MAX_HISTORY =
+    100;
 
 
   /* ==========================================================
@@ -22,52 +25,84 @@
   ========================================================== */
 
   const textarea =
-    document.getElementById('notepad-textarea');
+    document.getElementById(
+      'notepad-textarea'
+    );
 
   const saveStatus =
-    document.getElementById('notepad-save-status');
+    document.getElementById(
+      'notepad-save-status'
+    );
 
   const saveStatusWrapper =
-    document.querySelector('.notepad-status');
+    document.querySelector(
+      '.notepad-status'
+    );
 
   const characterCount =
-    document.getElementById('notepad-character-count');
+    document.getElementById(
+      'notepad-character-count'
+    );
 
   const wordCount =
-    document.getElementById('notepad-word-count');
+    document.getElementById(
+      'notepad-word-count'
+    );
 
   const lineCount =
-    document.getElementById('notepad-line-count');
+    document.getElementById(
+      'notepad-line-count'
+    );
 
   const newNoteBtn =
-    document.getElementById('btn-new-note');
+    document.getElementById(
+      'btn-new-note'
+    );
 
   const copyBtn =
-    document.getElementById('btn-copy-note');
+    document.getElementById(
+      'btn-copy-note'
+    );
 
   const clearBtn =
-    document.getElementById('btn-clear-note');
+    document.getElementById(
+      'btn-clear-note'
+    );
 
   const undoBtn =
-    document.getElementById('btn-undo');
+    document.getElementById(
+      'btn-undo'
+    );
 
   const redoBtn =
-    document.getElementById('btn-redo');
+    document.getElementById(
+      'btn-redo'
+    );
 
   const searchInput =
-    document.getElementById('notepad-search');
+    document.getElementById(
+      'notepad-search'
+    );
 
   const searchClearBtn =
-    document.getElementById('btn-search-clear');
+    document.getElementById(
+      'btn-search-clear'
+    );
 
   const confirmModal =
-    document.getElementById('notepad-confirm-modal');
+    document.getElementById(
+      'notepad-confirm-modal'
+    );
 
   const modalCancelBtn =
-    document.getElementById('btn-modal-cancel');
+    document.getElementById(
+      'btn-modal-cancel'
+    );
 
   const modalConfirmBtn =
-    document.getElementById('btn-modal-confirm');
+    document.getElementById(
+      'btn-modal-confirm'
+    );
 
 
   /* ==========================================================
@@ -119,7 +154,6 @@
 
         textarea.value =
           saved;
-
       }
 
     } catch (error) {
@@ -128,6 +162,7 @@
         '[Online Notepad] ไม่สามารถอ่าน localStorage ได้',
         error
       );
+
 
       setStatus(
         'ไม่สามารถโหลดข้อมูล',
@@ -203,97 +238,6 @@
 
 
   /* ==========================================================
-     DOWNLOAD TXT
-  ========================================================== */
-
-  function downloadTxt() {
-
-    const text =
-      textarea.value;
-
-
-    /*
-     * ใช้ BOM เพื่อให้ Windows / Notepad
-     * อ่านภาษาไทยเป็น UTF-8 ได้ถูกต้อง
-     */
-
-    const BOM =
-      '\uFEFF';
-
-
-    const blob =
-      new Blob(
-        [
-          BOM,
-          text
-        ],
-        {
-          type:
-            'text/plain;charset=utf-8'
-        }
-      );
-
-
-    const url =
-      URL.createObjectURL(
-        blob
-      );
-
-
-    const link =
-      document.createElement(
-        'a'
-      );
-
-
-    link.href =
-      url;
-
-
-    /*
-     * ชื่อไฟล์
-     */
-
-    link.download =
-      'notepad.txt';
-
-
-    link.style.display =
-      'none';
-
-
-    document.body.appendChild(
-      link
-    );
-
-
-    link.click();
-
-
-    link.remove();
-
-
-    /*
-     * คืนหน่วยความจำ
-     */
-
-    setTimeout(() => {
-
-      URL.revokeObjectURL(
-        url
-      );
-
-    }, 1000);
-
-
-    setStatus(
-      'บันทึกเป็น .txt แล้ว',
-      'saved'
-    );
-  }
-
-
-  /* ==========================================================
      STATUS
   ========================================================== */
 
@@ -343,6 +287,221 @@
         'is-error'
       );
     }
+  }
+
+
+  /* ==========================================================
+     DOWNLOAD TXT
+  ========================================================== */
+
+  function downloadTxt() {
+
+    const text =
+      textarea.value;
+
+
+    /*
+     * ป้องกันการดาวน์โหลดไฟล์ว่าง
+     * หรือข้อความที่มีแต่ช่องว่าง
+     */
+
+    if (
+      !text ||
+      text.trim().length === 0
+    ) {
+
+      setStatus(
+        'ยังไม่มีข้อความให้บันทึก',
+        'error'
+      );
+
+
+      focusTextarea();
+
+
+      return false;
+    }
+
+
+    /*
+     * UTF-8 BOM
+     *
+     * ช่วยให้ Windows Notepad
+     * อ่านภาษาไทยได้ถูกต้อง
+     */
+
+    const BOM =
+      '\uFEFF';
+
+
+    const blob =
+      new Blob(
+        [
+          BOM,
+          text
+        ],
+        {
+          type:
+            'text/plain;charset=utf-8'
+        }
+      );
+
+
+    const url =
+      URL.createObjectURL(
+        blob
+      );
+
+
+    const link =
+      document.createElement(
+        'a'
+      );
+
+
+    link.href =
+      url;
+
+
+    link.download =
+      'notepad.txt';
+
+
+    link.style.display =
+      'none';
+
+
+    document.body.appendChild(
+      link
+    );
+
+
+    link.click();
+
+
+    link.remove();
+
+
+    /*
+     * คืนหน่วยความจำ
+     */
+
+    setTimeout(() => {
+
+      URL.revokeObjectURL(
+        url
+      );
+
+    }, 1000);
+
+
+    setStatus(
+      'บันทึกเป็น .txt แล้ว',
+      'saved'
+    );
+
+
+    return true;
+  }
+
+
+  /* ==========================================================
+     GLOBAL CTRL + S PROTECTION
+  ========================================================== */
+
+  function handleSaveShortcut(
+    event
+  ) {
+
+    /*
+     * ตรวจ Ctrl + S / Cmd + S
+     */
+
+    const key =
+      String(
+        event.key || ''
+      ).toLowerCase();
+
+
+    const isSaveShortcut =
+      (event.ctrlKey ||
+        event.metaKey) &&
+      key === 's';
+
+
+    if (!isSaveShortcut) {
+      return false;
+    }
+
+
+    /*
+     * สำคัญมาก
+     *
+     * ป้องกัน Browser ไม่ให้เปิด
+     * "Save Page As..." ซึ่งจะบันทึกเป็น HTML
+     */
+
+    event.preventDefault();
+
+    event.stopPropagation();
+
+    event.stopImmediatePropagation();
+
+
+    /*
+     * ยกเลิก Auto Save timer
+     */
+
+    clearTimeout(
+      saveTimer
+    );
+
+
+    /*
+     * ตรวจข้อความก่อน
+     */
+
+    const text =
+      textarea.value;
+
+
+    const hasText =
+      text.trim().length > 0;
+
+
+    /*
+     * ไม่มีข้อความ
+     * => ห้ามดาวน์โหลด
+     */
+
+    if (!hasText) {
+
+      setStatus(
+        'ยังไม่มีข้อความให้บันทึก',
+        'error'
+      );
+
+
+      focusTextarea();
+
+
+      return true;
+    }
+
+
+    /*
+     * มีข้อความ
+     *
+     * 1. Save localStorage
+     * 2. Download .txt
+     */
+
+    saveNote();
+
+    downloadTxt();
+
+
+    return true;
   }
 
 
@@ -455,7 +614,9 @@
   }
 
 
-  function pushHistory(value) {
+  function pushHistory(
+    value
+  ) {
 
     if (suppressHistory) {
       return;
@@ -473,7 +634,7 @@
 
     /*
      * ถ้า Undo แล้วพิมพ์ใหม่
-     * history ด้านหน้าจะถูกตัดทิ้ง
+     * ให้ตัด history ด้านหน้าออก
      */
 
     if (
@@ -499,7 +660,7 @@
 
 
     /*
-     * จำกัด history
+     * จำกัดจำนวน history
      */
 
     if (
@@ -671,6 +832,7 @@
         copyBtn,
         'ไม่มีข้อความ'
       );
+
 
       return;
     }
@@ -1100,13 +1262,14 @@
   ) {
 
     const key =
-      event.key.toLowerCase();
+      String(
+        event.key || ''
+      ).toLowerCase();
 
 
     /* --------------------------------------------------------
        Ctrl + S / Cmd + S
-       ดาวน์โหลดเป็น .txt
-    -------------------------------------------------------- */
+       -------------------------------------------------------- */
 
     if (
       (event.ctrlKey ||
@@ -1114,27 +1277,14 @@
       key === 's'
     ) {
 
-      event.preventDefault();
+      /*
+       * ดักไว้ตรงนี้ด้วย
+       * สำหรับกรณีที่ Cursor อยู่ใน textarea
+       */
 
-      event.stopPropagation();
-
-      clearTimeout(
-        saveTimer
+      handleSaveShortcut(
+        event
       );
-
-
-      /*
-       * เก็บข้อมูลใน localStorage ก่อน
-       */
-
-      saveNote();
-
-
-      /*
-       * ดาวน์โหลดไฟล์ .txt
-       */
-
-      downloadTxt();
 
 
       return;
@@ -1143,7 +1293,7 @@
 
     /* --------------------------------------------------------
        Ctrl + Z
-    -------------------------------------------------------- */
+       -------------------------------------------------------- */
 
     if (
       (event.ctrlKey ||
@@ -1154,6 +1304,8 @@
 
       event.preventDefault();
 
+      event.stopPropagation();
+
       undo();
 
       return;
@@ -1162,7 +1314,7 @@
 
     /* --------------------------------------------------------
        Ctrl + Y
-    -------------------------------------------------------- */
+       -------------------------------------------------------- */
 
     if (
       event.ctrlKey &&
@@ -1170,6 +1322,8 @@
     ) {
 
       event.preventDefault();
+
+      event.stopPropagation();
 
       redo();
 
@@ -1179,7 +1333,7 @@
 
     /* --------------------------------------------------------
        Cmd + Shift + Z
-    -------------------------------------------------------- */
+       -------------------------------------------------------- */
 
     if (
       event.metaKey &&
@@ -1189,6 +1343,8 @@
 
       event.preventDefault();
 
+      event.stopPropagation();
+
       redo();
 
       return;
@@ -1197,7 +1353,7 @@
 
     /* --------------------------------------------------------
        Escape
-    -------------------------------------------------------- */
+       -------------------------------------------------------- */
 
     if (
       key === 'escape' &&
@@ -1210,6 +1366,65 @@
       focusTextarea();
     }
   }
+
+
+  /* ==========================================================
+     GLOBAL KEYBOARD PROTECTION
+  ========================================================== */
+
+  /*
+   * ใช้ capture phase
+   *
+   * ตรงนี้สำคัญมาก เพราะต่อให้ไม่ได้ focus
+   * อยู่ใน textarea Browser ก็จะไม่สามารถใช้
+   * Ctrl + S เพื่อ Save หน้าเว็บเป็น HTML ได้
+   */
+
+  document.addEventListener(
+    'keydown',
+    (event) => {
+
+      const key =
+        String(
+          event.key || ''
+        ).toLowerCase();
+
+
+      const isSaveShortcut =
+        (event.ctrlKey ||
+          event.metaKey) &&
+        key === 's';
+
+
+      if (!isSaveShortcut) {
+        return;
+      }
+
+
+      /*
+       * ถ้า textarea เป็น target
+       * ให้ handleKeyboard() จัดการ
+       */
+      if (
+        event.target === textarea
+      ) {
+
+        return;
+      }
+
+
+      /*
+       * ถ้าไม่ได้อยู่ใน textarea
+       * ให้ global handler จัดการ
+       */
+
+      handleSaveShortcut(
+        event
+      );
+
+    },
+    true
+  );
 
 
   /* ==========================================================
@@ -1399,7 +1614,7 @@
 
 
   /*
-   * ให้ textarea พร้อมพิมพ์
+   * ให้ textarea พร้อมพิมพ์ทันที
    */
 
   setTimeout(() => {
@@ -1459,7 +1674,7 @@
 
     downloadTxt() {
 
-      downloadTxt();
+      return downloadTxt();
     },
 
 
