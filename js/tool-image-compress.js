@@ -6,7 +6,8 @@
 (() => {
   'use strict';
 
-  const U = window.Utils;
+  const U =
+    window.Utils;
 
 
   /* ==========================================================
@@ -97,10 +98,16 @@
      STATE
   ========================================================== */
 
-  let jobSeq = 0;
+  let jobSeq =
+    0;
 
-  const jobs = [];
+  const jobs =
+    [];
 
+
+  /* ==========================================================
+     CONSTANTS
+  ========================================================== */
 
   const EXT_BY_FORMAT = {
     'image/png': 'png',
@@ -109,9 +116,32 @@
   };
 
 
-  const MAX_DIMENSION_LIMIT = 20000;
+  const ALLOWED_FORMATS = [
+    'image/jpeg',
+    'image/png',
+    'image/webp'
+  ];
 
-  const CONCURRENCY = 3;
+
+  const MAX_DIMENSION_LIMIT =
+    20000;
+
+
+  /*
+   * จำนวนงานที่ประมวลผลพร้อมกัน
+   */
+
+  const CONCURRENCY =
+    3;
+
+
+  /*
+   * จำกัดพื้นที่ canvas เพื่อป้องกัน
+   * browser memory พุ่งเกินไป
+   */
+
+  const MAX_CANVAS_PIXELS =
+    100000000;
 
 
   /* ==========================================================
@@ -124,6 +154,7 @@
       return 0.85;
     }
 
+
     const value =
       parseFloat(
         qualityEl.value
@@ -131,7 +162,9 @@
 
 
     if (
-      !Number.isFinite(value)
+      !Number.isFinite(
+        value
+      )
     ) {
 
       return 0.85;
@@ -154,6 +187,7 @@
       return 0;
     }
 
+
     const value =
       parseInt(
         maxSizeEl.value,
@@ -162,7 +196,9 @@
 
 
     if (
-      !Number.isFinite(value) ||
+      !Number.isFinite(
+        value
+      ) ||
       value <= 0
     ) {
 
@@ -179,24 +215,23 @@
 
   function getFormat() {
 
-    const allowed = [
-      'image/jpeg',
-      'image/png',
-      'image/webp'
-    ];
-
-
     const value =
       formatEl
         ? formatEl.value
         : 'image/jpeg';
 
 
-    return allowed.includes(
-      value
-    )
-      ? value
-      : 'image/jpeg';
+    if (
+      !ALLOWED_FORMATS.includes(
+        value
+      )
+    ) {
+
+      return 'image/jpeg';
+    }
+
+
+    return value;
   }
 
 
@@ -206,12 +241,21 @@
     maxSize
   ) {
 
-    let outW =
-      naturalW;
+    if (
+      !naturalW ||
+      !naturalH
+    ) {
 
-    let outH =
-      naturalH;
+      return {
+        width: 1,
+        height: 1
+      };
+    }
 
+
+    /*
+     * ถ้าไม่จำกัดด้านยาว
+     */
 
     if (
       !maxSize ||
@@ -222,8 +266,21 @@
     ) {
 
       return {
-        width: outW,
-        height: outH
+        width:
+          Math.max(
+            1,
+            Math.round(
+              naturalW
+            )
+          ),
+
+        height:
+          Math.max(
+            1,
+            Math.round(
+              naturalH
+            )
+          )
       };
     }
 
@@ -236,11 +293,77 @@
       );
 
 
-    outW =
+    const width =
       Math.max(
         1,
         Math.round(
-          naturalW * scale
+          naturalW *
+          scale
+        )
+      );
+
+
+    const height =
+      Math.max(
+        1,
+        Math.round(
+          naturalH *
+          scale
+        )
+      );
+
+
+    return {
+      width,
+      height
+    };
+  }
+
+
+  function fitCanvasDimensions(
+    width,
+    height
+  ) {
+
+    let outW =
+      width;
+
+    let outH =
+      height;
+
+
+    const pixels =
+      outW *
+      outH;
+
+
+    if (
+      pixels <=
+      MAX_CANVAS_PIXELS
+    ) {
+
+      return {
+        width:
+          outW,
+        height:
+          outH
+      };
+    }
+
+
+    const scale =
+      Math.sqrt(
+        MAX_CANVAS_PIXELS /
+        pixels
+      );
+
+
+    outW =
+      Math.max(
+        1,
+        Math.floor(
+          outW *
+          scale
         )
       );
 
@@ -248,15 +371,18 @@
     outH =
       Math.max(
         1,
-        Math.round(
-          naturalH * scale
+        Math.floor(
+          outH *
+          scale
         )
       );
 
 
     return {
-      width: outW,
-      height: outH
+      width:
+        outW,
+      height:
+        outH
     };
   }
 
@@ -267,15 +393,25 @@
   ) {
 
     if (
-      !originalSize ||
-      !Number.isFinite(originalSize) ||
-      !Number.isFinite(newSize)
+      !Number.isFinite(
+        originalSize
+      ) ||
+      originalSize <= 0 ||
+      !Number.isFinite(
+        newSize
+      ) ||
+      newSize < 0
     ) {
 
       return {
-        percent: 0,
-        bytes: 0,
-        isSmaller: false
+        percent:
+          0,
+
+        bytes:
+          0,
+
+        isSmaller:
+          false
       };
     }
 
@@ -289,15 +425,17 @@
       (
         bytes /
         originalSize
-      ) * 100;
+      ) *
+      100;
 
 
     return {
-      percent: Math.max(
-        0,
-        percent
-      ),
-      bytes,
+      percent:
+        percent,
+
+      bytes:
+        bytes,
+
       isSmaller:
         newSize <
         originalSize
@@ -310,6 +448,17 @@
     newSize
   ) {
 
+    if (
+      !Number.isFinite(
+        originalSize
+      ) ||
+      originalSize <= 0
+    ) {
+
+      return '—';
+    }
+
+
     const result =
       calculateSaving(
         originalSize,
@@ -317,13 +466,26 @@
       );
 
 
+    /*
+     * เล็กลง
+     */
+
     if (
       result.isSmaller
     ) {
 
-      return `-${result.percent.toFixed(1)}% · ประหยัด ${U.formatBytes(result.bytes)}`;
+      return (
+        `-${result.percent.toFixed(1)}% · ` +
+        `ประหยัด ${U.formatBytes(
+          result.bytes
+        )}`
+      );
     }
 
+
+    /*
+     * ใหญ่ขึ้น
+     */
 
     if (
       newSize >
@@ -337,10 +499,14 @@
             originalSize
           ) /
           originalSize
-        ) * 100;
+        ) *
+        100;
 
 
-      return `+${increase.toFixed(1)}% · ไฟล์ใหญ่ขึ้น`;
+      return (
+        `+${increase.toFixed(1)}% · ` +
+        'ไฟล์ใหญ่ขึ้น'
+      );
     }
 
 
@@ -363,11 +529,38 @@
         url
       );
 
-    } catch (error) {
+    } catch (_) {
 
-      /* Ignore */
+      /* ignore */
 
     }
+  }
+
+
+  function setProgress(
+    job,
+    value
+  ) {
+
+    if (!job.progressEl) {
+      return;
+    }
+
+
+    const percent =
+      Math.min(
+        100,
+        Math.max(
+          0,
+          Number(
+            value
+          ) || 0
+        )
+      );
+
+
+    job.progressEl.style.width =
+      `${percent}%`;
   }
 
 
@@ -377,7 +570,9 @@
 
   class CompressJob {
 
-    constructor(file) {
+    constructor(
+      file
+    ) {
 
       this.id =
         'compress-' +
@@ -387,6 +582,10 @@
       this.file =
         file;
 
+
+      /*
+       * เก็บค่าตั้งต้นของงาน
+       */
 
       this.format =
         getFormat();
@@ -420,10 +619,17 @@
         null;
 
 
+      this.isProcessing =
+        false;
+
+
       this.el =
-        jobTemplate.content
+        jobTemplate
+          .content
           .firstElementChild
-          .cloneNode(true);
+          .cloneNode(
+            true
+          );
 
 
       this.buildDom();
@@ -535,6 +741,33 @@
       }
 
 
+      if (this.newDimEl) {
+
+        this.newDimEl.textContent =
+          '—';
+      }
+
+
+      if (this.newSizeEl) {
+
+        this.newSizeEl.textContent =
+          '—';
+      }
+
+
+      if (this.savingEl) {
+
+        this.savingEl.textContent =
+          '—';
+      }
+
+
+      setProgress(
+        this,
+        0
+      );
+
+
       this.previewImg.src =
         this.sourceUrl;
 
@@ -543,11 +776,13 @@
         () => {
 
           this.naturalW =
-            this.previewImg.naturalWidth;
+            this.previewImg
+              .naturalWidth;
 
 
           this.naturalH =
-            this.previewImg.naturalHeight;
+            this.previewImg
+              .naturalHeight;
 
 
           if (origDimEl) {
@@ -557,12 +792,8 @@
           }
 
 
-          /*
-           * ถ้ายังไม่ได้ตั้ง max size
-           * แสดงผลขนาดปลายทางเบื้องต้น
-           */
-
           this.updatePreviewInfo();
+
         };
 
 
@@ -576,13 +807,16 @@
           }
 
 
-          this.statusEl.textContent =
-            'เปิดรูปไม่สำเร็จ';
+          if (this.statusEl) {
+
+            this.statusEl.textContent =
+              'เปิดรูปไม่สำเร็จ';
 
 
-          this.statusEl.classList.add(
-            'is-error'
-          );
+            this.statusEl.classList.add(
+              'is-error'
+            );
+          }
 
 
           if (this.compressBtn) {
@@ -590,6 +824,7 @@
             this.compressBtn.disabled =
               true;
           }
+
         };
 
 
@@ -597,8 +832,13 @@
 
         this.compressBtn.addEventListener(
           'click',
-          () => this.compress()
+          () => {
+
+            this.compress();
+
+          }
         );
+
       }
 
 
@@ -620,30 +860,36 @@
             el.remove();
 
 
-            const idx =
+            const index =
               jobs.indexOf(
                 this
               );
 
 
-            if (idx >= 0) {
+            if (
+              index >=
+              0
+            ) {
 
               jobs.splice(
-                idx,
+                index,
                 1
               );
+
             }
 
 
             updateBulkUI();
+
           }
         );
       }
+
     }
 
 
     /* ========================================================
-       UPDATE PREVIEW INFO
+       PREVIEW INFO
     ======================================================== */
 
     updatePreviewInfo() {
@@ -657,23 +903,28 @@
       }
 
 
-      const maxSize =
-        this.maxSize;
-
-
       const dimensions =
         getOutputDimensions(
           this.naturalW,
           this.naturalH,
-          maxSize
+          this.maxSize
+        );
+
+
+      const safeDimensions =
+        fitCanvasDimensions(
+          dimensions.width,
+          dimensions.height
         );
 
 
       if (this.newDimEl) {
 
         this.newDimEl.textContent =
-          `${dimensions.width}×${dimensions.height}`;
+          `${safeDimensions.width}×${safeDimensions.height}`;
+
       }
+
     }
 
 
@@ -681,23 +932,62 @@
        UPDATE OPTIONS
     ======================================================== */
 
-    updateOptionsFromGlobal() {
+    updateOptionsFromGlobal(
+      invalidate = true
+    ) {
 
-      this.format =
+      const nextFormat =
         getFormat();
 
 
-      this.quality =
+      const nextQuality =
         getQuality();
 
 
-      this.maxSize =
+      const nextMaxSize =
         getMaxSize();
 
 
-      this.updatePreviewInfo();
+      const changed =
+        nextFormat !==
+          this.format ||
+        nextQuality !==
+          this.quality ||
+        nextMaxSize !==
+          this.maxSize;
 
-      this.markStale();
+
+      this.format =
+        nextFormat;
+
+
+      this.quality =
+        nextQuality;
+
+
+      this.maxSize =
+        nextMaxSize;
+
+
+      if (
+        this.naturalW &&
+        this.naturalH
+      ) {
+
+        this.updatePreviewInfo();
+
+      }
+
+
+      if (
+        invalidate &&
+        changed
+      ) {
+
+        this.markStale();
+
+      }
+
     }
 
 
@@ -706,6 +996,11 @@
     ======================================================== */
 
     markStale() {
+
+      if (this.isProcessing) {
+        return;
+      }
+
 
       if (this.resultUrl) {
 
@@ -738,14 +1033,14 @@
         this.downloadBtn.classList.add(
           'hidden'
         );
+
       }
 
 
-      if (this.progressEl) {
-
-        this.progressEl.style.width =
-          '0%';
-      }
+      setProgress(
+        this,
+        0
+      );
 
 
       if (this.newSizeEl) {
@@ -772,7 +1067,9 @@
           'is-ready',
           'is-error'
         );
+
       }
+
     }
 
 
@@ -781,6 +1078,18 @@
     ======================================================== */
 
     async compress() {
+
+      if (
+        this.isProcessing
+      ) {
+
+        return;
+      }
+
+
+      /*
+       * ถ้ารูปยังโหลดไม่เสร็จ
+       */
 
       if (
         !this.naturalW ||
@@ -801,15 +1110,26 @@
             }
 
 
+            const onLoad =
+              () => {
+
+                resolve();
+
+              };
+
+
             this.previewImg.addEventListener(
               'load',
-              resolve,
+              onLoad,
               {
-                once: true
+                once:
+                  true
               }
             );
+
           }
         );
+
       }
 
 
@@ -818,21 +1138,45 @@
         !this.naturalH
       ) {
 
-        this.statusEl.textContent =
-          'อ่านข้อมูลรูปไม่สำเร็จ';
+        if (this.statusEl) {
+
+          this.statusEl.textContent =
+            'อ่านข้อมูลรูปไม่สำเร็จ';
 
 
-        this.statusEl.classList.add(
-          'is-error'
-        );
+          this.statusEl.classList.add(
+            'is-error'
+          );
+        }
 
 
         return;
       }
 
 
+      /*
+       * อ่านค่าปัจจุบัน
+       *
+       * invalidate = false
+       * เพราะตอนนี้กำลังจะสร้างผลลัพธ์ใหม่
+       * ไม่จำเป็นต้อง markStale ซ้ำ
+       */
+
+      this.updateOptionsFromGlobal(
+        false
+      );
+
+
+      this.isProcessing =
+        true;
+
+
       this.compressBtn.disabled =
         true;
+
+
+      this.el.dataset.processing =
+        'true';
 
 
       this.statusEl.classList.remove(
@@ -845,24 +1189,35 @@
         'กำลังลดขนาด…';
 
 
-      if (this.progressEl) {
+      setProgress(
+        this,
+        8
+      );
 
-        this.progressEl.style.width =
-          '15%';
-      }
+
+      /*
+       * ช่วยให้ UI มีโอกาสวาดสถานะกำลังทำงาน
+       */
+
+      await new Promise(
+        resolve =>
+          requestAnimationFrame(
+            resolve
+          )
+      );
+
+
+      let canvas =
+        null;
 
 
       try {
 
         /*
-         * อ่านค่าปัจจุบันจาก toolbar
-         * เพื่อให้เปลี่ยนค่าก่อนกดได้เสมอ
+         * คำนวณขนาด
          */
 
-        this.updateOptionsFromGlobal();
-
-
-        const dimensions =
+        let dimensions =
           getOutputDimensions(
             this.naturalW,
             this.naturalH,
@@ -870,7 +1225,42 @@
           );
 
 
-        const canvas =
+        /*
+         * ป้องกัน canvas ใหญ่เกิน
+         */
+
+        dimensions =
+          fitCanvasDimensions(
+            dimensions.width,
+            dimensions.height
+          );
+
+
+        if (
+          dimensions.width <= 0 ||
+          dimensions.height <= 0
+        ) {
+
+          throw new Error(
+            'ขนาดภาพปลายทางไม่ถูกต้อง'
+          );
+        }
+
+
+        if (this.newDimEl) {
+
+          this.newDimEl.textContent =
+            `${dimensions.width}×${dimensions.height}`;
+        }
+
+
+        setProgress(
+          this,
+          25
+        );
+
+
+        canvas =
           document.createElement(
             'canvas'
           );
@@ -886,7 +1276,11 @@
 
         const ctx =
           canvas.getContext(
-            '2d'
+            '2d',
+            {
+              alpha:
+                true
+            }
           );
 
 
@@ -900,7 +1294,6 @@
 
         /*
          * JPG ไม่มี transparency
-         * จึงเติมพื้นหลังสีขาว
          */
 
         if (
@@ -918,15 +1311,14 @@
             dimensions.width,
             dimensions.height
           );
+
         }
 
 
-        if (this.progressEl) {
-
-          this.progressEl.style.width =
-            '35%';
-        }
-
+        /*
+         * ให้ browser ใช้
+         * image smoothing คุณภาพสูง
+         */
 
         ctx.imageSmoothingEnabled =
           true;
@@ -934,6 +1326,12 @@
 
         ctx.imageSmoothingQuality =
           'high';
+
+
+        setProgress(
+          this,
+          42
+        );
 
 
         ctx.drawImage(
@@ -945,27 +1343,32 @@
         );
 
 
-        if (this.progressEl) {
-
-          this.progressEl.style.width =
-            '65%';
-        }
+        setProgress(
+          this,
+          68
+        );
 
 
         const quality =
-          this.format === 'image/png'
+          this.format ===
+            'image/png'
             ? undefined
             : this.quality;
 
 
         const blob =
           await new Promise(
-            (resolve, reject) => {
+            (
+              resolve,
+              reject
+            ) => {
 
               canvas.toBlob(
                 result => {
 
-                  if (result) {
+                  if (
+                    result
+                  ) {
 
                     resolve(
                       result
@@ -978,6 +1381,7 @@
                         'สร้างไฟล์ผลลัพธ์ไม่สำเร็จ'
                       )
                     );
+
                   }
 
                 },
@@ -997,11 +1401,24 @@
         }
 
 
-        if (this.resultUrl) {
+        setProgress(
+          this,
+          82
+        );
+
+
+        /*
+         * ลบผลลัพธ์เก่า
+         */
+
+        if (
+          this.resultUrl
+        ) {
 
           revokeUrl(
             this.resultUrl
           );
+
         }
 
 
@@ -1040,15 +1457,13 @@
           this.downloadBtn.classList.remove(
             'hidden'
           );
+
         }
 
 
-        if (this.newDimEl) {
-
-          this.newDimEl.textContent =
-            `${dimensions.width}×${dimensions.height}`;
-        }
-
+        /*
+         * ขนาดใหม่
+         */
 
         if (this.newSizeEl) {
 
@@ -1056,8 +1471,13 @@
             U.formatBytes(
               blob.size
             );
+
         }
 
+
+        /*
+         * เปอร์เซ็นต์การลด
+         */
 
         if (this.savingEl) {
 
@@ -1066,14 +1486,14 @@
               this.file.size,
               blob.size
             );
+
         }
 
 
-        if (this.progressEl) {
-
-          this.progressEl.style.width =
-            '100%';
-        }
+        setProgress(
+          this,
+          100
+        );
 
 
         const saving =
@@ -1082,6 +1502,10 @@
             blob.size
           );
 
+
+        /*
+         * Status
+         */
 
         if (
           saving.isSmaller
@@ -1101,7 +1525,10 @@
         } else {
 
           this.statusEl.textContent =
-            `พร้อมดาวน์โหลด · ${U.formatBytes(blob.size)}`;
+            `พร้อมดาวน์โหลด · ${U.formatBytes(
+              blob.size
+            )}`;
+
         }
 
 
@@ -1109,38 +1536,89 @@
           'is-ready'
         );
 
-      } catch (err) {
+
+        /*
+         * ทำเครื่องหมายว่างานเสร็จ
+         */
+
+        this.el.dataset.processing =
+          'false';
+
+      } catch (error) {
 
         console.error(
           '[Image Compress]',
-          err
+          error
         );
 
 
-        if (this.progressEl) {
+        setProgress(
+          this,
+          0
+        );
 
-          this.progressEl.style.width =
-            '0%';
+
+        if (this.downloadBtn) {
+
+          this.downloadBtn.classList.add(
+            'hidden'
+          );
+
         }
 
 
         this.statusEl.textContent =
           'ลดขนาดไม่สำเร็จ: ' +
-          (err &&
-           err.message
-            ? err.message
-            : 'เกิดข้อผิดพลาด');
+          (
+            error &&
+            error.message
+              ? error.message
+              : 'เกิดข้อผิดพลาด'
+          );
 
 
         this.statusEl.classList.add(
           'is-error'
         );
 
+
+        this.el.dataset.processing =
+          'false';
+
       } finally {
+
+        /*
+         * คืน canvas
+         */
+
+        if (canvas) {
+
+          canvas.width =
+            1;
+
+
+          canvas.height =
+            1;
+
+
+          canvas =
+            null;
+        }
+
+
+        this.isProcessing =
+          false;
+
 
         this.compressBtn.disabled =
           false;
+
+
+        this.el.dataset.processing =
+          'false';
+
       }
+
     }
 
 
@@ -1150,14 +1628,22 @@
 
     dispose() {
 
-      revokeUrl(
-        this.sourceUrl
-      );
+      if (this.sourceUrl) {
+
+        revokeUrl(
+          this.sourceUrl
+        );
+
+      }
 
 
-      revokeUrl(
-        this.resultUrl
-      );
+      if (this.resultUrl) {
+
+        revokeUrl(
+          this.resultUrl
+        );
+
+      }
 
 
       this.sourceUrl =
@@ -1170,7 +1656,17 @@
 
       this.resultBlob =
         null;
+
+
+      this.isProcessing =
+        false;
+
+
+      this.el.dataset.processing =
+        'false';
+
     }
+
   }
 
 
@@ -1186,6 +1682,7 @@
         String(
           jobs.length
         );
+
     }
 
 
@@ -1195,6 +1692,7 @@
         'hidden',
         jobs.length === 0
       );
+
     }
 
 
@@ -1211,7 +1709,9 @@
         'hidden',
         !hasReady
       );
+
     }
+
   }
 
 
@@ -1225,7 +1725,7 @@
 
     const files =
       Array.from(
-        fileList
+        fileList || []
       );
 
 
@@ -1233,13 +1733,8 @@
       .filter(
         file =>
           file &&
-          (
-            file.type ===
-              'image/jpeg' ||
-            file.type ===
-              'image/png' ||
-            file.type ===
-              'image/webp'
+          ALLOWED_FORMATS.includes(
+            file.type
           )
       )
       .forEach(
@@ -1265,6 +1760,7 @@
 
 
     updateBulkUI();
+
   }
 
 
@@ -1277,13 +1773,16 @@
     jobs.forEach(
       job => {
 
-        job.updateOptionsFromGlobal();
+        job.updateOptionsFromGlobal(
+          true
+        );
 
       }
     );
 
 
     updateBulkUI();
+
   }
 
 
@@ -1293,6 +1792,7 @@
       'change',
       refreshAllJobs
     );
+
   }
 
 
@@ -1302,6 +1802,7 @@
       'change',
       refreshAllJobs
     );
+
   }
 
 
@@ -1311,6 +1812,7 @@
       'change',
       refreshAllJobs
     );
+
   }
 
 
@@ -1342,6 +1844,7 @@
 
       }
     );
+
   }
 
 
@@ -1360,6 +1863,10 @@
         }
 
 
+        /*
+         * อ่าน settings ล่าสุด
+         */
+
         refreshAllJobs();
 
 
@@ -1371,12 +1878,24 @@
           'กำลังลดขนาดทั้งหมด…';
 
 
-        try {
+        /*
+         * ป้องกันการกดซ้ำ
+         */
 
-          /*
-           * จำกัด concurrency
-           * เพื่อไม่ให้ browser ใช้ RAM/CPU หนักเกินไป
-           */
+        jobs.forEach(
+          job => {
+
+            if (
+              job.isProcessing
+            ) {
+              job.isQueued = true;
+            }
+
+          }
+        );
+
+
+        try {
 
           let index =
             0;
@@ -1393,7 +1912,17 @@
                 jobs[index++];
 
 
+              if (
+                !job ||
+                job.isProcessing
+              ) {
+
+                continue;
+              }
+
+
               await job.compress();
+
             }
 
           }
@@ -1417,6 +1946,7 @@
             )
           );
 
+
         } finally {
 
           compressAllBtn.disabled =
@@ -1430,8 +1960,10 @@
           updateBulkUI();
 
         }
+
       }
     );
+
   }
 
 
@@ -1538,6 +2070,7 @@
             'compressed-images.zip'
           );
 
+
         } catch (error) {
 
           console.error(
@@ -1555,8 +2088,10 @@
             'ดาวน์โหลดทั้งหมด (.zip)';
 
         }
+
       }
     );
+
   }
 
 
@@ -1564,37 +2099,53 @@
      DROPZONE
   ========================================================== */
 
-  U.setupDropzone(
-    dropzone,
-    fileInput,
-    addFiles
-  );
+  if (
+    U &&
+    typeof U.setupDropzone ===
+      'function'
+  ) {
+
+    U.setupDropzone(
+      dropzone,
+      fileInput,
+      addFiles
+    );
+
+  }
 
 
   /* ==========================================================
      CLEAR CACHE
   ========================================================== */
 
-  U.onClearCache(
-    () => {
+  if (
+    U &&
+    typeof U.onClearCache ===
+      'function'
+  ) {
 
-      jobs.forEach(
-        job =>
-          job.dispose()
-      );
+    U.onClearCache(
+      () => {
 
-
-      jobs.length =
-        0;
-
-
-      jobsEl.innerHTML =
-        '';
+        jobs.forEach(
+          job =>
+            job.dispose()
+        );
 
 
-      updateBulkUI();
+        jobs.length =
+          0;
 
-    }
-  );
+
+        jobsEl.innerHTML =
+          '';
+
+
+        updateBulkUI();
+
+      }
+    );
+
+  }
 
 })();
