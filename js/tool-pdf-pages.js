@@ -270,13 +270,18 @@
             continue;
           }
 
+          const originalViewport =
+            page.getViewport({
+              scale: 1
+            });
+
+          const baseScale =
+            THUMB_TARGET_WIDTH /
+            originalViewport.width;
+
           const viewport =
             page.getViewport({
-              scale:
-                THUMB_TARGET_WIDTH /
-                page.getViewport({
-                  scale: 1
-                }).width
+              scale: baseScale
             });
 
           const width =
@@ -308,12 +313,7 @@
           const renderViewport =
             page.getViewport({
               scale:
-                (
-                  THUMB_TARGET_WIDTH /
-                  page.getViewport({
-                    scale: 1
-                  }).width
-                ) * scale
+                baseScale * scale
             });
 
           const canvas =
@@ -518,33 +518,7 @@
       pageItems = [];
 
       if (dragState) {
-
-        try {
-          if (
-            dragState.card &&
-            dragState.card.isConnected &&
-            dragState.card.parentNode !== grid
-          ) {
-            dragState.card.remove();
-          }
-        } catch (_) {}
-
-        try {
-          if (
-            dragState.placeholder &&
-            dragState.placeholder.isConnected
-          ) {
-            dragState.placeholder.remove();
-          }
-        } catch (_) {}
-
-        try {
-          resetDragStyles(
-            dragState.card
-          );
-        } catch (_) {}
-
-        dragState = null;
+        cleanupDragState();
       }
 
       clearDropIndicators();
@@ -630,7 +604,8 @@
           thumbUrl: null,
           rendering: false,
           deleted: false,
-          selected: false
+          selected: false,
+          thumbError: false
         });
 
       }
@@ -725,7 +700,11 @@
     }
 
     const item =
-      pageItems[index];
+      pageItems.find(
+        entry =>
+          entry.origIndex ===
+          index
+      );
 
     if (!item) {
       return;
@@ -744,7 +723,7 @@
         item.thumbUrl;
 
       img.alt =
-        `หน้า ${index + 1}`;
+        `หน้า ${getItemPosition(item) + 1}`;
 
       card.classList.remove(
         'is-pending',
@@ -765,6 +744,11 @@
         'is-thumb-error'
       );
     }
+  }
+
+
+  function getItemPosition(item) {
+    return pageItems.indexOf(item);
   }
 
 
@@ -1068,15 +1052,8 @@
             }
 
             if (
-              dragState &&
-              dragState.moved
-            ) {
-              return;
-            }
-
-            if (
               event.target.closest(
-                'button, input, a'
+                'button, input, a, select, textarea'
               )
             ) {
               return;
@@ -1194,6 +1171,9 @@
                 item.deleted =
                   false;
 
+                item.thumbError =
+                  false;
+
                 if (
                   !item.thumbUrl
                 ) {
@@ -1218,9 +1198,9 @@
         }
 
 
-        // ============================================================
+        // ======================================================
         // DRAG
-        // ============================================================
+        // ======================================================
 
         setupCardDrag(
           card,
@@ -1282,21 +1262,6 @@
       return;
     }
 
-    let pointerId = null;
-
-    let grabOffsetX = 0;
-    let grabOffsetY = 0;
-
-    let startX = 0;
-    let startY = 0;
-
-    let moved = false;
-
-
-    // ----------------------------------------------------------
-    // POINTER DOWN
-    // ----------------------------------------------------------
-
     card.addEventListener(
       'pointerdown',
       event => {
@@ -1314,6 +1279,12 @@
         }
 
         if (
+          event.button !== 0
+        ) {
+          return;
+        }
+
+        if (
           event.target.closest(
             'button, input, select, textarea, a'
           )
@@ -1321,175 +1292,205 @@
           return;
         }
 
-        pointerId =
-          event.pointerId;
-
-        startX =
-          event.clientX;
-
-        startY =
-          event.clientY;
-
-        moved =
-          false;
-
         const rect =
           card.getBoundingClientRect();
-
-        grabOffsetX =
-          event.clientX -
-          rect.left;
-
-        grabOffsetY =
-          event.clientY -
-          rect.top;
 
         dragState = {
           card,
           item,
-          pointerId,
+
+          pointerId:
+            event.pointerId,
+
+          startX:
+            event.clientX,
+
+          startY:
+            event.clientY,
+
+          grabOffsetX:
+            event.clientX -
+            rect.left,
+
+          grabOffsetY:
+            event.clientY -
+            rect.top,
+
           moved: false,
+
           started: false,
+
           placeholder: null,
-          grabOffsetX,
-          grabOffsetY,
-          originalParent: card.parentNode,
-          originalNextSibling: card.nextSibling
+
+          originalParent:
+            card.parentNode,
+
+          originalNextSibling:
+            card.nextSibling,
+
+          originalIndex:
+            pageItems.indexOf(item)
         };
 
-        try {
-          card.setPointerCapture(
-            pointerId
-          );
-        } catch (_) {}
-
-      },
-      {
-        passive: false
-      }
-    );
-
-
-    // ----------------------------------------------------------
-    // POINTER MOVE
-    // ----------------------------------------------------------
-
-    card.addEventListener(
-      'pointermove',
-      event => {
-
-        if (
-          pointerId === null ||
-          event.pointerId !== pointerId
-        ) {
-          return;
-        }
-
+        // ไม่ใช้ setPointerCapture
+        // เพราะ card จะถูกย้ายออกจาก grid ไป body
         event.preventDefault();
-
-        const dx =
-          event.clientX -
-          startX;
-
-        const dy =
-          event.clientY -
-          startY;
-
-
-        if (
-          !moved &&
-          Math.hypot(
-            dx,
-            dy
-          ) <
-          DRAG_START_DISTANCE
-        ) {
-          return;
-        }
-
-
-        if (!moved) {
-
-          moved =
-            true;
-
-          if (dragState) {
-            dragState.moved =
-              true;
-          }
-
-          startRealDrag(
-            card,
-            item
-          );
-        }
-
-
-        if (
-          dragState &&
-          dragState.started
-        ) {
-
-          moveFloatingCard(
-            event.clientX,
-            event.clientY
-          );
-
-        }
-
-
-        updateDropPosition(
-          event.clientX,
-          event.clientY
-        );
-
       },
       {
         passive: false
-      }
-    );
-
-
-    // ----------------------------------------------------------
-    // POINTER UP
-    // ----------------------------------------------------------
-
-    card.addEventListener(
-      'pointerup',
-      event => {
-
-        if (
-          pointerId !== null &&
-          event.pointerId === pointerId
-        ) {
-          finishDrag();
-        }
-
-      },
-      {
-        passive: false
-      }
-    );
-
-
-    // ----------------------------------------------------------
-    // POINTER CANCEL
-    // ----------------------------------------------------------
-
-    card.addEventListener(
-      'pointercancel',
-      event => {
-
-        if (
-          pointerId !== null &&
-          event.pointerId === pointerId
-        ) {
-          cancelDrag();
-        }
-
       }
     );
   }
+
+
+  // ============================================================
+  // GLOBAL POINTER MOVE
+  // ============================================================
+
+  document.addEventListener(
+    'pointermove',
+    event => {
+
+      if (!dragState) {
+        return;
+      }
+
+      if (
+        event.pointerId !==
+        dragState.pointerId
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const dx =
+        event.clientX -
+        dragState.startX;
+
+      const dy =
+        event.clientY -
+        dragState.startY;
+
+
+      // --------------------------------------------------------
+      // ยังไม่ถึงระยะเริ่มลาก
+      // --------------------------------------------------------
+
+      if (
+        !dragState.moved &&
+        Math.hypot(dx, dy) <
+          DRAG_START_DISTANCE
+      ) {
+        return;
+      }
+
+
+      // --------------------------------------------------------
+      // เริ่มลากจริง
+      // --------------------------------------------------------
+
+      if (
+        !dragState.moved
+      ) {
+
+        dragState.moved =
+          true;
+
+        startRealDrag(
+          dragState.card,
+          dragState.item
+        );
+      }
+
+
+      // --------------------------------------------------------
+      // ยังไม่ได้สร้าง floating card
+      // --------------------------------------------------------
+
+      if (
+        !dragState.started
+      ) {
+        return;
+      }
+
+
+      // --------------------------------------------------------
+      // ขยับ card
+      // --------------------------------------------------------
+
+      moveFloatingCard(
+        event.clientX,
+        event.clientY
+      );
+
+
+      // --------------------------------------------------------
+      // อัปเดตตำแหน่งปล่อย
+      // --------------------------------------------------------
+
+      updateDropPosition(
+        event.clientX,
+        event.clientY
+      );
+    },
+    {
+      passive: false
+    }
+  );
+
+
+  // ============================================================
+  // GLOBAL POINTER UP
+  // ============================================================
+
+  document.addEventListener(
+    'pointerup',
+    event => {
+
+      if (!dragState) {
+        return;
+      }
+
+      if (
+        event.pointerId !==
+        dragState.pointerId
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+
+      finishDrag();
+    },
+    {
+      passive: false
+    }
+  );
+
+
+  // ============================================================
+  // GLOBAL POINTER CANCEL
+  // ============================================================
+
+  document.addEventListener(
+    'pointercancel',
+    event => {
+
+      if (!dragState) {
+        return;
+      }
+
+      if (
+        event.pointerId !==
+        dragState.pointerId
+      ) {
+        return;
+      }
+
+      cancelDrag();
+    }
+  );
 
 
   // ============================================================
@@ -1503,6 +1504,13 @@
     if (
       !dragState ||
       dragState.started
+    ) {
+      return;
+    }
+
+    if (
+      !card ||
+      !card.isConnected
     ) {
       return;
     }
@@ -1542,13 +1550,21 @@
 
 
     // ----------------------------------------------------------
-    // PLACEHOLDER
+    // INSERT PLACEHOLDER
     // ----------------------------------------------------------
 
-    grid.insertBefore(
-      placeholder,
-      card
-    );
+    if (
+      card.parentNode === grid
+    ) {
+      grid.insertBefore(
+        placeholder,
+        card
+      );
+    } else {
+      grid.appendChild(
+        placeholder
+      );
+    }
 
 
     // ----------------------------------------------------------
@@ -1594,17 +1610,15 @@
       'top left';
 
 
+    // ----------------------------------------------------------
+    // SAVE STATE
+    // ----------------------------------------------------------
+
     dragState.placeholder =
       placeholder;
 
     dragState.started =
       true;
-
-    dragState.originalIndex =
-      pageItems.indexOf(
-        item
-      );
-
 
     clearDropIndicators();
   }
@@ -1620,7 +1634,8 @@
   ) {
     if (
       !dragState ||
-      !dragState.card
+      !dragState.card ||
+      !dragState.started
     ) {
       return;
     }
@@ -1784,6 +1799,7 @@
       );
 
     if (!target) {
+      clearDropIndicators();
       return;
     }
 
@@ -1897,6 +1913,66 @@
 
 
   // ============================================================
+  // CLEANUP DRAG STATE
+  // ============================================================
+
+  function cleanupDragState() {
+
+    if (!dragState) {
+      return;
+    }
+
+    const state =
+      dragState;
+
+    const card =
+      state.card;
+
+    const placeholder =
+      state.placeholder;
+
+
+    // ----------------------------------------------------------
+    // Remove placeholder
+    // ----------------------------------------------------------
+
+    if (
+      placeholder &&
+      placeholder.isConnected
+    ) {
+      placeholder.remove();
+    }
+
+
+    // ----------------------------------------------------------
+    // Remove floating card
+    // ----------------------------------------------------------
+
+    if (
+      card &&
+      card.isConnected &&
+      card.parentNode !== grid
+    ) {
+      card.remove();
+    }
+
+
+    // ----------------------------------------------------------
+    // Reset styles
+    // ----------------------------------------------------------
+
+    resetDragStyles(
+      card
+    );
+
+    clearDropIndicators();
+
+    dragState =
+      null;
+  }
+
+
+  // ============================================================
   // FINISH DRAG
   // ============================================================
 
@@ -1906,11 +1982,17 @@
       return;
     }
 
-    const {
-      card,
-      placeholder,
-      item
-    } = dragState;
+    const state =
+      dragState;
+
+    const card =
+      state.card;
+
+    const placeholder =
+      state.placeholder;
+
+    const item =
+      state.item;
 
 
     // ----------------------------------------------------------
@@ -1918,27 +2000,9 @@
     // ----------------------------------------------------------
 
     if (
-      !dragState.started ||
-      !dragState.moved
+      !state.started ||
+      !state.moved
     ) {
-
-      try {
-        const activePointerId =
-          dragState.pointerId;
-
-        if (
-          activePointerId != null &&
-          card &&
-          card.hasPointerCapture &&
-          card.hasPointerCapture(
-            activePointerId
-          )
-        ) {
-          card.releasePointerCapture(
-            activePointerId
-          );
-        }
-      } catch (_) {}
 
       if (
         placeholder &&
@@ -1999,14 +2063,12 @@
             );
 
           if (
-            child === card
+            Number.isInteger(index)
           ) {
-            return;
+            finalOrder.push(
+              index
+            );
           }
-
-          finalOrder.push(
-            index
-          );
         }
 
       }
@@ -2022,7 +2084,6 @@
         item.origIndex
       )
     ) {
-
       finalOrder.push(
         item.origIndex
       );
@@ -2039,31 +2100,6 @@
 
 
     // ----------------------------------------------------------
-    // Release pointer capture BEFORE removing card
-    // ----------------------------------------------------------
-
-    try {
-
-      const activePointerId =
-        dragState.pointerId;
-
-      if (
-        activePointerId != null &&
-        card &&
-        card.hasPointerCapture &&
-        card.hasPointerCapture(
-          activePointerId
-        )
-      ) {
-        card.releasePointerCapture(
-          activePointerId
-        );
-      }
-
-    } catch (_) {}
-
-
-    // ----------------------------------------------------------
     // Remove placeholder
     // ----------------------------------------------------------
 
@@ -2076,8 +2112,7 @@
 
 
     // ----------------------------------------------------------
-    // IMPORTANT:
-    // Remove the floating card that was moved to <body>
+    // Remove floating card
     // ----------------------------------------------------------
 
     if (
@@ -2090,11 +2125,11 @@
 
 
     // ----------------------------------------------------------
-    // Prevent the click event that follows pointerup
+    // Prevent click after drag
     // ----------------------------------------------------------
 
     suppressClickUntil =
-      Date.now() + 250;
+      Date.now() + 300;
 
 
     // ----------------------------------------------------------
@@ -2130,36 +2165,14 @@
       return;
     }
 
-    const {
-      card,
-      placeholder
-    } =
+    const state =
       dragState;
 
+    const card =
+      state.card;
 
-    // ----------------------------------------------------------
-    // Release pointer capture
-    // ----------------------------------------------------------
-
-    try {
-
-      const activePointerId =
-        dragState.pointerId;
-
-      if (
-        activePointerId != null &&
-        card &&
-        card.hasPointerCapture &&
-        card.hasPointerCapture(
-          activePointerId
-        )
-      ) {
-        card.releasePointerCapture(
-          activePointerId
-        );
-      }
-
-    } catch (_) {}
+    const placeholder =
+      state.placeholder;
 
 
     // ----------------------------------------------------------
@@ -2192,8 +2205,12 @@
     // ----------------------------------------------------------
 
     suppressClickUntil =
-      Date.now() + 250;
+      Date.now() + 300;
 
+
+    // ----------------------------------------------------------
+    // Reset
+    // ----------------------------------------------------------
 
     resetDragStyles(
       card
@@ -2205,6 +2222,7 @@
       null;
 
     renderGrid();
+    updateCounts();
   }
 
 
@@ -2221,7 +2239,9 @@
 
     card.classList.remove(
       'is-dragging',
-      'is-drag-ready'
+      'is-drag-ready',
+      'is-drop-before-target',
+      'is-drop-after-target'
     );
 
     card.style.position =
@@ -2286,6 +2306,7 @@
     const reordered =
       [];
 
+
     order.forEach(
       index => {
 
@@ -2340,33 +2361,37 @@
   // SELECT ALL
   // ============================================================
 
-  selectAllEl.addEventListener(
-    'change',
-    () => {
+  if (selectAllEl) {
 
-      const checked =
-        selectAllEl.checked;
+    selectAllEl.addEventListener(
+      'change',
+      () => {
 
-      pageItems.forEach(
-        item => {
+        const checked =
+          selectAllEl.checked;
 
-          if (
-            item.deleted
-          ) {
-            item.selected =
-              false;
-          } else {
-            item.selected =
-              checked;
+        pageItems.forEach(
+          item => {
+
+            if (
+              item.deleted
+            ) {
+              item.selected =
+                false;
+            } else {
+              item.selected =
+                checked;
+            }
+
           }
+        );
 
-        }
-      );
+        renderGrid();
+        updateCounts();
+      }
+    );
 
-      renderGrid();
-      updateCounts();
-    }
-  );
+  }
 
 
   // ============================================================
@@ -2424,178 +2449,186 @@
   // DOWNLOAD EDITED PDF
   // ============================================================
 
-  downloadBtn.addEventListener(
-    'click',
-    async () => {
+  if (downloadBtn) {
 
-      if (
-        downloadRunning ||
-        !currentFile
-      ) {
-        return;
-      }
+    downloadBtn.addEventListener(
+      'click',
+      async () => {
 
-      const indices =
-        getVisibleItems()
-          .map(
-            item =>
-              item.origIndex
+        if (
+          downloadRunning ||
+          !currentFile
+        ) {
+          return;
+        }
+
+        const indices =
+          getVisibleItems()
+            .map(
+              item =>
+                item.origIndex
+            );
+
+        if (!indices.length) {
+          alert(
+            'ไม่เหลือหน้าใน PDF'
           );
 
-      if (!indices.length) {
-        alert(
-          'ไม่เหลือหน้าใน PDF'
-        );
-
-        return;
-      }
-
-      downloadRunning =
-        true;
-
-      downloadBtn.disabled =
-        true;
-
-      downloadBtn.textContent =
-        'กำลังสร้าง PDF…';
-
-      setToolProcessing(true);
-
-      try {
-
-        const blob =
-          await buildPdf(
-            indices
-          );
-
-        U.downloadBlob(
-          blob,
-          `${U.baseName(
-            currentFile.name
-          )}-edited.pdf`
-        );
-
-      } catch (error) {
-
-        console.error(
-          'Build PDF error:',
-          error
-        );
-
-        alert(
-          'ไม่สามารถสร้าง PDF ได้\n\n' +
-          (
-            error?.message ||
-            'เกิดข้อผิดพลาด'
-          )
-        );
-
-      } finally {
+          return;
+        }
 
         downloadRunning =
-          false;
+          true;
 
         downloadBtn.disabled =
-          false;
+          true;
 
         downloadBtn.textContent =
-          'ดาวน์โหลด PDF (ตามลำดับ/ลบแล้ว)';
+          'กำลังสร้าง PDF…';
 
-        setToolProcessing(
-          false
-        );
+        setToolProcessing(true);
+
+        try {
+
+          const blob =
+            await buildPdf(
+              indices
+            );
+
+          U.downloadBlob(
+            blob,
+            `${U.baseName(
+              currentFile.name
+            )}-edited.pdf`
+          );
+
+        } catch (error) {
+
+          console.error(
+            'Build PDF error:',
+            error
+          );
+
+          alert(
+            'ไม่สามารถสร้าง PDF ได้\n\n' +
+            (
+              error?.message ||
+              'เกิดข้อผิดพลาด'
+            )
+          );
+
+        } finally {
+
+          downloadRunning =
+            false;
+
+          downloadBtn.disabled =
+            false;
+
+          downloadBtn.textContent =
+            'ดาวน์โหลด PDF (ตามลำดับ/ลบแล้ว)';
+
+          setToolProcessing(
+            false
+          );
+        }
       }
-    }
-  );
+    );
+
+  }
 
 
   // ============================================================
   // DOWNLOAD SELECTED
   // ============================================================
 
-  downloadSelectedBtn.addEventListener(
-    'click',
-    async () => {
+  if (downloadSelectedBtn) {
 
-      if (
-        downloadRunning ||
-        !currentFile
-      ) {
-        return;
-      }
+    downloadSelectedBtn.addEventListener(
+      'click',
+      async () => {
 
-      const indices =
-        getSelectedItems()
-          .map(
-            item =>
-              item.origIndex
+        if (
+          downloadRunning ||
+          !currentFile
+        ) {
+          return;
+        }
+
+        const indices =
+          getSelectedItems()
+            .map(
+              item =>
+                item.origIndex
+            );
+
+        if (!indices.length) {
+          alert(
+            'กรุณาเลือกหน้าอย่างน้อย 1 หน้า'
           );
 
-      if (!indices.length) {
-        alert(
-          'กรุณาเลือกหน้าอย่างน้อย 1 หน้า'
-        );
-
-        return;
-      }
-
-      downloadRunning =
-        true;
-
-      downloadSelectedBtn.disabled =
-        true;
-
-      downloadSelectedBtn.textContent =
-        'กำลังสร้าง PDF…';
-
-      setToolProcessing(true);
-
-      try {
-
-        const blob =
-          await buildPdf(
-            indices
-          );
-
-        U.downloadBlob(
-          blob,
-          `${U.baseName(
-            currentFile.name
-          )}-selected.pdf`
-        );
-
-      } catch (error) {
-
-        console.error(
-          'Build selected PDF error:',
-          error
-        );
-
-        alert(
-          'ไม่สามารถสร้าง PDF ได้\n\n' +
-          (
-            error?.message ||
-            'เกิดข้อผิดพลาด'
-          )
-        );
-
-      } finally {
+          return;
+        }
 
         downloadRunning =
-          false;
+          true;
 
         downloadSelectedBtn.disabled =
-          false;
+          true;
 
         downloadSelectedBtn.textContent =
-          'ดาวน์โหลดเฉพาะที่เลือก';
+          'กำลังสร้าง PDF…';
 
-        setToolProcessing(
-          false
-        );
+        setToolProcessing(true);
+
+        try {
+
+          const blob =
+            await buildPdf(
+              indices
+            );
+
+          U.downloadBlob(
+            blob,
+            `${U.baseName(
+              currentFile.name
+            )}-selected.pdf`
+          );
+
+        } catch (error) {
+
+          console.error(
+            'Build selected PDF error:',
+            error
+          );
+
+          alert(
+            'ไม่สามารถสร้าง PDF ได้\n\n' +
+            (
+              error?.message ||
+              'เกิดข้อผิดพลาด'
+            )
+          );
+
+        } finally {
+
+          downloadRunning =
+            false;
+
+          downloadSelectedBtn.disabled =
+            false;
+
+          downloadSelectedBtn.textContent =
+            'ดาวน์โหลดเฉพาะที่เลือก';
+
+          setToolProcessing(
+            false
+          );
+        }
       }
-    }
-  );
+    );
+
+  }
 
 
   // ============================================================
@@ -2641,54 +2674,7 @@
       }
 
       if (dragState) {
-
-        try {
-
-          const activePointerId =
-            dragState.pointerId;
-
-          if (
-            activePointerId != null &&
-            dragState.card &&
-            dragState.card.hasPointerCapture &&
-            dragState.card.hasPointerCapture(
-              activePointerId
-            )
-          ) {
-            dragState.card.releasePointerCapture(
-              activePointerId
-            );
-          }
-
-        } catch (_) {}
-
-        try {
-          if (
-            dragState.card &&
-            dragState.card.isConnected &&
-            dragState.card.parentNode !== grid
-          ) {
-            dragState.card.remove();
-          }
-        } catch (_) {}
-
-        try {
-          if (
-            dragState.placeholder &&
-            dragState.placeholder.isConnected
-          ) {
-            dragState.placeholder.remove();
-          }
-        } catch (_) {}
-
-        try {
-          resetDragStyles(
-            dragState.card
-          );
-        } catch (_) {}
-
-        dragState =
-          null;
+        cleanupDragState();
       }
 
       suppressClickUntil =
@@ -2714,6 +2700,22 @@
 
       downloadRunning =
         false;
+
+      if (downloadBtn) {
+        downloadBtn.disabled =
+          false;
+
+        downloadBtn.textContent =
+          'ดาวน์โหลด PDF (ตามลำดับ/ลบแล้ว)';
+      }
+
+      if (downloadSelectedBtn) {
+        downloadSelectedBtn.disabled =
+          false;
+
+        downloadSelectedBtn.textContent =
+          'ดาวน์โหลดเฉพาะที่เลือก';
+      }
 
       grid.innerHTML =
         '';
