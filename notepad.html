@@ -20,17 +20,48 @@
     <header class="notepad-header">
 
       <div class="notepad-title">
-        <div class="notepad-icon">📝</div>
+
+        <!-- BACK TO HOME -->
+        <button
+          type="button"
+          class="notepad-home-btn"
+          id="btn-back-home"
+          title="กลับหน้าหลัก"
+          aria-label="กลับหน้าหลัก"
+        >
+          <span class="notepad-home-arrow">←</span>
+          <span>หน้าหลัก</span>
+        </button>
+
+
+        <div class="notepad-icon">
+          📝
+        </div>
+
 
         <div>
-          <h1>Online Notepad</h1>
-          <p>จดข้อความของคุณได้ง่าย ๆ และบันทึกอัตโนมัติ</p>
+
+          <h1>
+            Online Notepad
+          </h1>
+
+          <p>
+            จดข้อความของคุณได้ง่าย ๆ และบันทึกอัตโนมัติ
+          </p>
+
         </div>
+
       </div>
 
+
       <div class="notepad-status">
+
         <span class="status-dot"></span>
-        <span id="notepad-save-status">พร้อมใช้งาน</span>
+
+        <span id="notepad-save-status">
+          พร้อมใช้งาน
+        </span>
+
       </div>
 
     </header>
@@ -53,6 +84,7 @@
           <span>ใหม่</span>
         </button>
 
+
         <button
           type="button"
           class="notepad-btn"
@@ -62,6 +94,7 @@
           <span>📋</span>
           <span>คัดลอก</span>
         </button>
+
 
         <button
           type="button"
@@ -91,6 +124,7 @@
           ↶
         </button>
 
+
         <button
           type="button"
           class="notepad-btn icon-only"
@@ -111,7 +145,10 @@
 
         <div class="search-box">
 
-          <span class="search-icon">🔍</span>
+          <span class="search-icon">
+            🔍
+          </span>
+
 
           <input
             type="search"
@@ -120,6 +157,7 @@
             autocomplete="off"
             spellcheck="false"
           >
+
 
           <button
             type="button"
@@ -169,21 +207,35 @@
 
         <span>
           ตัวอักษร:
-          <strong id="notepad-character-count">0</strong>
+          <strong id="notepad-character-count">
+            0
+          </strong>
         </span>
 
-        <span class="info-divider">•</span>
+
+        <span class="info-divider">
+          •
+        </span>
+
 
         <span>
           คำ:
-          <strong id="notepad-word-count">0</strong>
+          <strong id="notepad-word-count">
+            0
+          </strong>
         </span>
 
-        <span class="info-divider">•</span>
+
+        <span class="info-divider">
+          •
+        </span>
+
 
         <span>
           บรรทัด:
-          <strong id="notepad-line-count">0</strong>
+          <strong id="notepad-line-count">
+            0
+          </strong>
         </span>
 
       </div>
@@ -192,15 +244,32 @@
       <div class="notepad-shortcuts">
 
         <span>
-          <kbd>Ctrl</kbd>
-          <kbd>S</kbd>
+
+          <kbd>
+            Ctrl
+          </kbd>
+
+          <kbd>
+            S
+          </kbd>
+
           บันทึก
+
         </span>
 
+
         <span>
-          <kbd>Ctrl</kbd>
-          <kbd>Z</kbd>
+
+          <kbd>
+            Ctrl
+          </kbd>
+
+          <kbd>
+            Z
+          </kbd>
+
           ย้อนกลับ
+
         </span>
 
       </div>
@@ -221,6 +290,7 @@
 
     <div class="notepad-modal-backdrop"></div>
 
+
     <div
       class="notepad-modal-box"
       role="dialog"
@@ -232,13 +302,16 @@
         ⚠️
       </div>
 
+
       <h2 id="notepad-confirm-title">
         สร้างโน้ตใหม่?
       </h2>
 
+
       <p>
         ข้อความปัจจุบันจะถูกล้างออก
       </p>
+
 
       <div class="modal-actions">
 
@@ -249,6 +322,7 @@
         >
           ยกเลิก
         </button>
+
 
         <button
           type="button"
@@ -269,6 +343,41 @@
        NOTEPAD JAVASCRIPT
   ========================================================== -->
   <script src="js/notepad.js"></script>
+
+
+  <!-- =========================================================
+       BACK TO HOME
+  ========================================================== -->
+  <script>
+
+    (() => {
+
+      'use strict';
+
+      const backHomeBtn =
+        document.getElementById(
+          'btn-back-home'
+        );
+
+
+      if (!backHomeBtn) {
+        return;
+      }
+
+
+      backHomeBtn.addEventListener(
+        'click',
+        () => {
+
+          window.location.href =
+            'index.html';
+
+        }
+      );
+
+    })();
+
+  </script>
 
 </body>
 </html>
