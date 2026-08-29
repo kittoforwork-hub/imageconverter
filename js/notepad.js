@@ -75,6 +75,7 @@
   ========================================================== */
 
   if (!textarea) {
+
     console.warn(
       '[Online Notepad] textarea not found.'
     );
@@ -105,15 +106,24 @@
   ========================================================== */
 
   function loadNote() {
+
     try {
+
       const saved =
-        localStorage.getItem(STORAGE_KEY);
+        localStorage.getItem(
+          STORAGE_KEY
+        );
+
 
       if (saved !== null) {
-        textarea.value = saved;
+
+        textarea.value =
+          saved;
+
       }
 
     } catch (error) {
+
       console.warn(
         '[Online Notepad] ไม่สามารถอ่าน localStorage ได้',
         error
@@ -128,26 +138,35 @@
 
 
   function saveNote() {
+
     try {
+
       localStorage.setItem(
         STORAGE_KEY,
         textarea.value
       );
+
 
       setStatus(
         'บันทึกแล้ว',
         'saved'
       );
 
-      isSaving = false;
+
+      isSaving =
+        false;
 
     } catch (error) {
+
       console.error(
         '[Online Notepad] Save failed:',
         error
       );
 
-      isSaving = false;
+
+      isSaving =
+        false;
+
 
       setStatus(
         'บันทึกไม่สำเร็จ',
@@ -158,18 +177,119 @@
 
 
   function scheduleSave() {
-    clearTimeout(saveTimer);
+
+    clearTimeout(
+      saveTimer
+    );
+
 
     setStatus(
       'กำลังบันทึก...',
       'saving'
     );
 
-    isSaving = true;
 
-    saveTimer = setTimeout(() => {
-      saveNote();
-    }, AUTO_SAVE_DELAY);
+    isSaving =
+      true;
+
+
+    saveTimer =
+      setTimeout(() => {
+
+        saveNote();
+
+      }, AUTO_SAVE_DELAY);
+  }
+
+
+  /* ==========================================================
+     DOWNLOAD TXT
+  ========================================================== */
+
+  function downloadTxt() {
+
+    const text =
+      textarea.value;
+
+
+    /*
+     * ใช้ BOM เพื่อให้ Windows / Notepad
+     * อ่านภาษาไทยเป็น UTF-8 ได้ถูกต้อง
+     */
+
+    const BOM =
+      '\uFEFF';
+
+
+    const blob =
+      new Blob(
+        [
+          BOM,
+          text
+        ],
+        {
+          type:
+            'text/plain;charset=utf-8'
+        }
+      );
+
+
+    const url =
+      URL.createObjectURL(
+        blob
+      );
+
+
+    const link =
+      document.createElement(
+        'a'
+      );
+
+
+    link.href =
+      url;
+
+
+    /*
+     * ชื่อไฟล์
+     */
+
+    link.download =
+      'notepad.txt';
+
+
+    link.style.display =
+      'none';
+
+
+    document.body.appendChild(
+      link
+    );
+
+
+    link.click();
+
+
+    link.remove();
+
+
+    /*
+     * คืนหน่วยความจำ
+     */
+
+    setTimeout(() => {
+
+      URL.revokeObjectURL(
+        url
+      );
+
+    }, 1000);
+
+
+    setStatus(
+      'บันทึกเป็น .txt แล้ว',
+      'saved'
+    );
   }
 
 
@@ -177,15 +297,22 @@
      STATUS
   ========================================================== */
 
-  function setStatus(text, type = '') {
+  function setStatus(
+    text,
+    type = ''
+  ) {
 
     if (saveStatus) {
-      saveStatus.textContent = text;
+
+      saveStatus.textContent =
+        text;
     }
+
 
     if (!saveStatusWrapper) {
       return;
     }
+
 
     saveStatusWrapper.classList.remove(
       'is-saving',
@@ -193,19 +320,25 @@
       'is-error'
     );
 
+
     if (type === 'saving') {
+
       saveStatusWrapper.classList.add(
         'is-saving'
       );
     }
 
+
     if (type === 'saved') {
+
       saveStatusWrapper.classList.add(
         'is-saved'
       );
     }
 
+
     if (type === 'error') {
+
       saveStatusWrapper.classList.add(
         'is-error'
       );
@@ -222,6 +355,7 @@
     const text =
       textarea.value;
 
+
     /* --------------------------------------------------------
        Characters
     -------------------------------------------------------- */
@@ -229,7 +363,9 @@
     if (characterCount) {
 
       characterCount.textContent =
-        text.length.toLocaleString('th-TH');
+        text.length.toLocaleString(
+          'th-TH'
+        );
     }
 
 
@@ -242,32 +378,24 @@
       const trimmed =
         text.trim();
 
-      let words = 0;
+
+      let words =
+        0;
+
 
       if (trimmed) {
-
-        /*
-         * รองรับทั้งภาษาอังกฤษและภาษาไทย
-         *
-         * สำหรับภาษาอังกฤษ:
-         *   Hello world
-         *
-         * สำหรับภาษาไทย:
-         *   สวัสดีครับ
-         *
-         * ภาษาไทยไม่มีช่องว่างระหว่างคำเสมอไป
-         * ดังนั้นใช้จำนวนช่วงข้อความเป็นตัวนับแบบง่าย
-         */
 
         const englishWords =
           trimmed.match(
             /[A-Za-z0-9À-ÿ]+/g
           );
 
+
         const thaiBlocks =
           trimmed
             .split(/\s+/)
             .filter(Boolean);
+
 
         words =
           englishWords
@@ -278,8 +406,11 @@
             : thaiBlocks.length;
       }
 
+
       wordCount.textContent =
-        words.toLocaleString('th-TH');
+        words.toLocaleString(
+          'th-TH'
+        );
     }
 
 
@@ -292,10 +423,15 @@
       const lines =
         text === ''
           ? 0
-          : text.split(/\r\n|\r|\n/).length;
+          : text.split(
+              /\r\n|\r|\n/
+            ).length;
+
 
       lineCount.textContent =
-        lines.toLocaleString('th-TH');
+        lines.toLocaleString(
+          'th-TH'
+        );
     }
   }
 
@@ -310,7 +446,10 @@
       textarea.value
     ];
 
-    historyIndex = 0;
+
+    historyIndex =
+      0;
+
 
     updateHistoryButtons();
   }
@@ -322,17 +461,19 @@
       return;
     }
 
+
     if (
       historyIndex >= 0 &&
       history[historyIndex] === value
     ) {
+
       return;
     }
 
 
     /*
-     * ถ้าเรา undo แล้วยังพิมพ์ใหม่
-     * history ด้านหน้าเก่าจะต้องถูกตัดทิ้ง
+     * ถ้า Undo แล้วพิมพ์ใหม่
+     * history ด้านหน้าจะถูกตัดทิ้ง
      */
 
     if (
@@ -348,31 +489,45 @@
     }
 
 
-    history.push(value);
+    history.push(
+      value
+    );
+
 
     historyIndex =
       history.length - 1;
 
 
     /*
-     * จำกัดจำนวน history
+     * จำกัด history
      */
 
-    if (history.length > MAX_HISTORY) {
+    if (
+      history.length >
+      MAX_HISTORY
+    ) {
 
       const removeCount =
-        history.length - MAX_HISTORY;
+        history.length -
+        MAX_HISTORY;
+
 
       history.splice(
         0,
         removeCount
       );
 
+
       historyIndex -=
         removeCount;
 
-      if (historyIndex < 0) {
-        historyIndex = 0;
+
+      if (
+        historyIndex < 0
+      ) {
+
+        historyIndex =
+          0;
       }
     }
 
@@ -383,7 +538,10 @@
 
   function delayedHistoryPush() {
 
-    clearTimeout(historyTimer);
+    clearTimeout(
+      historyTimer
+    );
+
 
     historyTimer =
       setTimeout(() => {
@@ -398,11 +556,16 @@
 
   function undo() {
 
-    if (historyIndex <= 0) {
+    if (
+      historyIndex <= 0
+    ) {
+
       return;
     }
 
+
     historyIndex--;
+
 
     applyHistoryValue(
       history[historyIndex]
@@ -416,10 +579,13 @@
       historyIndex >=
       history.length - 1
     ) {
+
       return;
     }
 
+
     historyIndex++;
+
 
     applyHistoryValue(
       history[historyIndex]
@@ -427,13 +593,21 @@
   }
 
 
-  function applyHistoryValue(value) {
+  function applyHistoryValue(
+    value
+  ) {
 
-    suppressHistory = true;
+    suppressHistory =
+      true;
 
-    textarea.value = value;
 
-    suppressHistory = false;
+    textarea.value =
+      value;
+
+
+    suppressHistory =
+      false;
+
 
     updateCounters();
 
@@ -453,6 +627,7 @@
         historyIndex <= 0;
     }
 
+
     if (redoBtn) {
 
       redoBtn.disabled =
@@ -469,10 +644,13 @@
   function focusTextarea() {
 
     try {
+
       textarea.focus();
 
     } catch (error) {
+
       /* Ignore focus errors */
+
     }
   }
 
@@ -502,9 +680,6 @@
 
       /*
        * Modern Clipboard API
-       *
-       * navigator.clipboard.writeText()
-       * ต้องทำงานใน secure context ใน browser
        */
 
       if (
@@ -517,21 +692,25 @@
           text
         );
 
+
         showTemporaryButtonText(
           copyBtn,
           '✓ คัดลอกแล้ว'
         );
+
 
         return;
       }
 
 
       /*
-       * Fallback สำหรับ browser/environment
-       * ที่ไม่มี Clipboard API
+       * Fallback
        */
 
-      fallbackCopy(text);
+      fallbackCopy(
+        text
+      );
+
 
       showTemporaryButtonText(
         copyBtn,
@@ -545,9 +724,13 @@
         error
       );
 
+
       try {
 
-        fallbackCopy(text);
+        fallbackCopy(
+          text
+        );
+
 
         showTemporaryButtonText(
           copyBtn,
@@ -561,6 +744,7 @@
           fallbackError
         );
 
+
         showTemporaryButtonText(
           copyBtn,
           'คัดลอกไม่ได้'
@@ -570,55 +754,71 @@
   }
 
 
-  function fallbackCopy(text) {
+  function fallbackCopy(
+    text
+  ) {
 
     const temp =
       document.createElement(
         'textarea'
       );
 
-    temp.value = text;
+
+    temp.value =
+      text;
+
 
     temp.setAttribute(
       'readonly',
       ''
     );
 
+
     temp.style.position =
       'fixed';
+
 
     temp.style.opacity =
       '0';
 
+
     temp.style.pointerEvents =
       'none';
 
+
     temp.style.left =
       '-9999px';
+
 
     document.body.appendChild(
       temp
     );
 
+
     temp.focus();
 
     temp.select();
+
 
     temp.setSelectionRange(
       0,
       temp.value.length
     );
 
+
     const successful =
       document.execCommand(
         'copy'
       );
 
+
     document.body.removeChild(
       temp
     );
 
+
     if (!successful) {
+
       throw new Error(
         'Copy command failed'
       );
@@ -635,20 +835,27 @@
       return;
     }
 
+
     const originalHTML =
       button.innerHTML;
+
 
     button.innerHTML =
       `<span>${text}</span>`;
 
-    button.disabled = true;
+
+    button.disabled =
+      true;
+
 
     setTimeout(() => {
 
       button.innerHTML =
         originalHTML;
 
-      button.disabled = false;
+
+      button.disabled =
+        false;
 
     }, 1200);
   }
@@ -664,9 +871,15 @@
       return;
     }
 
-    textarea.value = '';
 
-    pushHistory('');
+    textarea.value =
+      '';
+
+
+    pushHistory(
+      ''
+    );
+
 
     updateCounters();
 
@@ -683,19 +896,25 @@
   function openConfirmModal() {
 
     if (!confirmModal) {
+
       clearNote();
+
       return;
     }
+
 
     confirmModal.hidden =
       false;
 
+
     document.body.style.overflow =
       'hidden';
+
 
     setTimeout(() => {
 
       if (modalCancelBtn) {
+
         modalCancelBtn.focus();
       }
 
@@ -709,8 +928,10 @@
       return;
     }
 
+
     confirmModal.hidden =
       true;
+
 
     document.body.style.overflow =
       '';
@@ -719,7 +940,9 @@
 
   function createNewNote() {
 
-    textarea.value = '';
+    textarea.value =
+      '';
+
 
     resetHistory();
 
@@ -743,17 +966,22 @@
       return;
     }
 
+
     const searchBox =
       searchInput.closest(
         '.search-box'
       );
 
+
     if (!searchBox) {
       return;
     }
 
+
     const hasValue =
-      searchInput.value.length > 0;
+      searchInput.value.length >
+      0;
+
 
     searchBox.classList.toggle(
       'has-value',
@@ -768,8 +996,10 @@
       return;
     }
 
+
     const query =
       searchInput.value;
+
 
     updateSearchUI();
 
@@ -791,8 +1021,10 @@
     const lowerText =
       text.toLocaleLowerCase();
 
+
     const lowerQuery =
       query.toLocaleLowerCase();
+
 
     const index =
       lowerText.indexOf(
@@ -802,24 +1034,18 @@
 
     if (index === -1) {
 
-      /*
-       * ไม่พบข้อความ
-       */
-
       searchInput.setAttribute(
         'aria-label',
         'ไม่พบข้อความ'
       );
 
+
       return;
     }
 
 
-    /*
-     * เลือกข้อความที่พบ
-     */
-
     focusTextarea();
+
 
     textarea.setSelectionRange(
       index,
@@ -834,13 +1060,18 @@
       return;
     }
 
-    searchInput.value = '';
+
+    searchInput.value =
+      '';
+
 
     updateSearchUI();
+
 
     searchInput.removeAttribute(
       'aria-label'
     );
+
 
     focusTextarea();
   }
@@ -864,15 +1095,18 @@
      KEYBOARD SHORTCUTS
   ========================================================== */
 
-  function handleKeyboard(event) {
+  function handleKeyboard(
+    event
+  ) {
 
     const key =
       event.key.toLowerCase();
 
 
-    /*
-     * Ctrl + S
-     */
+    /* --------------------------------------------------------
+       Ctrl + S / Cmd + S
+       ดาวน์โหลดเป็น .txt
+    -------------------------------------------------------- */
 
     if (
       (event.ctrlKey ||
@@ -882,17 +1116,34 @@
 
       event.preventDefault();
 
-      clearTimeout(saveTimer);
+      event.stopPropagation();
+
+      clearTimeout(
+        saveTimer
+      );
+
+
+      /*
+       * เก็บข้อมูลใน localStorage ก่อน
+       */
 
       saveNote();
+
+
+      /*
+       * ดาวน์โหลดไฟล์ .txt
+       */
+
+      downloadTxt();
+
 
       return;
     }
 
 
-    /*
-     * Ctrl + Z
-     */
+    /* --------------------------------------------------------
+       Ctrl + Z
+    -------------------------------------------------------- */
 
     if (
       (event.ctrlKey ||
@@ -909,11 +1160,9 @@
     }
 
 
-    /*
-     * Ctrl + Y
-     *
-     * Windows / Linux
-     */
+    /* --------------------------------------------------------
+       Ctrl + Y
+    -------------------------------------------------------- */
 
     if (
       event.ctrlKey &&
@@ -928,11 +1177,9 @@
     }
 
 
-    /*
-     * Cmd + Shift + Z
-     *
-     * macOS
-     */
+    /* --------------------------------------------------------
+       Cmd + Shift + Z
+    -------------------------------------------------------- */
 
     if (
       event.metaKey &&
@@ -948,11 +1195,9 @@
     }
 
 
-    /*
-     * Escape
-     *
-     * ปิด Modal
-     */
+    /* --------------------------------------------------------
+       Escape
+    -------------------------------------------------------- */
 
     if (
       key === 'escape' &&
@@ -977,7 +1222,11 @@
       return;
     }
 
-    clearTimeout(saveTimer);
+
+    clearTimeout(
+      saveTimer
+    );
+
 
     saveNote();
   }
@@ -1113,6 +1362,7 @@
         '.notepad-modal-backdrop'
       );
 
+
     if (backdrop) {
 
       backdrop.addEventListener(
@@ -1141,6 +1391,7 @@
 
   updateSearchUI();
 
+
   setStatus(
     'บันทึกแล้ว',
     'saved'
@@ -1148,7 +1399,7 @@
 
 
   /*
-   * ให้ textarea พร้อมพิมพ์ทันที
+   * ให้ textarea พร้อมพิมพ์
    */
 
   setTimeout(() => {
@@ -1160,30 +1411,28 @@
 
   /* ==========================================================
      PUBLIC API
-     ========================================================== */
-
-  /*
-   * เปิดให้โค้ดส่วนอื่นของเว็บเรียกใช้ได้ เช่น
-   *
-   * window.OnlineNotepad.clear()
-   * window.OnlineNotepad.save()
-   */
+  ========================================================== */
 
   window.OnlineNotepad = {
 
     getText() {
+
       return textarea.value;
     },
 
 
-    setText(text = '') {
+    setText(
+      text = ''
+    ) {
 
       textarea.value =
         String(text);
 
+
       pushHistory(
         textarea.value
       );
+
 
       updateCounters();
 
@@ -1192,31 +1441,45 @@
 
 
     clear() {
+
       clearNote();
     },
 
 
     save() {
 
-      clearTimeout(saveTimer);
+      clearTimeout(
+        saveTimer
+      );
+
 
       saveNote();
     },
 
 
+    downloadTxt() {
+
+      downloadTxt();
+    },
+
+
     copy() {
+
       return copyNote();
     },
 
 
     undo() {
+
       undo();
     },
 
 
     redo() {
+
       redo();
     }
+
   };
 
 })();
