@@ -366,6 +366,7 @@ window.Utils = (() => {
     /*
      * ถ้ามีข้อความ custom จาก Tool
      * ให้ใช้ข้อความนั้น
+     *
      * ถ้าไม่มี ให้ใช้ข้อความจากระบบภาษา
      */
 
@@ -583,7 +584,9 @@ window.Utils = (() => {
       !key
     ) {
       throw new Error(
-        'replaceObjectUrl ต้องมี holder และ key'
+        t(
+          'utils.invalidObjectUrlHolder'
+        )
       );
     }
 
