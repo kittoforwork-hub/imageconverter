@@ -11,7 +11,8 @@
  * - แปลข้อความใน HTML
  * - แปล attribute เช่น title / aria-label / placeholder
  * - รองรับ UI ที่ถูกสร้างขึ้นภายหลัง
- * - รองรับ RTL สำหรับภาษาในอนาคต
+ * - รองรับ RTL
+ * - มี fallback เป็น English เมื่อไม่มีคำแปล
  *
  * ไม่ต้องมีไฟล์ภาษาแยก
  * ทุกอย่างเก็บอยู่ในไฟล์นี้
@@ -33,14 +34,9 @@ window.I18n = (() => {
     'en';
 
 
-  /*
-   * ------------------------------------------------------------
-   * Supported Languages
-   * ------------------------------------------------------------
-   *
-   * ตอนนี้ใส่ภาษาหลักไว้ก่อน
-   * เพิ่มภาษาใน object นี้ได้โดยไม่ต้องสร้างไฟล์ใหม่
-   */
+  // ============================================================
+  // LANGUAGE DICTIONARY
+  // ============================================================
 
   const LANGUAGES = {
 
@@ -66,6 +62,9 @@ window.I18n = (() => {
 
           home:
             'หน้าหลัก',
+
+          language:
+            'ภาษา',
 
           image:
             'รูปภาพ',
@@ -188,7 +187,10 @@ window.I18n = (() => {
             'ผลลัพธ์',
 
           done:
-            'เสร็จแล้ว'
+            'เสร็จแล้ว',
+
+          unlimited:
+            'ไม่จำกัด'
         },
 
 
@@ -216,7 +218,7 @@ window.I18n = (() => {
 
 
         // ------------------------------------------------------
-        // IMAGE TOOLS
+        // IMAGE
         // ------------------------------------------------------
 
         image: {
@@ -275,8 +277,14 @@ window.I18n = (() => {
           convertAll:
             'แปลงทั้งหมด',
 
+          convertingAll:
+            'กำลังแปลงทั้งหมด…',
+
           compressAll:
             'ลดขนาดทั้งหมด',
+
+          compressingZip:
+            'กำลังบีบอัด…',
 
           removeBackgroundAll:
             'ลบพื้นหลังทั้งหมด',
@@ -323,6 +331,15 @@ window.I18n = (() => {
           crop:
             'ตัด',
 
+          cropping:
+            'กำลังตัด…',
+
+          croppingFailed:
+            'ตัดไม่สำเร็จ: {message}',
+
+          conversionFailed:
+            'แปลงไม่สำเร็จ: {message}',
+
           saveFormat:
             'บันทึกเป็น',
 
@@ -350,13 +367,19 @@ window.I18n = (() => {
           savings:
             'ลดไป',
 
+          ready:
+            'พร้อมดาวน์โหลด',
+
+          readyDownload:
+            'พร้อมดาวน์โหลด · {size}',
+
           modelFirstUse:
             'ครั้งแรกที่ใช้งานจะโหลดโมเดล AI ขนาดประมาณ 40MB (ครั้งเดียว เบราว์เซอร์จะแคชไว้ให้ครั้งถัดไปเร็วขึ้น) และใช้เวลาประมวลผลต่อรูปสักครู่ขึ้นอยู่กับสเปกเครื่อง'
         },
 
 
         // ------------------------------------------------------
-        // PDF TOOLS
+        // PDF
         // ------------------------------------------------------
 
         pdf: {
@@ -591,7 +614,16 @@ window.I18n = (() => {
             'ประมวลผลไฟล์ไม่สำเร็จ',
 
           somethingWentWrong:
-            'เกิดข้อผิดพลาด กรุณาลองอีกครั้ง'
+            'เกิดข้อผิดพลาด กรุณาลองอีกครั้ง',
+
+          createFailed:
+            'สร้างไฟล์ไม่สำเร็จ',
+
+          canvasContext:
+            'ไม่สามารถสร้าง Canvas ได้',
+
+          invalidImageDimensions:
+            'ขนาดรูปภาพไม่ถูกต้อง'
         },
 
 
@@ -622,7 +654,36 @@ window.I18n = (() => {
         utils: {
 
           cacheHandlerFailed:
-            'ตัวจัดการ clearCache ทำงานไม่สำเร็จ'
+            'ตัวจัดการ clearCache ทำงานไม่สำเร็จ',
+
+          invalidObjectUrlHolder:
+            'replaceObjectUrl ต้องมี holder และ key'
+        },
+
+
+        // ------------------------------------------------------
+        // LANGUAGE NAMES
+        // ------------------------------------------------------
+
+        language: {
+
+          th:
+            'ไทย',
+
+          en:
+            'English',
+
+          ja:
+            '日本語',
+
+          ko:
+            '한국어',
+
+          zhCN:
+            '简体中文',
+
+          zhTW:
+            '繁體中文'
         }
 
       }
@@ -647,6 +708,9 @@ window.I18n = (() => {
 
           home:
             'Home',
+
+          language:
+            'Language',
 
           image:
             'Images',
@@ -769,7 +833,10 @@ window.I18n = (() => {
             'Result',
 
           done:
-            'Done'
+            'Done',
+
+          unlimited:
+            'Unlimited'
         },
 
 
@@ -848,8 +915,14 @@ window.I18n = (() => {
           convertAll:
             'Convert All',
 
+          convertingAll:
+            'Converting all…',
+
           compressAll:
             'Compress All',
+
+          compressingZip:
+            'Creating ZIP…',
 
           removeBackgroundAll:
             'Remove All Backgrounds',
@@ -896,6 +969,15 @@ window.I18n = (() => {
           crop:
             'Crop',
 
+          cropping:
+            'Cropping…',
+
+          croppingFailed:
+            'Crop failed: {message}',
+
+          conversionFailed:
+            'Conversion failed: {message}',
+
           saveFormat:
             'Save as',
 
@@ -922,6 +1004,12 @@ window.I18n = (() => {
 
           savings:
             'Saved',
+
+          ready:
+            'Ready to download',
+
+          readyDownload:
+            'Ready to download · {size}',
 
           modelFirstUse:
             'The first use downloads an AI model of about 40MB. It is cached by the browser for faster future use. Processing time depends on your device.'
@@ -1152,7 +1240,16 @@ window.I18n = (() => {
             'Failed to process the file.',
 
           somethingWentWrong:
-            'Something went wrong. Please try again.'
+            'Something went wrong. Please try again.',
+
+          createFailed:
+            'Failed to create the output file.',
+
+          canvasContext:
+            'Unable to create the canvas.',
+
+          invalidImageDimensions:
+            'Invalid image dimensions.'
         },
 
 
@@ -1175,7 +1272,32 @@ window.I18n = (() => {
         utils: {
 
           cacheHandlerFailed:
-            'clearCache handler failed'
+            'clearCache handler failed',
+
+          invalidObjectUrlHolder:
+            'replaceObjectUrl requires a valid holder and key'
+        },
+
+
+        language: {
+
+          th:
+            'ไทย',
+
+          en:
+            'English',
+
+          ja:
+            '日本語',
+
+          ko:
+            '한국어',
+
+          zhCN:
+            '简体中文',
+
+          zhTW:
+            '繁體中文'
         }
 
       }
@@ -1200,6 +1322,9 @@ window.I18n = (() => {
 
           home:
             'ホーム',
+
+          language:
+            '言語',
 
           image:
             '画像',
@@ -1322,7 +1447,10 @@ window.I18n = (() => {
             '結果',
 
           done:
-            '完了'
+            '完了',
+
+          unlimited:
+            '制限なし'
         },
 
 
@@ -1401,8 +1529,14 @@ window.I18n = (() => {
           convertAll:
             'すべて変換',
 
+          convertingAll:
+            'すべて変換中…',
+
           compressAll:
             'すべて圧縮',
+
+          compressingZip:
+            'ZIPを作成中…',
 
           removeBackgroundAll:
             'すべて背景削除',
@@ -1449,6 +1583,15 @@ window.I18n = (() => {
           crop:
             '切り抜く',
 
+          cropping:
+            '切り抜き中…',
+
+          croppingFailed:
+            '切り抜きに失敗しました: {message}',
+
+          conversionFailed:
+            '変換に失敗しました: {message}',
+
           saveFormat:
             '保存形式',
 
@@ -1475,6 +1618,12 @@ window.I18n = (() => {
 
           savings:
             '削減量',
+
+          ready:
+            'ダウンロード準備完了',
+
+          readyDownload:
+            'ダウンロード準備完了 · {size}',
 
           modelFirstUse:
             '初回使用時に約40MBのAIモデルを読み込みます。ブラウザにキャッシュされるため、次回からは高速になります。処理時間は端末の性能によって異なります。'
@@ -1705,7 +1854,16 @@ window.I18n = (() => {
             'ファイルの処理に失敗しました。',
 
           somethingWentWrong:
-            'エラーが発生しました。もう一度お試しください。'
+            'エラーが発生しました。もう一度お試しください。',
+
+          createFailed:
+            '出力ファイルの作成に失敗しました。',
+
+          canvasContext:
+            'Canvasを作成できませんでした。',
+
+          invalidImageDimensions:
+            '画像サイズが正しくありません。'
         },
 
 
@@ -1728,7 +1886,32 @@ window.I18n = (() => {
         utils: {
 
           cacheHandlerFailed:
-            'clearCache ハンドラーの実行に失敗しました'
+            'clearCache ハンドラーの実行に失敗しました',
+
+          invalidObjectUrlHolder:
+            'replaceObjectUrlには有効なholderとkeyが必要です'
+        },
+
+
+        language: {
+
+          th:
+            'ไทย',
+
+          en:
+            'English',
+
+          ja:
+            '日本語',
+
+          ko:
+            '한국어',
+
+          zhCN:
+            '简体中文',
+
+          zhTW:
+            '繁體中文'
         }
 
       }
@@ -1751,141 +1934,58 @@ window.I18n = (() => {
 
         common: {
 
-          home:
-            '홈',
-
-          image:
-            '이미지',
-
-          images:
-            '이미지',
-
-          pdf:
-            'PDF',
-
-          notepad:
-            '메모장',
-
-          upload:
-            '업로드',
-
-          chooseFile:
-            '파일 선택',
-
-          chooseFiles:
-            '파일 선택',
-
-          download:
-            '다운로드',
-
-          downloadAll:
-            '모두 다운로드',
-
-          clear:
-            '모두 지우기',
-
-          cancel:
-            '취소',
-
-          delete:
-            '삭제',
-
-          remove:
-            '제거',
-
-          process:
-            '처리',
-
-          processing:
-            '처리 중...',
-
-          completed:
-            '완료',
-
-          failed:
-            '실패',
-
-          loading:
-            '불러오는 중...',
-
-          ready:
-            '준비 완료',
-
-          retry:
-            '다시 시도',
-
-          close:
-            '닫기',
-
-          save:
-            '저장',
-
-          reset:
-            '초기화',
-
-          continue:
-            '계속',
-
-          confirm:
-            '확인',
-
-          selectAll:
-            '모두 선택',
-
-          items:
-            '항목',
-
-          files:
-            '파일',
-
-          file:
-            '파일',
-
-          pages:
-            '페이지',
-
-          page:
-            '페이지',
-
-          jobs:
-            '작업',
-
-          original:
-            '원본',
-
-          format:
-            '형식',
-
-          size:
-            '크기',
-
-          quality:
-            '품질',
-
-          width:
-            '너비',
-
-          height:
-            '높이',
-
-          saveAs:
-            '다른 이름으로 저장',
-
-          result:
-            '결과',
-
-          done:
-            '완료'
+          home: '홈',
+          language: '언어',
+          image: '이미지',
+          images: '이미지',
+          pdf: 'PDF',
+          notepad: '메모장',
+          upload: '업로드',
+          chooseFile: '파일 선택',
+          chooseFiles: '파일 선택',
+          download: '다운로드',
+          downloadAll: '모두 다운로드',
+          clear: '모두 지우기',
+          cancel: '취소',
+          delete: '삭제',
+          remove: '제거',
+          process: '처리',
+          processing: '처리 중...',
+          completed: '완료',
+          failed: '실패',
+          loading: '불러오는 중...',
+          ready: '준비 완료',
+          retry: '다시 시도',
+          close: '닫기',
+          save: '저장',
+          reset: '초기화',
+          continue: '계속',
+          confirm: '확인',
+          selectAll: '모두 선택',
+          items: '항목',
+          files: '파일',
+          file: '파일',
+          pages: '페이지',
+          page: '페이지',
+          jobs: '작업',
+          original: '원본',
+          format: '형식',
+          size: '크기',
+          quality: '품질',
+          width: '너비',
+          height: '높이',
+          saveAs: '다른 이름으로 저장',
+          result: '결과',
+          done: '완료',
+          unlimited: '제한 없음'
         },
 
 
         page: {
 
-          title:
-            'Workshop Utility BY KITTO',
+          title: 'Workshop Utility BY KITTO',
 
-          heading:
-            '파일 관리 도구',
+          heading: '파일 관리 도구',
 
           subtitle:
             '모든 이미지와 PDF를 브라우저에서 변환하고 편집하세요. 서버에 파일을 업로드하지 않습니다.',
@@ -1954,8 +2054,14 @@ window.I18n = (() => {
           convertAll:
             '모두 변환',
 
+          convertingAll:
+            '모두 변환 중…',
+
           compressAll:
             '모두 압축',
+
+          compressingZip:
+            'ZIP 생성 중…',
 
           removeBackgroundAll:
             '모든 배경 제거',
@@ -2002,6 +2108,15 @@ window.I18n = (() => {
           crop:
             '자르기',
 
+          cropping:
+            '자르는 중…',
+
+          croppingFailed:
+            '자르기 실패: {message}',
+
+          conversionFailed:
+            '변환 실패: {message}',
+
           saveFormat:
             '저장 형식',
 
@@ -2028,6 +2143,12 @@ window.I18n = (() => {
 
           savings:
             '절감',
+
+          ready:
+            '다운로드 준비 완료',
+
+          readyDownload:
+            '다운로드 준비 완료 · {size}',
 
           modelFirstUse:
             '처음 사용하면 약 40MB의 AI 모델을 다운로드합니다. 브라우저에 캐시되어 다음 사용부터 더 빨라집니다. 처리 시간은 기기 성능에 따라 달라집니다.'
@@ -2258,7 +2379,16 @@ window.I18n = (() => {
             '파일 처리에 실패했습니다.',
 
           somethingWentWrong:
-            '오류가 발생했습니다. 다시 시도해 주세요.'
+            '오류가 발생했습니다. 다시 시도해 주세요.',
+
+          createFailed:
+            '출력 파일을 만들지 못했습니다.',
+
+          canvasContext:
+            'Canvas를 생성할 수 없습니다.',
+
+          invalidImageDimensions:
+            '이미지 크기가 올바르지 않습니다.'
         },
 
 
@@ -2281,7 +2411,32 @@ window.I18n = (() => {
         utils: {
 
           cacheHandlerFailed:
-            'clearCache 핸들러 실행에 실패했습니다'
+            'clearCache 핸들러 실행에 실패했습니다',
+
+          invalidObjectUrlHolder:
+            'replaceObjectUrl에 유효한 holder와 key가 필요합니다'
+        },
+
+
+        language: {
+
+          th:
+            'ไทย',
+
+          en:
+            'English',
+
+          ja:
+            '日本語',
+
+          ko:
+            '한국어',
+
+          zhCN:
+            '简体中文',
+
+          zhTW:
+            '繁體中文'
         }
 
       }
@@ -2304,131 +2459,50 @@ window.I18n = (() => {
 
         common: {
 
-          home:
-            '首页',
-
-          image:
-            '图片',
-
-          images:
-            '图片',
-
-          pdf:
-            'PDF',
-
-          notepad:
-            '记事本',
-
-          upload:
-            '上传',
-
-          chooseFile:
-            '选择文件',
-
-          chooseFiles:
-            '选择文件',
-
-          download:
-            '下载',
-
-          downloadAll:
-            '全部下载',
-
-          clear:
-            '全部清除',
-
-          cancel:
-            '取消',
-
-          delete:
-            '删除',
-
-          remove:
-            '移除',
-
-          process:
-            '开始处理',
-
-          processing:
-            '处理中...',
-
-          completed:
-            '完成',
-
-          failed:
-            '失败',
-
-          loading:
-            '加载中...',
-
-          ready:
-            '准备就绪',
-
-          retry:
-            '重试',
-
-          close:
-            '关闭',
-
-          save:
-            '保存',
-
-          reset:
-            '重置',
-
-          continue:
-            '继续',
-
-          confirm:
-            '确认',
-
-          selectAll:
-            '全选',
-
-          items:
-            '项',
-
-          files:
-            '个文件',
-
-          file:
-            '文件',
-
-          pages:
-            '页',
-
-          page:
-            '页',
-
-          jobs:
-            '任务',
-
-          original:
-            '原始',
-
-          format:
-            '格式',
-
-          size:
-            '大小',
-
-          quality:
-            '质量',
-
-          width:
-            '宽度',
-
-          height:
-            '高度',
-
-          saveAs:
-            '保存为',
-
-          result:
-            '结果',
-
-          done:
-            '完成'
+          home: '首页',
+          language: '语言',
+          image: '图片',
+          images: '图片',
+          pdf: 'PDF',
+          notepad: '记事本',
+          upload: '上传',
+          chooseFile: '选择文件',
+          chooseFiles: '选择文件',
+          download: '下载',
+          downloadAll: '全部下载',
+          clear: '全部清除',
+          cancel: '取消',
+          delete: '删除',
+          remove: '移除',
+          process: '开始处理',
+          processing: '处理中...',
+          completed: '完成',
+          failed: '失败',
+          loading: '加载中...',
+          ready: '准备就绪',
+          retry: '重试',
+          close: '关闭',
+          save: '保存',
+          reset: '重置',
+          continue: '继续',
+          confirm: '确认',
+          selectAll: '全选',
+          items: '项',
+          files: '个文件',
+          file: '文件',
+          pages: '页',
+          page: '页',
+          jobs: '任务',
+          original: '原始',
+          format: '格式',
+          size: '大小',
+          quality: '质量',
+          width: '宽度',
+          height: '高度',
+          saveAs: '保存为',
+          result: '结果',
+          done: '完成',
+          unlimited: '不限制'
         },
 
 
@@ -2507,8 +2581,14 @@ window.I18n = (() => {
           convertAll:
             '全部转换',
 
+          convertingAll:
+            '正在转换全部…',
+
           compressAll:
             '全部压缩',
+
+          compressingZip:
+            '正在创建 ZIP…',
 
           removeBackgroundAll:
             '全部移除背景',
@@ -2555,6 +2635,15 @@ window.I18n = (() => {
           crop:
             '裁剪',
 
+          cropping:
+            '正在裁剪…',
+
+          croppingFailed:
+            '裁剪失败：{message}',
+
+          conversionFailed:
+            '转换失败：{message}',
+
           saveFormat:
             '保存为',
 
@@ -2581,6 +2670,12 @@ window.I18n = (() => {
 
           savings:
             '节省',
+
+          ready:
+            '准备下载',
+
+          readyDownload:
+            '准备下载 · {size}',
 
           modelFirstUse:
             '首次使用会加载约 40MB 的 AI 模型。浏览器会缓存模型，以便下次更快使用。处理时间取决于设备性能。'
@@ -2811,7 +2906,16 @@ window.I18n = (() => {
             '文件处理失败。',
 
           somethingWentWrong:
-            '发生错误，请重试。'
+            '发生错误，请重试。',
+
+          createFailed:
+            '创建输出文件失败。',
+
+          canvasContext:
+            '无法创建 Canvas。',
+
+          invalidImageDimensions:
+            '图片尺寸无效。'
         },
 
 
@@ -2834,7 +2938,32 @@ window.I18n = (() => {
         utils: {
 
           cacheHandlerFailed:
-            'clearCache 处理程序执行失败'
+            'clearCache 处理程序执行失败',
+
+          invalidObjectUrlHolder:
+            'replaceObjectUrl 需要有效的 holder 和 key'
+        },
+
+
+        language: {
+
+          th:
+            'ไทย',
+
+          en:
+            'English',
+
+          ja:
+            '日本語',
+
+          ko:
+            '한국어',
+
+          zhCN:
+            '简体中文',
+
+          zhTW:
+            '繁體中文'
         }
 
       }
@@ -2857,131 +2986,50 @@ window.I18n = (() => {
 
         common: {
 
-          home:
-            '首頁',
-
-          image:
-            '圖片',
-
-          images:
-            '圖片',
-
-          pdf:
-            'PDF',
-
-          notepad:
-            '記事本',
-
-          upload:
-            '上傳',
-
-          chooseFile:
-            '選擇檔案',
-
-          chooseFiles:
-            '選擇檔案',
-
-          download:
-            '下載',
-
-          downloadAll:
-            '全部下載',
-
-          clear:
-            '全部清除',
-
-          cancel:
-            '取消',
-
-          delete:
-            '刪除',
-
-          remove:
-            '移除',
-
-          process:
-            '開始處理',
-
-          processing:
-            '處理中...',
-
-          completed:
-            '完成',
-
-          failed:
-            '失敗',
-
-          loading:
-            '載入中...',
-
-          ready:
-            '準備完成',
-
-          retry:
-            '重試',
-
-          close:
-            '關閉',
-
-          save:
-            '儲存',
-
-          reset:
-            '重設',
-
-          continue:
-            '繼續',
-
-          confirm:
-            '確認',
-
-          selectAll:
-            '全選',
-
-          items:
-            '項目',
-
-          files:
-            '個檔案',
-
-          file:
-            '檔案',
-
-          pages:
-            '頁',
-
-          page:
-            '頁',
-
-          jobs:
-            '工作',
-
-          original:
-            '原始',
-
-          format:
-            '格式',
-
-          size:
-            '大小',
-
-          quality:
-            '品質',
-
-          width:
-            '寬度',
-
-          height:
-            '高度',
-
-          saveAs:
-            '另存為',
-
-          result:
-            '結果',
-
-          done:
-            '完成'
+          home: '首頁',
+          language: '語言',
+          image: '圖片',
+          images: '圖片',
+          pdf: 'PDF',
+          notepad: '記事本',
+          upload: '上傳',
+          chooseFile: '選擇檔案',
+          chooseFiles: '選擇檔案',
+          download: '下載',
+          downloadAll: '全部下載',
+          clear: '全部清除',
+          cancel: '取消',
+          delete: '刪除',
+          remove: '移除',
+          process: '開始處理',
+          processing: '處理中...',
+          completed: '完成',
+          failed: '失敗',
+          loading: '載入中...',
+          ready: '準備完成',
+          retry: '重試',
+          close: '關閉',
+          save: '儲存',
+          reset: '重設',
+          continue: '繼續',
+          confirm: '確認',
+          selectAll: '全選',
+          items: '項目',
+          files: '個檔案',
+          file: '檔案',
+          pages: '頁',
+          page: '頁',
+          jobs: '工作',
+          original: '原始',
+          format: '格式',
+          size: '大小',
+          quality: '品質',
+          width: '寬度',
+          height: '高度',
+          saveAs: '另存為',
+          result: '結果',
+          done: '完成',
+          unlimited: '不限制'
         },
 
 
@@ -3060,8 +3108,14 @@ window.I18n = (() => {
           convertAll:
             '全部轉換',
 
+          convertingAll:
+            '正在轉換全部…',
+
           compressAll:
             '全部壓縮',
+
+          compressingZip:
+            '正在建立 ZIP…',
 
           removeBackgroundAll:
             '全部移除背景',
@@ -3108,6 +3162,15 @@ window.I18n = (() => {
           crop:
             '裁切',
 
+          cropping:
+            '正在裁切…',
+
+          croppingFailed:
+            '裁切失敗：{message}',
+
+          conversionFailed:
+            '轉換失敗：{message}',
+
           saveFormat:
             '儲存格式',
 
@@ -3134,6 +3197,12 @@ window.I18n = (() => {
 
           savings:
             '節省',
+
+          ready:
+            '準備下載',
+
+          readyDownload:
+            '準備下載 · {size}',
 
           modelFirstUse:
             '第一次使用會載入約 40MB 的 AI 模型。瀏覽器會快取模型，之後使用會更快。處理時間取決於裝置效能。'
@@ -3364,7 +3433,16 @@ window.I18n = (() => {
             '檔案處理失敗。',
 
           somethingWentWrong:
-            '發生錯誤，請再試一次。'
+            '發生錯誤，請再試一次。',
+
+          createFailed:
+            '建立輸出檔案失敗。',
+
+          canvasContext:
+            '無法建立 Canvas。',
+
+          invalidImageDimensions:
+            '圖片尺寸無效。'
         },
 
 
@@ -3387,7 +3465,32 @@ window.I18n = (() => {
         utils: {
 
           cacheHandlerFailed:
-            'clearCache 處理程序執行失敗'
+            'clearCache 處理程序執行失敗',
+
+          invalidObjectUrlHolder:
+            'replaceObjectUrl 需要有效的 holder 和 key'
+        },
+
+
+        language: {
+
+          th:
+            'ไทย',
+
+          en:
+            'English',
+
+          ja:
+            '日本語',
+
+          ko:
+            '한국어',
+
+          zhCN:
+            '简体中文',
+
+          zhTW:
+            '繁體中文'
         }
 
       }
@@ -3446,10 +3549,60 @@ window.I18n = (() => {
   function findBestLanguage(
     languageList
   ) {
+
     if (
       !Array.isArray(languageList)
     ) {
       return null;
+    }
+
+
+    // ----------------------------------------------------------
+    // Chinese special case first
+    // ----------------------------------------------------------
+
+    for (
+      const rawLanguage of languageList
+    ) {
+
+      const language =
+        normalizeLanguage(
+          rawLanguage
+        ).toLowerCase();
+
+
+      if (
+        language === 'zh-tw' ||
+        language === 'zh-hk' ||
+        language === 'zh-mo' ||
+        language.includes('hant')
+      ) {
+
+        if (
+          hasLanguage(
+            'zh-TW'
+          )
+        ) {
+          return 'zh-TW';
+        }
+      }
+
+
+      if (
+        language === 'zh-cn' ||
+        language === 'zh-sg' ||
+        language === 'zh-my' ||
+        language.includes('hans')
+      ) {
+
+        if (
+          hasLanguage(
+            'zh-CN'
+          )
+        ) {
+          return 'zh-CN';
+        }
+      }
     }
 
 
@@ -3466,6 +3619,7 @@ window.I18n = (() => {
           rawLanguage
         );
 
+
       if (
         hasLanguage(language)
       ) {
@@ -3475,11 +3629,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // Base language match
-    // เช่น:
-    // en-US -> en
-    // th-TH -> th
-    // ja-JP -> ja
+    // Base language
     // ----------------------------------------------------------
 
     for (
@@ -3491,9 +3641,11 @@ window.I18n = (() => {
           rawLanguage
         );
 
+
       if (!base) {
         continue;
       }
+
 
       if (
         hasLanguage(base)
@@ -3503,58 +3655,16 @@ window.I18n = (() => {
     }
 
 
-    // ----------------------------------------------------------
-    // Chinese special case
-    // ----------------------------------------------------------
-
-    for (
-      const rawLanguage of languageList
-    ) {
-
-      const language =
-        normalizeLanguage(
-          rawLanguage
-        ).toLowerCase();
-
-      if (
-        language === 'zh-tw' ||
-        language === 'zh-hk' ||
-        language === 'zh-mo' ||
-        language.includes('hant')
-      ) {
-
-        if (
-          hasLanguage('zh-TW')
-        ) {
-          return 'zh-TW';
-        }
-      }
-
-      if (
-        language === 'zh-cn' ||
-        language === 'zh-sg' ||
-        language === 'zh-my' ||
-        language.includes('hans')
-      ) {
-
-        if (
-          hasLanguage('zh-CN')
-        ) {
-          return 'zh-CN';
-        }
-      }
-    }
-
-
     return null;
   }
 
 
   // ============================================================
-  // DETECT BROWSER LANGUAGES
+  // GET BROWSER LANGUAGES
   // ============================================================
 
   function getBrowserLanguages() {
+
     const languages = [];
 
 
@@ -3591,10 +3701,11 @@ window.I18n = (() => {
 
 
   // ============================================================
-  // LOAD SAVED LANGUAGE
+  // SAVED LANGUAGE
   // ============================================================
 
   function getSavedLanguage() {
+
     try {
 
       const saved =
@@ -3602,15 +3713,17 @@ window.I18n = (() => {
           STORAGE_KEY
         );
 
+
       if (
         saved &&
         hasLanguage(saved)
       ) {
+
         return saved;
       }
 
     } catch (_) {
-      // localStorage unavailable
+      // ignore
     }
 
 
@@ -3624,38 +3737,29 @@ window.I18n = (() => {
 
   function detectLanguage() {
 
-    // ----------------------------------------------------------
-    // 1. User selected language
-    // ----------------------------------------------------------
-
     const saved =
       getSavedLanguage();
+
 
     if (saved) {
       return saved;
     }
 
 
-    // ----------------------------------------------------------
-    // 2. Browser language
-    // ----------------------------------------------------------
-
     const browserLanguages =
       getBrowserLanguages();
+
 
     const detected =
       findBestLanguage(
         browserLanguages
       );
 
+
     if (detected) {
       return detected;
     }
 
-
-    // ----------------------------------------------------------
-    // 3. Fallback
-    // ----------------------------------------------------------
 
     return DEFAULT_LANGUAGE;
   }
@@ -3670,13 +3774,14 @@ window.I18n = (() => {
 
 
   // ============================================================
-  // GET NESTED VALUE
+  // NESTED GET
   // ============================================================
 
   function getNestedValue(
     source,
     path
   ) {
+
     if (
       !source ||
       !path
@@ -3686,7 +3791,8 @@ window.I18n = (() => {
 
 
     const parts =
-      String(path).split('.');
+      String(path)
+        .split('.');
 
 
     let current =
@@ -3701,6 +3807,7 @@ window.I18n = (() => {
         current === null ||
         current === undefined
       ) {
+
         return undefined;
       }
 
@@ -3711,6 +3818,7 @@ window.I18n = (() => {
           key
         )
       ) {
+
         return undefined;
       }
 
@@ -3725,17 +3833,19 @@ window.I18n = (() => {
 
 
   // ============================================================
-  // INTERPOLATE
+  // INTERPOLATION
   // ============================================================
 
   function interpolate(
     value,
     data
   ) {
+
     if (
       typeof value !==
       'string'
     ) {
+
       return value;
     }
 
@@ -3745,6 +3855,7 @@ window.I18n = (() => {
       typeof data !==
       'object'
     ) {
+
       return value;
     }
 
@@ -3804,7 +3915,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // fallback to English
+    // Fallback to English
     // ----------------------------------------------------------
 
     if (
@@ -3820,19 +3931,16 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // unknown key
+    // Unknown key
     // ----------------------------------------------------------
 
     if (
       value === undefined
     ) {
+
       return String(key);
     }
 
-
-    // ----------------------------------------------------------
-    // interpolation
-    // ----------------------------------------------------------
 
     return interpolate(
       value,
@@ -3880,26 +3988,43 @@ window.I18n = (() => {
 
     document.documentElement.dataset.i18nReady =
       'true';
+
+
+    /*
+     * เปลี่ยน title ของ document
+     */
+    const title =
+      t(
+        'page.title'
+      );
+
+
+    if (title) {
+      document.title =
+        title;
+    }
   }
 
 
   // ============================================================
-  // ATTRIBUTE TRANSLATION
+  // TRANSLATE ELEMENT
   // ============================================================
 
   function translateElement(
     element
   ) {
+
     if (
       !element ||
       element.nodeType !== 1
     ) {
+
       return;
     }
 
 
     // ----------------------------------------------------------
-    // data-i18n
+    // TEXT
     // ----------------------------------------------------------
 
     if (
@@ -3923,9 +4048,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // data-i18n-html
-    //
-    // ใช้เฉพาะกรณีที่จำเป็นจริง ๆ
+    // HTML
     // ----------------------------------------------------------
 
     if (
@@ -3949,7 +4072,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // placeholder
+    // PLACEHOLDER
     // ----------------------------------------------------------
 
     if (
@@ -3975,7 +4098,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // title
+    // TITLE
     // ----------------------------------------------------------
 
     if (
@@ -4001,7 +4124,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // aria-label
+    // ARIA LABEL
     // ----------------------------------------------------------
 
     if (
@@ -4027,7 +4150,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // aria-description
+    // ARIA DESCRIPTION
     // ----------------------------------------------------------
 
     if (
@@ -4054,16 +4177,18 @@ window.I18n = (() => {
 
 
   // ============================================================
-  // APPLY HTML TRANSLATIONS
+  // APPLY TRANSLATIONS
   // ============================================================
 
   function applyTranslations(
     root
   ) {
+
     if (
       typeof document ===
       'undefined'
     ) {
+
       return;
     }
 
@@ -4077,7 +4202,8 @@ window.I18n = (() => {
     // ----------------------------------------------------------
 
     if (
-      container.nodeType === 1
+      container.nodeType ===
+      1
     ) {
 
       translateElement(
@@ -4094,6 +4220,7 @@ window.I18n = (() => {
       typeof container.querySelectorAll !==
       'function'
     ) {
+
       return;
     }
 
@@ -4118,7 +4245,7 @@ window.I18n = (() => {
 
 
   // ============================================================
-  // CHANGE LANGUAGE
+  // SET LANGUAGE
   // ============================================================
 
   function setLanguage(
@@ -4136,20 +4263,8 @@ window.I18n = (() => {
         normalized
       )
     ) {
+
       return false;
-    }
-
-
-    if (
-      normalized ===
-      currentLanguage
-    ) {
-
-      applyDocumentLanguage();
-
-      applyTranslations();
-
-      return true;
     }
 
 
@@ -4158,7 +4273,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // Save choice
+    // Save selection
     // ----------------------------------------------------------
 
     try {
@@ -4174,21 +4289,16 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // Apply document attributes
+    // Apply
     // ----------------------------------------------------------
 
     applyDocumentLanguage();
-
-
-    // ----------------------------------------------------------
-    // Translate static HTML
-    // ----------------------------------------------------------
 
     applyTranslations();
 
 
     // ----------------------------------------------------------
-    // Notify app
+    // Notify application
     // ----------------------------------------------------------
 
     try {
@@ -4214,9 +4324,6 @@ window.I18n = (() => {
 
   // ============================================================
   // RESET LANGUAGE
-  //
-  // ล้างภาษาที่ผู้ใช้เลือกเอง
-  // แล้วกลับไปตรวจ Browser ใหม่
   // ============================================================
 
   function resetLanguage() {
@@ -4230,15 +4337,11 @@ window.I18n = (() => {
     } catch (_) {}
 
 
-    const detected =
+    currentLanguage =
       findBestLanguage(
         getBrowserLanguages()
       ) ||
       DEFAULT_LANGUAGE;
-
-
-    currentLanguage =
-      detected;
 
 
     applyDocumentLanguage();
@@ -4268,7 +4371,7 @@ window.I18n = (() => {
 
 
   // ============================================================
-  // GET CURRENT LANGUAGE
+  // CURRENT LANGUAGE
   // ============================================================
 
   function getLanguage() {
@@ -4290,7 +4393,9 @@ window.I18n = (() => {
 
 
     const info =
-      LANGUAGES[code];
+      LANGUAGES[
+        code
+      ];
 
 
     if (!info) {
@@ -4326,7 +4431,9 @@ window.I18n = (() => {
       code => {
 
         const info =
-          LANGUAGES[code];
+          LANGUAGES[
+            code
+          ];
 
 
         return {
@@ -4348,7 +4455,7 @@ window.I18n = (() => {
 
 
   // ============================================================
-  // OBSERVER
+  // MUTATION OBSERVER
   // ============================================================
 
   let observer =
@@ -4361,11 +4468,23 @@ window.I18n = (() => {
       typeof MutationObserver ===
       'undefined'
     ) {
+
       return;
     }
 
 
-    if (observer) {
+    if (
+      observer
+    ) {
+
+      return;
+    }
+
+
+    if (
+      !document.body
+    ) {
+
       return;
     }
 
@@ -4374,18 +4493,17 @@ window.I18n = (() => {
       new MutationObserver(
         mutations => {
 
-          for (
-            const mutation of mutations
-          ) {
+          mutations.forEach(
+            mutation => {
 
-            // ------------------------------------------------
-            // Added nodes
-            // ------------------------------------------------
+              if (
+                mutation.type !==
+                'childList'
+              ) {
 
-            if (
-              mutation.type ===
-              'childList'
-            ) {
+                return;
+              }
+
 
               mutation.addedNodes
                 .forEach(
@@ -4395,14 +4513,11 @@ window.I18n = (() => {
                       node.nodeType !==
                       1
                     ) {
+
                       return;
                     }
 
 
-                    /*
-                     * แปลเฉพาะ node ที่มี
-                     * data-i18n ต่าง ๆ
-                     */
                     translateElement(
                       node
                     );
@@ -4414,7 +4529,7 @@ window.I18n = (() => {
                   }
                 );
             }
-          }
+          );
         }
       );
 
@@ -4448,7 +4563,7 @@ window.I18n = (() => {
 
 
   // ============================================================
-  // AUTO INIT
+  // INITIALIZE
   // ============================================================
 
   function init() {
@@ -4460,6 +4575,10 @@ window.I18n = (() => {
     startObserver();
   }
 
+
+  // ============================================================
+  // AUTO INIT
+  // ============================================================
 
   if (
     typeof document !==
