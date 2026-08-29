@@ -261,6 +261,18 @@
         null;
 
 
+      /*
+       * เก็บ key/params ของ error ล่าสุดไว้
+       * เพื่อให้แปลภาษาใหม่ได้ตอน languagechange
+       */
+      this.errorKey =
+        null;
+
+
+      this.errorParams =
+        null;
+
+
       this.el =
         jobTemplate
           .content
@@ -513,12 +525,26 @@
 
       /*
        * Error
+       * แปล error เดิมใหม่ด้วย key/params ที่เก็บไว้
        */
       if (
         this.statusEl.classList.contains(
           'is-error'
         )
       ) {
+
+        if (
+          this.errorKey
+        ) {
+
+          this.statusEl.textContent =
+            t(
+              this.errorKey,
+              this.errorParams ||
+                undefined
+            );
+
+        }
 
         return;
 
@@ -806,16 +832,23 @@
         );
 
 
+        this.errorKey =
+          'image.backgroundRemovalFailed';
+
+        this.errorParams =
+          {
+            message:
+              err?.message ||
+              String(
+                err
+              )
+          };
+
+
         this.statusEl.textContent =
           t(
-            'image.backgroundRemovalFailed',
-            {
-              message:
-                err?.message ||
-                String(
-                  err
-                )
-            }
+            this.errorKey,
+            this.errorParams
           );
 
 
