@@ -1,8 +1,18 @@
+/* global window, document, URL, requestAnimationFrame */
+
 (() => {
   'use strict';
 
-  const U = window.Utils;
-  const I18n = window.I18n || null;
+
+  // ============================================================
+  // GLOBALS
+  // ============================================================
+
+  const U =
+    window.Utils;
+
+  const I18n =
+    window.I18n || null;
 
 
   // ============================================================
@@ -13,17 +23,21 @@
     key,
     values
   ) {
+
     if (
       I18n &&
       typeof I18n.t === 'function'
     ) {
+
       return I18n.t(
         key,
         values
       );
     }
 
-    return String(key);
+    return String(
+      key
+    );
   }
 
 
@@ -62,7 +76,9 @@
     !jobsEl ||
     !jobTemplate
   ) {
+
     return;
+
   }
 
 
@@ -78,18 +94,24 @@
     0;
 
 
-  /*
-   * tracked so clearCache can
-   * revoke every blob URL
-   */
-  const jobs = [];
+  const jobs =
+    [];
 
 
   const RATIOS = {
-    'free': null,
-    '1:1': 1,
-    '4:3': 4 / 3,
-    '16:9': 16 / 9
+
+    free:
+      null,
+
+    '1:1':
+      1,
+
+    '4:3':
+      4 / 3,
+
+    '16:9':
+      16 / 9
+
   };
 
 
@@ -121,14 +143,31 @@
 
 
       this.box = {
-        left: 0,
-        top: 0,
-        width: 0,
-        height: 0
+
+        left:
+          0,
+
+        top:
+          0,
+
+        width:
+          0,
+
+        height:
+          0
+
       };
 
 
+      this.resultBlob =
+        null;
+
+
       this.resultUrl =
+        null;
+
+
+      this.objectUrl =
         null;
 
 
@@ -136,14 +175,25 @@
         false;
 
 
+      this.hasError =
+        false;
+
+
+      this.errorMessage =
+        '';
+
+
       this.el =
         jobTemplate
           .content
           .firstElementChild
-          .cloneNode(true);
+          .cloneNode(
+            true
+          );
 
 
       this.buildDom();
+
     }
 
 
@@ -157,14 +207,10 @@
         this.el;
 
 
-      const url =
+      this.objectUrl =
         URL.createObjectURL(
           this.file
         );
-
-
-      this.objectUrl =
-        url;
 
 
       // ------------------------------------------------------
@@ -232,6 +278,16 @@
 
 
       // ------------------------------------------------------
+      // Processing state
+      //
+      // app.js uses this instead of reading translated text.
+      // ------------------------------------------------------
+
+      this.el.dataset.processing =
+        'false';
+
+
+      // ------------------------------------------------------
       // File
       // ------------------------------------------------------
 
@@ -241,19 +297,22 @@
         );
 
 
-      if (filenameEl) {
+      if (
+        filenameEl
+      ) {
 
         filenameEl.textContent =
           this.file.name;
+
       }
 
 
       this.imgEl.src =
-        url;
+        this.objectUrl;
 
 
       // ------------------------------------------------------
-      // Image loaded
+      // Image load
       // ------------------------------------------------------
 
       this.imgEl.onload =
@@ -265,18 +324,73 @@
             );
 
 
-          if (origDimEl) {
+          if (
+            origDimEl
+          ) {
 
             origDimEl.textContent =
               `${this.imgEl.naturalWidth}×${this.imgEl.naturalHeight}`;
+
           }
 
 
           requestAnimationFrame(
             () => {
+
               this.initBox();
+
             }
           );
+
+        };
+
+
+      // ------------------------------------------------------
+      // Image error
+      // ------------------------------------------------------
+
+      this.imgEl.onerror =
+        () => {
+
+          this.hasError =
+            true;
+
+
+          this.errorMessage =
+            t(
+              'image.openFailed'
+            );
+
+
+          if (
+            this.statusEl
+          ) {
+
+            this.statusEl.textContent =
+              this.errorMessage;
+
+
+            this.statusEl.classList.remove(
+              'is-ready'
+            );
+
+
+            this.statusEl.classList.add(
+              'is-error'
+            );
+
+          }
+
+
+          if (
+            this.cropBtn
+          ) {
+
+            this.cropBtn.disabled =
+              true;
+
+          }
+
         };
 
 
@@ -294,8 +408,12 @@
             );
 
 
-          if (!btn) {
+          if (
+            !btn
+          ) {
+
             return;
+
           }
 
 
@@ -305,9 +423,11 @@
             )
             .forEach(
               button => {
+
                 button.classList.remove(
                   'is-active'
                 );
+
               }
             );
 
@@ -326,13 +446,21 @@
               RATIOS,
               ratioKey
             )
-              ? RATIOS[ratioKey]
+              ? RATIOS[
+                  ratioKey
+                ]
               : null;
+
+
+          this.hasError =
+            false;
 
 
           this.invalidateResult();
 
+
           this.applyRatioToBox();
+
         }
       );
 
@@ -351,8 +479,12 @@
             );
 
 
-          if (!btn) {
+          if (
+            !btn
+          ) {
+
             return;
+
           }
 
 
@@ -362,9 +494,11 @@
             )
             .forEach(
               button => {
+
                 button.classList.remove(
                   'is-active'
                 );
+
               }
             );
 
@@ -378,7 +512,12 @@
             btn.dataset.format;
 
 
+          this.hasError =
+            false;
+
+
           this.invalidateResult();
+
         }
       );
 
@@ -390,7 +529,9 @@
       this.cropBtn.addEventListener(
         'click',
         () => {
+
           this.crop();
+
         }
       );
 
@@ -405,6 +546,7 @@
 
           this.dispose();
 
+
           el.remove();
 
 
@@ -414,13 +556,18 @@
             );
 
 
-          if (idx >= 0) {
+          if (
+            idx >=
+            0
+          ) {
 
             jobs.splice(
               idx,
               1
             );
+
           }
+
         }
       );
 
@@ -437,6 +584,7 @@
       // ------------------------------------------------------
 
       this.wireDrag();
+
     }
 
 
@@ -449,62 +597,107 @@
       if (
         !this.statusEl
       ) {
+
         return;
+
       }
 
 
+      /*
+       * Processing
+       */
       if (
         this.isCropping
       ) {
 
         this.statusEl.textContent =
           t(
-            'common.processing'
+            'image.cropping'
           );
 
+
         return;
+
       }
 
 
+      /*
+       * Error
+       */
       if (
-        this.resultUrl
+        this.hasError
       ) {
 
-        /*
-         * ดึงขนาด Blob ใหม่ไม่ได้จาก resultUrl โดยตรง
-         * ดังนั้นใช้ resultBlob ถ้ามี
-         */
-        if (
-          this.resultBlob
-        ) {
+        this.statusEl.textContent =
+          this.errorMessage ||
+          t(
+            'image.croppingFailed'
+          );
 
-          this.statusEl.textContent =
-            t(
-              'image.readyDownload',
-              {
-                size:
-                  U.formatBytes(
-                    this.resultBlob.size
-                  )
-              }
-            );
 
-        } else {
+        this.statusEl.classList.remove(
+          'is-ready'
+        );
 
-          this.statusEl.textContent =
-            t(
-              'image.ready'
-            );
-        }
+
+        this.statusEl.classList.add(
+          'is-error'
+        );
+
 
         return;
+
       }
 
 
+      /*
+       * Result
+       */
+      if (
+        this.resultBlob
+      ) {
+
+        this.statusEl.textContent =
+          t(
+            'image.readyDownload',
+            {
+              size:
+                U.formatBytes(
+                  this.resultBlob.size
+                )
+            }
+          );
+
+
+        this.statusEl.classList.remove(
+          'is-error'
+        );
+
+
+        this.statusEl.classList.add(
+          'is-ready'
+        );
+
+
+        return;
+
+      }
+
+
+      /*
+       * Waiting
+       */
       this.statusEl.textContent =
         t(
           'image.waitingCrop'
         );
+
+
+      this.statusEl.classList.remove(
+        'is-error',
+        'is-ready'
+      );
+
     }
 
 
@@ -537,6 +730,7 @@
 
         height:
           imgRect.height
+
       };
     }
 
@@ -555,18 +749,23 @@
         !d.width ||
         !d.height
       ) {
+
         return;
+
       }
 
 
       let w =
-        d.width * 0.7;
+        d.width *
+        0.7;
 
 
       let h =
         this.ratio
-          ? w / this.ratio
-          : d.height * 0.7;
+          ? w /
+            this.ratio
+          : d.height *
+            0.7;
 
 
       /*
@@ -581,13 +780,17 @@
         h =
           d.height;
 
-        if (this.ratio) {
+
+        if (
+          this.ratio
+        ) {
 
           w =
             h *
             this.ratio;
 
         }
+
       }
 
 
@@ -599,13 +802,17 @@
         w =
           d.width;
 
-        if (this.ratio) {
+
+        if (
+          this.ratio
+        ) {
 
           h =
             w /
             this.ratio;
 
         }
+
       }
 
 
@@ -632,10 +839,12 @@
 
         height:
           h
+
       };
 
 
       this.render();
+
     }
 
 
@@ -648,7 +857,9 @@
       if (
         !this.box.width
       ) {
+
         return;
+
       }
 
 
@@ -669,9 +880,6 @@
           this.box.width;
 
 
-        /*
-         * ถ้าสูงเกินรูป
-         */
         if (
           h >
           d.height
@@ -680,15 +888,14 @@
           h =
             d.height;
 
+
           width =
             h *
             this.ratio;
+
         }
 
 
-        /*
-         * ถ้ากว้างเกินรูป
-         */
         if (
           width >
           d.width
@@ -697,9 +904,11 @@
           width =
             d.width;
 
+
           h =
             width /
             this.ratio;
+
         }
 
 
@@ -709,11 +918,12 @@
 
         this.box.height =
           h;
+
       }
 
 
       /*
-       * บังคับกรอบให้อยู่ในรูป
+       * Keep box inside image
        */
 
       if (
@@ -727,6 +937,7 @@
           d.left +
           d.width -
           this.box.width;
+
       }
 
 
@@ -741,6 +952,7 @@
           d.top +
           d.height -
           this.box.height;
+
       }
 
 
@@ -751,6 +963,7 @@
 
         this.box.left =
           d.left;
+
       }
 
 
@@ -761,10 +974,12 @@
 
         this.box.top =
           d.top;
+
       }
 
 
       this.render();
+
     }
 
 
@@ -829,7 +1044,9 @@
 
         this.cropdimEl.textContent =
           `${outW}×${outH} px`;
+
       }
+
     }
 
 
@@ -852,8 +1069,13 @@
 
 
       let startPtr = {
-        x: 0,
-        y: 0
+
+        x:
+          0,
+
+        y:
+          0
+
       };
 
 
@@ -881,7 +1103,9 @@
             y:
               event.clientY -
               r.top
+
           };
+
         };
 
 
@@ -915,10 +1139,19 @@
           ) {
 
             const opposite = {
-              nw: 'se',
-              ne: 'sw',
-              sw: 'ne',
-              se: 'nw'
+
+              nw:
+                'se',
+
+              ne:
+                'sw',
+
+              sw:
+                'ne',
+
+              se:
+                'nw'
+
             }[m];
 
 
@@ -939,11 +1172,14 @@
                   ? startBox.top +
                     startBox.height
                   : startBox.top
+
             };
+
           }
 
 
           event.preventDefault();
+
           event.stopPropagation();
 
 
@@ -957,14 +1193,19 @@
             'pointerup',
             onUp
           );
+
         };
 
 
       const onMove =
         event => {
 
-          if (!mode) {
+          if (
+            !mode
+          ) {
+
             return;
+
           }
 
 
@@ -1005,7 +1246,8 @@
           // --------------------------------------------------
 
           if (
-            mode === 'move'
+            mode ===
+            'move'
           ) {
 
             const dx =
@@ -1063,6 +1305,7 @@
 
               height:
                 startBox.height
+
             };
 
           } else {
@@ -1085,20 +1328,14 @@
               );
 
 
-            // ----------------------------------------------
-            // Aspect ratio
-            // ----------------------------------------------
-
             if (
               this.ratio
             ) {
 
-              /*
-               * ใช้ width เป็นตัวหลัก
-               */
               height =
                 width /
                 this.ratio;
+
             }
 
 
@@ -1157,7 +1394,9 @@
                 height =
                   width /
                   this.ratio;
+
               }
+
             }
 
 
@@ -1186,7 +1425,9 @@
                 width =
                   height *
                   this.ratio;
+
               }
+
             }
 
 
@@ -1214,7 +1455,9 @@
                 height =
                   width /
                   this.ratio;
+
               }
+
             }
 
 
@@ -1242,13 +1485,12 @@
                 width =
                   height *
                   this.ratio;
+
               }
+
             }
 
 
-            /*
-             * ป้องกันกรอบเป็นค่าติดลบ
-             */
             width =
               Math.max(
                 width,
@@ -1272,13 +1514,21 @@
               width,
 
               height
+
             };
+
           }
+
+
+          this.hasError =
+            false;
 
 
           this.invalidateResult();
 
+
           this.render();
+
         };
 
 
@@ -1299,6 +1549,7 @@
             'pointerup',
             onUp
           );
+
         };
 
 
@@ -1318,8 +1569,10 @@
               ? handle.dataset.dir
               : 'move'
           );
+
         }
       );
+
     }
 
 
@@ -1344,6 +1597,7 @@
 
         this.resultUrl =
           null;
+
       }
 
 
@@ -1351,28 +1605,41 @@
         null;
 
 
-      this.downloadBtn.removeAttribute(
-        'href'
-      );
+      if (
+        this.downloadBtn
+      ) {
+
+        this.downloadBtn.removeAttribute(
+          'href'
+        );
 
 
-      this.downloadBtn.removeAttribute(
-        'download'
-      );
+        this.downloadBtn.removeAttribute(
+          'download'
+        );
 
 
-      this.downloadBtn.classList.add(
-        'hidden'
-      );
+        this.downloadBtn.classList.add(
+          'hidden'
+        );
+
+      }
 
 
-      this.statusEl.classList.remove(
-        'is-ready',
-        'is-error'
-      );
+      if (
+        this.statusEl
+      ) {
+
+        this.statusEl.classList.remove(
+          'is-ready',
+          'is-error'
+        );
+
+      }
 
 
       this.updateLanguageUI();
+
     }
 
 
@@ -1386,14 +1653,18 @@
         !this.imgEl.naturalWidth ||
         !this.imgEl.naturalHeight
       ) {
+
         return;
+
       }
 
 
       if (
         this.isCropping
       ) {
+
         return;
+
       }
 
 
@@ -1401,20 +1672,38 @@
         true;
 
 
+      this.hasError =
+        false;
+
+
+      this.errorMessage =
+        '';
+
+
+      this.el.dataset.processing =
+        'true';
+
+
       this.cropBtn.disabled =
         true;
 
 
-      this.statusEl.classList.remove(
-        'is-ready',
-        'is-error'
-      );
+      if (
+        this.statusEl
+      ) {
 
-
-      this.statusEl.textContent =
-        t(
-          'image.cropping'
+        this.statusEl.classList.remove(
+          'is-ready',
+          'is-error'
         );
+
+
+        this.statusEl.textContent =
+          t(
+            'image.cropping'
+          );
+
+      }
 
 
       try {
@@ -1433,6 +1722,7 @@
               'errors.invalidImageDimensions'
             )
           );
+
         }
 
 
@@ -1485,14 +1775,18 @@
         canvas.width =
           Math.max(
             1,
-            Math.round(sw)
+            Math.round(
+              sw
+            )
           );
 
 
         canvas.height =
           Math.max(
             1,
-            Math.round(sh)
+            Math.round(
+              sh
+            )
           );
 
 
@@ -1502,13 +1796,16 @@
           );
 
 
-        if (!ctx) {
+        if (
+          !ctx
+        ) {
 
           throw new Error(
             t(
               'errors.canvasContext'
             )
           );
+
         }
 
 
@@ -1531,6 +1828,7 @@
             canvas.width,
             canvas.height
           );
+
         }
 
 
@@ -1582,6 +1880,7 @@
                         )
                       )
                     );
+
                   }
 
                 },
@@ -1596,13 +1895,16 @@
           );
 
 
-        if (!blob) {
+        if (
+          !blob
+        ) {
 
           throw new Error(
             t(
               'errors.createFailed'
             )
           );
+
         }
 
 
@@ -1621,11 +1923,12 @@
             );
 
           } catch (_) {}
+
         }
 
 
         // --------------------------------------------------
-        // Store
+        // Store result
         // --------------------------------------------------
 
         this.resultBlob =
@@ -1664,6 +1967,14 @@
         );
 
 
+        this.hasError =
+          false;
+
+
+        this.errorMessage =
+          '';
+
+
         // --------------------------------------------------
         // Success
         // --------------------------------------------------
@@ -1680,11 +1991,19 @@
           );
 
 
+        this.statusEl.classList.remove(
+          'is-error'
+        );
+
+
         this.statusEl.classList.add(
           'is-ready'
         );
 
-      } catch (err) {
+
+      } catch (
+        err
+      ) {
 
         const message =
           err &&
@@ -1695,6 +2014,18 @@
               );
 
 
+        this.hasError =
+          true;
+
+
+        /*
+         * เก็บ key + message ตรง ๆ
+         * เพื่อเปลี่ยนภาษาแล้วสร้างข้อความใหม่ได้
+         */
+        this.errorMessage =
+          message;
+
+
         this.statusEl.textContent =
           t(
             'image.croppingFailed',
@@ -1702,6 +2033,11 @@
               message
             }
           );
+
+
+        this.statusEl.classList.remove(
+          'is-ready'
+        );
 
 
         this.statusEl.classList.add(
@@ -1714,9 +2050,15 @@
           false;
 
 
+        this.el.dataset.processing =
+          'false';
+
+
         this.cropBtn.disabled =
           false;
+
       }
+
     }
 
 
@@ -1725,6 +2067,14 @@
     // ========================================================
 
     dispose() {
+
+      this.isCropping =
+        false;
+
+
+      this.el.dataset.processing =
+        'false';
+
 
       if (
         this.objectUrl
@@ -1741,6 +2091,7 @@
 
         this.objectUrl =
           null;
+
       }
 
 
@@ -1759,11 +2110,13 @@
 
         this.resultUrl =
           null;
+
       }
 
 
       this.resultBlob =
         null;
+
     }
 
   }
@@ -1778,7 +2131,7 @@
   ) {
 
     Array.from(
-      fileList
+      fileList || []
     )
       .filter(
         file =>
@@ -1806,8 +2159,10 @@
           jobsEl.appendChild(
             job.el
           );
+
         }
       );
+
   }
 
 
@@ -1815,35 +2170,54 @@
   // DROPZONE
   // ============================================================
 
-  U.setupDropzone(
-    dropzone,
-    fileInput,
-    addFiles
-  );
+  if (
+    U &&
+    typeof U.setupDropzone ===
+      'function'
+  ) {
+
+    U.setupDropzone(
+      dropzone,
+      fileInput,
+      addFiles
+    );
+
+  }
 
 
   // ============================================================
   // CLEAR CACHE
   // ============================================================
 
-  U.onClearCache(
-    () => {
+  if (
+    U &&
+    typeof U.onClearCache ===
+      'function'
+  ) {
 
-      jobs.forEach(
-        job => {
-          job.dispose();
-        }
-      );
+    U.onClearCache(
+      () => {
+
+        jobs.forEach(
+          job => {
+
+            job.dispose();
+
+          }
+        );
 
 
-      jobs.length =
-        0;
+        jobs.length =
+          0;
 
 
-      jobsEl.innerHTML =
-        '';
-    }
-  );
+        jobsEl.innerHTML =
+          '';
+
+      }
+    );
+
+  }
 
 
   // ============================================================
@@ -1856,9 +2230,25 @@
 
       jobs.forEach(
         job => {
+
           job.updateLanguageUI();
+
         }
       );
+
+    }
+  );
+
+
+  // ============================================================
+  // INITIAL UI
+  // ============================================================
+
+  jobs.forEach(
+    job => {
+
+      job.updateLanguageUI();
+
     }
   );
 
