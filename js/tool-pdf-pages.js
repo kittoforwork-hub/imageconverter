@@ -1,3 +1,5 @@
+/* global window, document, URL, Blob, IntersectionObserver, pdfjsLib */
+
 (() => {
   'use strict';
 
@@ -95,8 +97,6 @@
 
   let dragState = null;
 
-  // Prevent the click event that follows a completed drag
-  // from toggling selection on the old card.
   let suppressClickUntil = 0;
 
 
@@ -466,286 +466,248 @@
       );
     }
   }
-// ============================================================
-// LOAD FILE
-// ============================================================
 
-async function loadFile(file) {
-  if (!file) {
-    return;
-  }
 
-  const requestId =
-    ++loadSeq;
+  // ============================================================
+  // LOAD FILE
+  // ============================================================
 
-  const validPdf =
-    file.type === 'application/pdf' ||
-    /\.pdf$/i.test(file.name);
-
-  if (!validPdf) {
-    alert(
-      'กรุณาเลือกไฟล์ PDF เท่านั้น'
-    );
-    return;
-  }
-
-  if (
-    !U.confirmLargeFile(
-      file,
-      LARGE_FILE_WARN_MB,
-      'ไฟล์ PDF นี้มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) จึงอาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก'
-    )
-  ) {
-    return;
-  }
-
-  try {
-    setToolProcessing(true);
-
-    // ----------------------------------------
-    // Stop observer
-    // ----------------------------------------
-
-    if (observer) {
-      observer.disconnect();
-      observer = null;
-    }
-
-    // ----------------------------------------
-    // Stop thumbnail queue
-    // ----------------------------------------
-
-    resetQueue();
-
-    // ----------------------------------------
-    // Cleanup old thumbnails
-    // ----------------------------------------
-
-    revokeThumbs();
-
-    pageItems = [];
-
-    // ----------------------------------------
-    // Cancel / cleanup current drag
-    // ----------------------------------------
-
-    if (dragState) {
-
-      try {
-        if (
-          dragState.card &&
-          dragState.card.isConnected &&
-          dragState.card.parentNode !== grid
-        ) {
-          dragState.card.remove();
-        }
-      } catch (_) {}
-
-      try {
-        if (
-          dragState.placeholder &&
-          dragState.placeholder.isConnected
-        ) {
-          dragState.placeholder.remove();
-        }
-      } catch (_) {}
-
-      try {
-        resetDragStyles(
-          dragState.card
-        );
-      } catch (_) {}
-
-      dragState = null;
-    }
-
-    clearDropIndicators();
-
-    // ----------------------------------------
-    // Destroy previous PDF
-    // ----------------------------------------
-
-    await destroyCurrentDoc();
-
-    if (
-      requestId !== loadSeq
-    ) {
+  async function loadFile(file) {
+    if (!file) {
       return;
     }
 
-    // ----------------------------------------
-    // Set current file
-    // ----------------------------------------
+    const requestId =
+      ++loadSeq;
 
-    currentFile =
-      file;
-
-    if (nameEl) {
-      nameEl.textContent =
-        `${file.name} · ${U.formatBytes(
-          file.size
-        )}`;
-    }
-
-    grid.innerHTML = '';
-
-    bulkbar.classList.remove(
-      'hidden'
-    );
-
-    if (noteEl) {
-      noteEl.classList.remove(
-        'hidden'
-      );
-    }
-
-    if (countEl) {
-      countEl.textContent =
-        '…';
-    }
-
-    // ----------------------------------------
-    // Read PDF
-    // ----------------------------------------
-
-    const bytes =
-      await U.readAsArrayBuffer(
-        file
+    const validPdf =
+      file.type === 'application/pdf' ||
+      /\.pdf$/i.test(
+        file.name
       );
 
-    if (
-      requestId !== loadSeq
-    ) {
-      return;
-    }
-
-    // ----------------------------------------
-    // Open with PDF.js
-    // ----------------------------------------
-
-    const loadingTask =
-      pdfjsLib.getDocument({
-        data: bytes,
-        canvasFactory:
-          window.KittoCanvasFactory
-      });
-
-    const doc =
-      await loadingTask.promise;
-
-    // ----------------------------------------
-    // Request became stale
-    // ----------------------------------------
-
-    if (
-      requestId !== loadSeq
-    ) {
-
-      try {
-        await doc.destroy();
-      } catch (_) {}
-
-      return;
-    }
-
-    currentDoc =
-      doc;
-
-    // ----------------------------------------
-    // Create page state
-    // ----------------------------------------
-
-    for (
-      let i = 0;
-      i < doc.numPages;
-      i++
-    ) {
-
-      pageItems.push({
-        origIndex: i,
-        thumbUrl: null,
-        rendering: false,
-        deleted: false,
-        selected: false
-      });
-
-    }
-
-    // ----------------------------------------
-    // Render
-    // ----------------------------------------
-
-    updateCounts();
-
-    renderGrid();
-
-  } catch (error) {
-
-    if (
-      requestId !== loadSeq
-    ) {
-      return;
-    }
-
-    console.error(
-      'PDF load error:',
-      error
-    );
-
-    await destroyCurrentDoc();
-
-    currentFile =
-      null;
-
-    pageItems =
-      [];
-
-    grid.innerHTML =
-      '';
-
-    bulkbar.classList.add(
-      'hidden'
-    );
-
-    if (noteEl) {
-      noteEl.classList.add(
-        'hidden'
+    if (!validPdf) {
+      alert(
+        'กรุณาเลือกไฟล์ PDF เท่านั้น'
       );
+      return;
     }
 
-    if (countEl) {
-      countEl.textContent =
-        '0';
-    }
-
-    if (selectAllEl) {
-      selectAllEl.checked =
-        false;
-
-      selectAllEl.indeterminate =
-        false;
-    }
-
-    alert(
-      'ไม่สามารถเปิดไฟล์ PDF ได้\n\n' +
-      (
-        error?.message ||
-        'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
+    if (
+      !U.confirmLargeFile(
+        file,
+        LARGE_FILE_WARN_MB,
+        'ไฟล์ PDF นี้มีขนาดใหญ่ ทุกอย่างประมวลผลอยู่ในเบราว์เซอร์ (ไม่มีการอัปโหลดขึ้นเซิร์ฟเวอร์) จึงอาจใช้เวลาสักครู่และใช้แรมมากกว่าไฟล์เล็ก'
       )
-    );
-
-  } finally {
-
-    if (
-      requestId === loadSeq
     ) {
-      setToolProcessing(
-        false
-      );
+      return;
     }
 
+    try {
+      setToolProcessing(true);
+
+      if (observer) {
+        observer.disconnect();
+        observer = null;
+      }
+
+      resetQueue();
+
+      revokeThumbs();
+
+      pageItems = [];
+
+      if (dragState) {
+
+        try {
+          if (
+            dragState.card &&
+            dragState.card.isConnected &&
+            dragState.card.parentNode !== grid
+          ) {
+            dragState.card.remove();
+          }
+        } catch (_) {}
+
+        try {
+          if (
+            dragState.placeholder &&
+            dragState.placeholder.isConnected
+          ) {
+            dragState.placeholder.remove();
+          }
+        } catch (_) {}
+
+        try {
+          resetDragStyles(
+            dragState.card
+          );
+        } catch (_) {}
+
+        dragState = null;
+      }
+
+      clearDropIndicators();
+
+      await destroyCurrentDoc();
+
+      if (
+        requestId !== loadSeq
+      ) {
+        return;
+      }
+
+      currentFile =
+        file;
+
+      if (nameEl) {
+        nameEl.textContent =
+          `${file.name} · ${U.formatBytes(
+            file.size
+          )}`;
+      }
+
+      grid.innerHTML = '';
+
+      bulkbar.classList.remove(
+        'hidden'
+      );
+
+      if (noteEl) {
+        noteEl.classList.remove(
+          'hidden'
+        );
+      }
+
+      if (countEl) {
+        countEl.textContent =
+          '…';
+      }
+
+      const bytes =
+        await U.readAsArrayBuffer(
+          file
+        );
+
+      if (
+        requestId !== loadSeq
+      ) {
+        return;
+      }
+
+      const loadingTask =
+        pdfjsLib.getDocument({
+          data: bytes,
+          canvasFactory:
+            window.KittoCanvasFactory
+        });
+
+      const doc =
+        await loadingTask.promise;
+
+      if (
+        requestId !== loadSeq
+      ) {
+
+        try {
+          await doc.destroy();
+        } catch (_) {}
+
+        return;
+      }
+
+      currentDoc =
+        doc;
+
+      for (
+        let i = 0;
+        i < doc.numPages;
+        i++
+      ) {
+
+        pageItems.push({
+          origIndex: i,
+          thumbUrl: null,
+          rendering: false,
+          deleted: false,
+          selected: false
+        });
+
+      }
+
+      updateCounts();
+
+      renderGrid();
+
+    } catch (error) {
+
+      if (
+        requestId !== loadSeq
+      ) {
+        return;
+      }
+
+      console.error(
+        'PDF load error:',
+        error
+      );
+
+      await destroyCurrentDoc();
+
+      currentFile =
+        null;
+
+      pageItems =
+        [];
+
+      grid.innerHTML =
+        '';
+
+      bulkbar.classList.add(
+        'hidden'
+      );
+
+      if (noteEl) {
+        noteEl.classList.add(
+          'hidden'
+        );
+      }
+
+      if (countEl) {
+        countEl.textContent =
+          '0';
+      }
+
+      if (selectAllEl) {
+        selectAllEl.checked =
+          false;
+
+        selectAllEl.indeterminate =
+          false;
+      }
+
+      alert(
+        'ไม่สามารถเปิดไฟล์ PDF ได้\n\n' +
+        (
+          error?.message ||
+          'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
+        )
+      );
+
+    } finally {
+
+      if (
+        requestId === loadSeq
+      ) {
+        setToolProcessing(
+          false
+        );
+      }
+
+    }
   }
-}
+
+
   // ============================================================
   // THUMBNAIL UPDATE
   // ============================================================
@@ -1374,10 +1336,6 @@ async function loadFile(file) {
         const rect =
           card.getBoundingClientRect();
 
-        /*
-         * จำตำแหน่งที่กดลงบนการ์ด
-         * เพื่อให้จุดนั้นติดกับเมาส์
-         */
         grabOffsetX =
           event.clientX -
           rect.left;
@@ -1601,14 +1559,6 @@ async function loadFile(file) {
       'is-dragging'
     );
 
-    /*
-     * สำคัญ:
-     * ย้าย card ออกจาก grid ไปไว้ที่ body
-     * เพื่อให้ position: fixed อ้างอิง viewport โดยตรง
-     *
-     * ป้องกันปัญหา parent มี transform / scale
-     * แล้วทำให้ card คลาดจากเมาส์
-     */
     document.body.appendChild(
       card
     );
@@ -1678,11 +1628,6 @@ async function loadFile(file) {
     const card =
       dragState.card;
 
-    /*
-     * clientX / clientY เป็น viewport coordinates
-     * และ card ใช้ position: fixed
-     * ดังนั้นไม่ต้องบวก scrollX / scrollY
-     */
     const left =
       clientX -
       dragState.grabOffsetX;
@@ -1977,9 +1922,23 @@ async function loadFile(file) {
       !dragState.moved
     ) {
 
-      resetDragStyles(
-        card
-      );
+      try {
+        const activePointerId =
+          dragState.pointerId;
+
+        if (
+          activePointerId != null &&
+          card &&
+          card.hasPointerCapture &&
+          card.hasPointerCapture(
+            activePointerId
+          )
+        ) {
+          card.releasePointerCapture(
+            activePointerId
+          );
+        }
+      } catch (_) {}
 
       if (
         placeholder &&
@@ -1988,19 +1947,9 @@ async function loadFile(file) {
         placeholder.remove();
       }
 
-      try {
-        if (
-          pointerIdOf(
-            card
-          ) !== null
-        ) {
-          card.releasePointerCapture(
-            pointerIdOf(
-              card
-            )
-          );
-        }
-      } catch (_) {}
+      resetDragStyles(
+        card
+      );
 
       dragState =
         null;
@@ -2049,10 +1998,6 @@ async function loadFile(file) {
               child.dataset.idx
             );
 
-          /*
-           * card ที่กำลังลากถูกย้ายไป body
-           * ดังนั้นปกติจะไม่อยู่ใน grid แล้ว
-           */
           if (
             child === card
           ) {
@@ -2094,24 +2039,24 @@ async function loadFile(file) {
 
 
     // ----------------------------------------------------------
-    // Suppress the click event generated after pointerup
-    // ----------------------------------------------------------
-
-    suppressClickUntil =
-      Date.now() + 250;
-
-
-    // ----------------------------------------------------------
-    // Release pointer
+    // Release pointer capture BEFORE removing card
     // ----------------------------------------------------------
 
     try {
 
+      const activePointerId =
+        dragState.pointerId;
+
       if (
-        pointerId !== null
+        activePointerId != null &&
+        card &&
+        card.hasPointerCapture &&
+        card.hasPointerCapture(
+          activePointerId
+        )
       ) {
         card.releasePointerCapture(
-          pointerId
+          activePointerId
         );
       }
 
@@ -2131,12 +2076,8 @@ async function loadFile(file) {
 
 
     // ----------------------------------------------------------
-    // Remove the floating card
-    //
-    // startRealDrag() moves the real card to <body>.
-    // renderGrid() creates fresh cards inside the grid, so the
-    // old floating card must be removed first or it becomes
-    // an orphan element left at the bottom of the document.
+    // IMPORTANT:
+    // Remove the floating card that was moved to <body>
     // ----------------------------------------------------------
 
     if (
@@ -2146,6 +2087,14 @@ async function loadFile(file) {
     ) {
       card.remove();
     }
+
+
+    // ----------------------------------------------------------
+    // Prevent the click event that follows pointerup
+    // ----------------------------------------------------------
+
+    suppressClickUntil =
+      Date.now() + 250;
 
 
     // ----------------------------------------------------------
@@ -2188,24 +2137,34 @@ async function loadFile(file) {
       dragState;
 
 
-    // Prevent the click generated after pointercancel
-    // from toggling the page selection.
-    suppressClickUntil =
-      Date.now() + 250;
-
+    // ----------------------------------------------------------
+    // Release pointer capture
+    // ----------------------------------------------------------
 
     try {
 
+      const activePointerId =
+        dragState.pointerId;
+
       if (
-        pointerId !== null
+        activePointerId != null &&
+        card &&
+        card.hasPointerCapture &&
+        card.hasPointerCapture(
+          activePointerId
+        )
       ) {
         card.releasePointerCapture(
-          pointerId
+          activePointerId
         );
       }
 
     } catch (_) {}
 
+
+    // ----------------------------------------------------------
+    // Remove placeholder
+    // ----------------------------------------------------------
 
     if (
       placeholder &&
@@ -2215,8 +2174,10 @@ async function loadFile(file) {
     }
 
 
-    // The card was moved to <body> during a real drag.
-    // Remove it so canceling cannot leave an orphan card.
+    // ----------------------------------------------------------
+    // Remove floating card
+    // ----------------------------------------------------------
+
     if (
       card &&
       card.isConnected &&
@@ -2224,6 +2185,14 @@ async function loadFile(file) {
     ) {
       card.remove();
     }
+
+
+    // ----------------------------------------------------------
+    // Prevent synthetic click
+    // ----------------------------------------------------------
+
+    suppressClickUntil =
+      Date.now() + 250;
 
 
     resetDragStyles(
@@ -2288,25 +2257,6 @@ async function loadFile(file) {
 
 
   // ============================================================
-  // POINTER ID HELPER
-  // ============================================================
-
-  function pointerIdOf(
-    card
-  ) {
-    if (
-      dragState &&
-      dragState.card === card &&
-      dragState.pointerId != null
-    ) {
-      return dragState.pointerId;
-    }
-
-    return null;
-  }
-
-
-  // ============================================================
   // APPLY FINAL ORDER
   // ============================================================
 
@@ -2364,9 +2314,6 @@ async function loadFile(file) {
     );
 
 
-    /*
-     * เติมรายการที่อาจไม่อยู่ใน DOM
-     */
     pageItems.forEach(
       item => {
 
@@ -2696,6 +2643,26 @@ async function loadFile(file) {
       if (dragState) {
 
         try {
+
+          const activePointerId =
+            dragState.pointerId;
+
+          if (
+            activePointerId != null &&
+            dragState.card &&
+            dragState.card.hasPointerCapture &&
+            dragState.card.hasPointerCapture(
+              activePointerId
+            )
+          ) {
+            dragState.card.releasePointerCapture(
+              activePointerId
+            );
+          }
+
+        } catch (_) {}
+
+        try {
           if (
             dragState.card &&
             dragState.card.isConnected &&
@@ -2706,18 +2673,18 @@ async function loadFile(file) {
         } catch (_) {}
 
         try {
-          resetDragStyles(
-            dragState.card
-          );
-        } catch (_) {}
-
-        try {
           if (
             dragState.placeholder &&
             dragState.placeholder.isConnected
           ) {
             dragState.placeholder.remove();
           }
+        } catch (_) {}
+
+        try {
+          resetDragStyles(
+            dragState.card
+          );
         } catch (_) {}
 
         dragState =
