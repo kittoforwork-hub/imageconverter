@@ -54,6 +54,10 @@ window.I18n = (() => {
 
       messages: {
 
+        // ------------------------------------------------------
+        // COMMON
+        // ------------------------------------------------------
+
         common: {
 
           home: 'หน้าหลัก',
@@ -117,6 +121,10 @@ window.I18n = (() => {
         },
 
 
+        // ------------------------------------------------------
+        // CUTE
+        // ------------------------------------------------------
+
         cute: {
 
           ready: 'พร้อมแล้ว ✨',
@@ -125,6 +133,10 @@ window.I18n = (() => {
           itemCount: '{count} รายการ'
         },
 
+
+        // ------------------------------------------------------
+        // PAGE
+        // ------------------------------------------------------
 
         page: {
 
@@ -789,38 +801,77 @@ window.I18n = (() => {
 
         notepad: {
 
-          saved:
-            'บันทึกแล้ว',
+          title:
+            'Online Notepad',
 
-          saving:
-            'กำลังบันทึก...',
+          subtitle:
+            'จดข้อความของคุณได้ง่าย ๆ และบันทึกอัตโนมัติ',
 
-          saveFailed:
-            'บันทึกไม่สำเร็จ',
+          toolbar:
+            'แถบเครื่องมือ Notepad',
 
-          noText:
-            'ยังไม่มีข้อความให้บันทึก',
-
-          savedTxt:
-            'บันทึกเป็น .txt แล้ว',
-
-          copied:
-            '✓ คัดลอกแล้ว',
-
-          copyFailed:
-            'คัดลอกไม่ได้',
-
-          noTextToCopy:
-            'ไม่มีข้อความ',
-
-          notFound:
-            'ไม่พบข้อความ',
-
-          clearConfirm:
-            'ล้างข้อความทั้งหมดหรือไม่?',
+          backHome:
+            'กลับหน้าหลัก',
 
           newNote:
-            'บันทึกใหม่',
+            'สร้างโน้ตใหม่',
+
+          newNoteQuestion:
+            'สร้างโน้ตใหม่?',
+
+          currentTextWillClear:
+            'ข้อความปัจจุบันจะถูกล้างออก',
+
+          createNew:
+            'สร้างใหม่',
+
+          new:
+            'ใหม่',
+
+          copy:
+            'คัดลอก',
+
+          copyAll:
+            'คัดลอกข้อความทั้งหมด',
+
+          save:
+            'บันทึก',
+
+          saveTxt:
+            'บันทึกข้อความเป็นไฟล์ TXT',
+
+          clear:
+            'ล้าง',
+
+          undo:
+            'ย้อนกลับ',
+
+          undoLabel:
+            'ย้อนกลับ',
+
+          redo:
+            'ทำซ้ำ',
+
+          redoLabel:
+            'ทำซ้ำ',
+
+          searchPlaceholder:
+            'ค้นหาข้อความ...',
+
+          searchLabel:
+            'ค้นหาในโน้ต',
+
+          clearSearch:
+            'ล้างการค้นหา',
+
+          editorSection:
+            'พื้นที่แก้ไขข้อความ',
+
+          editorPlaceholder:
+            'เริ่มพิมพ์ข้อความของคุณที่นี่...',
+
+          editorLabel:
+            'พื้นที่เขียนข้อความ',
 
           characters:
             'ตัวอักษร',
@@ -831,32 +882,56 @@ window.I18n = (() => {
           lines:
             'บรรทัด',
 
-          search:
-            'ค้นหา',
+          status: {
 
-          searchPlaceholder:
-            'ค้นหาข้อความ...',
+            saved:
+              'บันทึกแล้ว',
 
-          clearSearch:
-            'ล้างการค้นหา',
+            saving:
+              'กำลังบันทึก...',
 
-          copy:
-            'คัดลอก',
+            saveFailed:
+              'บันทึกไม่สำเร็จ',
 
-          saveTxt:
-            'บันทึก .txt',
+            nothingToSave:
+              'ยังไม่มีข้อความให้บันทึก',
 
-          clear:
-            'ล้าง',
+            txtSaved:
+              'บันทึกเป็น .txt แล้ว'
+          },
 
-          undo:
-            'ย้อนกลับ',
+          buttons: {
 
-          redo:
-            'ทำซ้ำ',
+            nothingToSave:
+              'ไม่มีข้อความ',
 
-          new:
-            'ใหม่'
+            txtSaved:
+              '✓ บันทึกแล้ว',
+
+            noText:
+              'ไม่มีข้อความ',
+
+            copied:
+              '✓ คัดลอกแล้ว',
+
+            copyFailed:
+              'คัดลอกไม่ได้'
+          },
+
+          search: {
+
+            found:
+              'พบข้อความ',
+
+            notFound:
+              'ไม่พบข้อความ'
+          },
+
+          errors: {
+
+            loadFailed:
+              'ไม่สามารถโหลดข้อมูลจากบันทึกเดิมได้'
+          }
         },
 
 
@@ -1102,9 +1177,6 @@ window.I18n = (() => {
           croppingFailed:
             'Crop failed: {message}',
 
-          conversionFailed:
-            'Conversion failed: {message}',
-
           saveFormat:
             'Save as',
 
@@ -1149,6 +1221,9 @@ window.I18n = (() => {
 
           backgroundRemovalFailed:
             'Background removal failed: {message}',
+
+          conversionFailed:
+            'Conversion failed: {message}',
 
           compressing:
             'Compressing…',
@@ -1593,40 +1668,83 @@ window.I18n = (() => {
         },
 
 
+        // ------------------------------------------------------
+        // NOTEPAD
+        // ------------------------------------------------------
+
         notepad: {
 
-          saved:
-            'Saved',
+          title:
+            'Online Notepad',
 
-          saving:
-            'Saving...',
+          subtitle:
+            'Write your notes easily with automatic saving',
 
-          saveFailed:
-            'Save failed',
+          toolbar:
+            'Notepad toolbar',
 
-          noText:
-            'There is no text to save.',
-
-          savedTxt:
-            'Saved as .txt',
-
-          copied:
-            '✓ Copied',
-
-          copyFailed:
-            'Copy failed',
-
-          noTextToCopy:
-            'No text',
-
-          notFound:
-            'Text not found',
-
-          clearConfirm:
-            'Clear all text?',
+          backHome:
+            'Back to home',
 
           newNote:
-            'New note',
+            'Create a new note',
+
+          newNoteQuestion:
+            'Create a new note?',
+
+          currentTextWillClear:
+            'Your current text will be cleared',
+
+          createNew:
+            'Create New',
+
+          new:
+            'New',
+
+          copy:
+            'Copy',
+
+          copyAll:
+            'Copy all text',
+
+          save:
+            'Save',
+
+          saveTxt:
+            'Save text as TXT',
+
+          clear:
+            'Clear',
+
+          undo:
+            'Undo',
+
+          undoLabel:
+            'Undo',
+
+          redo:
+            'Redo',
+
+          redoLabel:
+            'Redo',
+
+          searchPlaceholder:
+            'Search text...',
+
+          searchLabel:
+            'Search in note',
+
+          clearSearch:
+            'Clear search',
+
+          editorSection:
+            'Text editor',
+
+          editorPlaceholder:
+            'Start typing your text here...',
+
+          editorLabel:
+            'Text writing area',
 
           characters:
             'Characters',
@@ -1637,32 +1755,56 @@ window.I18n = (() => {
           lines:
             'Lines',
 
-          search:
-            'Search',
+          status: {
 
-          searchPlaceholder:
-            'Search text...',
+            saved:
+              'Saved',
 
-          clearSearch:
-            'Clear search',
+            saving:
+              'Saving...',
 
-          copy:
-            'Copy',
+            saveFailed:
+              'Save failed',
 
-          saveTxt:
-            'Save .txt',
+            nothingToSave:
+              'There is no text to save',
 
-          clear:
-            'Clear',
+            txtSaved:
+              'Saved as .txt'
+          },
 
-          undo:
-            'Undo',
+          buttons: {
 
-          redo:
-            'Redo',
+            nothingToSave:
+              'No text',
 
-          new:
-            'New'
+            txtSaved:
+              '✓ Saved',
+
+            noText:
+              'No text',
+
+            copied:
+              '✓ Copied',
+
+            copyFailed:
+              'Copy failed'
+          },
+
+          search: {
+
+            found:
+              'Text found',
+
+            notFound:
+              'Text not found'
+          },
+
+          errors: {
+
+            loadFailed:
+              'Unable to load the saved note'
+          }
         },
 
 
@@ -1904,9 +2046,6 @@ window.I18n = (() => {
           croppingFailed:
             '切り抜きに失敗しました: {message}',
 
-          conversionFailed:
-            '変換に失敗しました: {message}',
-
           saveFormat:
             '保存形式',
 
@@ -1951,6 +2090,9 @@ window.I18n = (() => {
 
           backgroundRemovalFailed:
             '背景の削除に失敗しました: {message}',
+
+          conversionFailed:
+            '変換に失敗しました: {message}',
 
           compressing:
             '圧縮中…',
@@ -2397,38 +2539,77 @@ window.I18n = (() => {
 
         notepad: {
 
-          saved:
-            '保存しました',
+          title:
+            'オンラインメモ帳',
 
-          saving:
-            '保存中...',
+          subtitle:
+            '簡単にメモを書いて自動保存できます',
 
-          saveFailed:
-            '保存に失敗しました',
+          toolbar:
+            'メモ帳ツールバー',
 
-          noText:
-            '保存するテキストがありません。',
-
-          savedTxt:
-            '.txtとして保存しました',
-
-          copied:
-            '✓ コピーしました',
-
-          copyFailed:
-            'コピーできませんでした',
-
-          noTextToCopy:
-            'テキストがありません',
-
-          notFound:
-            'テキストが見つかりません',
-
-          clearConfirm:
-            'すべてのテキストを削除しますか？',
+          backHome:
+            'ホームへ戻る',
 
           newNote:
-            '新しいメモ',
+            '新しいメモを作成',
+
+          newNoteQuestion:
+            '新しいメモを作成しますか？',
+
+          currentTextWillClear:
+            '現在のテキストは消去されます',
+
+          createNew:
+            '新規作成',
+
+          new:
+            '新規',
+
+          copy:
+            'コピー',
+
+          copyAll:
+            'すべてのテキストをコピー',
+
+          save:
+            '保存',
+
+          saveTxt:
+            'テキストをTXTとして保存',
+
+          clear:
+            'クリア',
+
+          undo:
+            '元に戻す',
+
+          undoLabel:
+            '元に戻す',
+
+          redo:
+            'やり直す',
+
+          redoLabel:
+            'やり直す',
+
+          searchPlaceholder:
+            'テキストを検索...',
+
+          searchLabel:
+            'メモを検索',
+
+          clearSearch:
+            '検索をクリア',
+
+          editorSection:
+            'テキストエディター',
+
+          editorPlaceholder:
+            'ここにテキストを入力してください...',
+
+          editorLabel:
+            'テキスト入力エリア',
 
           characters:
             '文字',
@@ -2439,32 +2620,56 @@ window.I18n = (() => {
           lines:
             '行',
 
-          search:
-            '検索',
+          status: {
 
-          searchPlaceholder:
-            'テキストを検索...',
+            saved:
+              '保存しました',
 
-          clearSearch:
-            '検索をクリア',
+            saving:
+              '保存中...',
 
-          copy:
-            'コピー',
+            saveFailed:
+              '保存に失敗しました',
 
-          saveTxt:
-            '.txt保存',
+            nothingToSave:
+              '保存するテキストがありません',
 
-          clear:
-            'クリア',
+            txtSaved:
+              '.txtとして保存しました'
+          },
 
-          undo:
-            '元に戻す',
+          buttons: {
 
-          redo:
-            'やり直す',
+            nothingToSave:
+              'テキストなし',
 
-          new:
-            '新規'
+            txtSaved:
+              '✓ 保存しました',
+
+            noText:
+              'テキストなし',
+
+            copied:
+              '✓ コピーしました',
+
+            copyFailed:
+              'コピーできませんでした'
+          },
+
+          search: {
+
+            found:
+              'テキストが見つかりました',
+
+            notFound:
+              'テキストが見つかりません'
+          },
+
+          errors: {
+
+            loadFailed:
+              '保存されたメモを読み込めませんでした'
+          }
         },
 
 
@@ -2706,9 +2911,6 @@ window.I18n = (() => {
           croppingFailed:
             '자르기 실패: {message}',
 
-          conversionFailed:
-            '변환 실패: {message}',
-
           saveFormat:
             '저장 형식',
 
@@ -2753,6 +2955,9 @@ window.I18n = (() => {
 
           backgroundRemovalFailed:
             '배경 제거 실패: {message}',
+
+          conversionFailed:
+            '변환 실패: {message}',
 
           compressing:
             '압축 중…',
@@ -3199,38 +3404,77 @@ window.I18n = (() => {
 
         notepad: {
 
-          saved:
-            '저장됨',
+          title:
+            '온라인 메모장',
 
-          saving:
-            '저장 중...',
+          subtitle:
+            '간단하게 메모를 작성하고 자동으로 저장하세요',
 
-          saveFailed:
-            '저장 실패',
+          toolbar:
+            '메모장 도구 모음',
 
-          noText:
-            '저장할 텍스트가 없습니다.',
-
-          savedTxt:
-            '.txt로 저장됨',
-
-          copied:
-            '✓ 복사됨',
-
-          copyFailed:
-            '복사할 수 없습니다',
-
-          noTextToCopy:
-            '텍스트 없음',
-
-          notFound:
-            '텍스트를 찾을 수 없습니다',
-
-          clearConfirm:
-            '모든 텍스트를 삭제하시겠습니까?',
+          backHome:
+            '홈으로 돌아가기',
 
           newNote:
-            '새 메모',
+            '새 메모 만들기',
+
+          newNoteQuestion:
+            '새 메모를 만들까요?',
+
+          currentTextWillClear:
+            '현재 텍스트가 지워집니다',
+
+          createNew:
+            '새로 만들기',
+
+          new:
+            '새로 만들기',
+
+          copy:
+            '복사',
+
+          copyAll:
+            '전체 텍스트 복사',
+
+          save:
+            '저장',
+
+          saveTxt:
+            '텍스트를 TXT로 저장',
+
+          clear:
+            '지우기',
+
+          undo:
+            '실행 취소',
+
+          undoLabel:
+            '실행 취소',
+
+          redo:
+            '다시 실행',
+
+          redoLabel:
+            '다시 실행',
+
+          searchPlaceholder:
+            '텍스트 검색...',
+
+          searchLabel:
+            '메모 검색',
+
+          clearSearch:
+            '검색 지우기',
+
+          editorSection:
+            '텍스트 편집기',
+
+          editorPlaceholder:
+            '여기에 텍스트를 입력하세요...',
+
+          editorLabel:
+            '텍스트 입력 영역',
 
           characters:
             '문자',
@@ -3241,32 +3485,56 @@ window.I18n = (() => {
           lines:
             '줄',
 
-          search:
-            '검색',
+          status: {
 
-          searchPlaceholder:
-            '텍스트 검색...',
+            saved:
+              '저장됨',
 
-          clearSearch:
-            '검색 지우기',
+            saving:
+              '저장 중...',
 
-          copy:
-            '복사',
+            saveFailed:
+              '저장 실패',
 
-          saveTxt:
-            '.txt 저장',
+            nothingToSave:
+              '저장할 텍스트가 없습니다',
 
-          clear:
-            '지우기',
+            txtSaved:
+              '.txt로 저장됨'
+          },
 
-          undo:
-            '실행 취소',
+          buttons: {
 
-          redo:
-            '다시 실행',
+            nothingToSave:
+              '텍스트 없음',
 
-          new:
-            '새로 만들기'
+            txtSaved:
+              '✓ 저장됨',
+
+            noText:
+              '텍스트 없음',
+
+            copied:
+              '✓ 복사됨',
+
+            copyFailed:
+              '복사할 수 없습니다'
+          },
+
+          search: {
+
+            found:
+              '텍스트를 찾았습니다',
+
+            notFound:
+              '텍스트를 찾을 수 없습니다'
+          },
+
+          errors: {
+
+            loadFailed:
+              '저장된 메모를 불러올 수 없습니다'
+          }
         },
 
 
@@ -3508,9 +3776,6 @@ window.I18n = (() => {
           croppingFailed:
             '裁剪失败：{message}',
 
-          conversionFailed:
-            '转换失败：{message}',
-
           saveFormat:
             '保存为',
 
@@ -3555,6 +3820,9 @@ window.I18n = (() => {
 
           backgroundRemovalFailed:
             '移除背景失败：{message}',
+
+          conversionFailed:
+            '转换失败：{message}',
 
           compressing:
             '正在压缩…',
@@ -4001,62 +4269,44 @@ window.I18n = (() => {
 
         notepad: {
 
-          saved:
-            '已保存',
+          title:
+            '在线记事本',
 
-          saving:
-            '正在保存...',
+          subtitle:
+            '轻松记录文字，并自动保存',
 
-          saveFailed:
-            '保存失败',
+          toolbar:
+            '记事本工具栏',
 
-          noText:
-            '没有可保存的文本。',
-
-          savedTxt:
-            '已保存为 .txt',
-
-          copied:
-            '✓ 已复制',
-
-          copyFailed:
-            '无法复制',
-
-          noTextToCopy:
-            '没有文本',
-
-          notFound:
-            '找不到文本',
-
-          clearConfirm:
-            '确定清除所有文本吗？',
+          backHome:
+            '返回首页',
 
           newNote:
-            '新建笔记',
+            '创建新记事',
 
-          characters:
-            '字符',
+          newNoteQuestion:
+            '创建新记事吗？',
 
-          words:
-            '字词',
+          currentTextWillClear:
+            '当前文字将被清除',
 
-          lines:
-            '行',
+          createNew:
+            '创建新记事',
 
-          search:
-            '搜索',
-
-          searchPlaceholder:
-            '搜索文本...',
-
-          clearSearch:
-            '清除搜索',
+          new:
+            '新建',
 
           copy:
             '复制',
 
+          copyAll:
+            '复制全部文字',
+
+          save:
+            '保存',
+
           saveTxt:
-            '保存 .txt',
+            '将文字保存为 TXT',
 
           clear:
             '清除',
@@ -4064,11 +4314,92 @@ window.I18n = (() => {
           undo:
             '撤销',
 
+          undoLabel:
+            '撤销',
+
           redo:
             '重做',
 
-          new:
-            '新建'
+          redoLabel:
+            '重做',
+
+          searchPlaceholder:
+            '搜索文字...',
+
+          searchLabel:
+            '搜索记事',
+
+          clearSearch:
+            '清除搜索',
+
+          editorSection:
+            '文字编辑器',
+
+          editorPlaceholder:
+            '从这里开始输入文字...',
+
+          editorLabel:
+            '文字输入区域',
+
+          characters:
+            '字符',
+
+          words:
+            '字数',
+
+          lines:
+            '行',
+
+          status: {
+
+            saved:
+              '已保存',
+
+            saving:
+              '正在保存...',
+
+            saveFailed:
+              '保存失败',
+
+            nothingToSave:
+              '没有可保存的文字',
+
+            txtSaved:
+              '已保存为 .txt'
+          },
+
+          buttons: {
+
+            nothingToSave:
+              '没有文字',
+
+            txtSaved:
+              '✓ 已保存',
+
+            noText:
+              '没有文字',
+
+            copied:
+              '✓ 已复制',
+
+            copyFailed:
+              '无法复制'
+          },
+
+          search: {
+
+            found:
+              '已找到文字',
+
+            notFound:
+              '找不到文字'
+          },
+
+          errors: {
+
+            loadFailed:
+              '无法加载已保存的记事'
+          }
         },
 
 
@@ -4310,9 +4641,6 @@ window.I18n = (() => {
           croppingFailed:
             '裁切失敗：{message}',
 
-          conversionFailed:
-            '轉換失敗：{message}',
-
           saveFormat:
             '儲存格式',
 
@@ -4357,6 +4685,9 @@ window.I18n = (() => {
 
           backgroundRemovalFailed:
             '移除背景失敗：{message}',
+
+          conversionFailed:
+            '轉換失敗：{message}',
 
           compressing:
             '正在壓縮…',
@@ -4803,38 +5134,77 @@ window.I18n = (() => {
 
         notepad: {
 
-          saved:
-            '已儲存',
+          title:
+            '線上記事本',
 
-          saving:
-            '正在儲存...',
+          subtitle:
+            '輕鬆記錄文字並自動儲存',
 
-          saveFailed:
-            '儲存失敗',
+          toolbar:
+            '記事本工具列',
 
-          noText:
-            '沒有可儲存的文字。',
-
-          savedTxt:
-            '已儲存為 .txt',
-
-          copied:
-            '✓ 已複製',
-
-          copyFailed:
-            '無法複製',
-
-          noTextToCopy:
-            '沒有文字',
-
-          notFound:
-            '找不到文字',
-
-          clearConfirm:
-            '確定要清除所有文字嗎？',
+          backHome:
+            '返回首頁',
 
           newNote:
-            '新筆記',
+            '建立新記事',
+
+          newNoteQuestion:
+            '要建立新記事嗎？',
+
+          currentTextWillClear:
+            '目前文字將會被清除',
+
+          createNew:
+            '建立新記事',
+
+          new:
+            '新增',
+
+          copy:
+            '複製',
+
+          copyAll:
+            '複製全部文字',
+
+          save:
+            '儲存',
+
+          saveTxt:
+            '將文字儲存為 TXT',
+
+          clear:
+            '清除',
+
+          undo:
+            '復原',
+
+          undoLabel:
+            '復原',
+
+          redo:
+            '重做',
+
+          redoLabel:
+            '重做',
+
+          searchPlaceholder:
+            '搜尋文字...',
+
+          searchLabel:
+            '搜尋記事',
+
+          clearSearch:
+            '清除搜尋',
+
+          editorSection:
+            '文字編輯器',
+
+          editorPlaceholder:
+            '從這裡開始輸入文字...',
+
+          editorLabel:
+            '文字輸入區域',
 
           characters:
             '字元',
@@ -4845,32 +5215,56 @@ window.I18n = (() => {
           lines:
             '行',
 
-          search:
-            '搜尋',
+          status: {
 
-          searchPlaceholder:
-            '搜尋文字...',
+            saved:
+              '已儲存',
 
-          clearSearch:
-            '清除搜尋',
+            saving:
+              '正在儲存...',
 
-          copy:
-            '複製',
+            saveFailed:
+              '儲存失敗',
 
-          saveTxt:
-            '儲存 .txt',
+            nothingToSave:
+              '沒有可儲存的文字',
 
-          clear:
-            '清除',
+            txtSaved:
+              '已儲存為 .txt'
+          },
 
-          undo:
-            '復原',
+          buttons: {
 
-          redo:
-            '重做',
+            nothingToSave:
+              '沒有文字',
 
-          new:
-            '新增'
+            txtSaved:
+              '✓ 已儲存',
+
+            noText:
+              '沒有文字',
+
+            copied:
+              '✓ 已複製',
+
+            copyFailed:
+              '無法複製'
+          },
+
+          search: {
+
+            found:
+              '已找到文字',
+
+            notFound:
+              '找不到文字'
+          },
+
+          errors: {
+
+            loadFailed:
+              '無法載入已儲存的記事'
+          }
         },
 
 
@@ -4894,7 +5288,9 @@ window.I18n = (() => {
   // LANGUAGE HELPERS
   // ============================================================
 
-  function hasLanguage(language) {
+  function hasLanguage(
+    language
+  ) {
 
     return Object.prototype.hasOwnProperty.call(
       LANGUAGES,
@@ -4903,7 +5299,9 @@ window.I18n = (() => {
   }
 
 
-  function normalizeLanguage(language) {
+  function normalizeLanguage(
+    language
+  ) {
 
     if (!language) {
       return '';
@@ -4911,14 +5309,21 @@ window.I18n = (() => {
 
     return String(language)
       .trim()
-      .replace(/_/g, '-');
+      .replace(
+        /_/g,
+        '-'
+      );
   }
 
 
-  function getBaseLanguage(language) {
+  function getBaseLanguage(
+    language
+  ) {
 
     const normalized =
-      normalizeLanguage(language);
+      normalizeLanguage(
+        language
+      );
 
     if (!normalized) {
       return '';
@@ -4934,9 +5339,16 @@ window.I18n = (() => {
   // FIND BEST LANGUAGE
   // ============================================================
 
-  function findBestLanguage(languageList) {
+  function findBestLanguage(
+    languageList
+  ) {
 
-    if (!Array.isArray(languageList)) {
+    if (
+      !Array.isArray(
+        languageList
+      )
+    ) {
+
       return null;
     }
 
@@ -4945,11 +5357,17 @@ window.I18n = (() => {
     // Chinese special handling
     // ----------------------------------------------------------
 
-    for (const rawLanguage of languageList) {
+    for (
+      const rawLanguage of
+      languageList
+    ) {
 
       const language =
-        normalizeLanguage(rawLanguage)
+        normalizeLanguage(
+          rawLanguage
+        )
           .toLowerCase();
+
 
       if (
         language === 'zh-tw' ||
@@ -4958,7 +5376,12 @@ window.I18n = (() => {
         language.includes('hant')
       ) {
 
-        if (hasLanguage('zh-TW')) {
+        if (
+          hasLanguage(
+            'zh-TW'
+          )
+        ) {
+
           return 'zh-TW';
         }
       }
@@ -4971,7 +5394,12 @@ window.I18n = (() => {
         language.includes('hans')
       ) {
 
-        if (hasLanguage('zh-CN')) {
+        if (
+          hasLanguage(
+            'zh-CN'
+          )
+        ) {
+
           return 'zh-CN';
         }
       }
@@ -4982,12 +5410,23 @@ window.I18n = (() => {
     // Exact match
     // ----------------------------------------------------------
 
-    for (const rawLanguage of languageList) {
+    for (
+      const rawLanguage of
+      languageList
+    ) {
 
       const language =
-        normalizeLanguage(rawLanguage);
+        normalizeLanguage(
+          rawLanguage
+        );
 
-      if (hasLanguage(language)) {
+
+      if (
+        hasLanguage(
+          language
+        )
+      ) {
+
         return language;
       }
     }
@@ -4997,16 +5436,28 @@ window.I18n = (() => {
     // Base language
     // ----------------------------------------------------------
 
-    for (const rawLanguage of languageList) {
+    for (
+      const rawLanguage of
+      languageList
+    ) {
 
       const base =
-        getBaseLanguage(rawLanguage);
+        getBaseLanguage(
+          rawLanguage
+        );
+
 
       if (!base) {
         continue;
       }
 
-      if (hasLanguage(base)) {
+
+      if (
+        hasLanguage(
+          base
+        )
+      ) {
+
         return base;
       }
     }
@@ -5042,7 +5493,9 @@ window.I18n = (() => {
       }
 
 
-      if (navigator.language) {
+      if (
+        navigator.language
+      ) {
 
         languages.push(
           navigator.language
@@ -5068,9 +5521,12 @@ window.I18n = (() => {
           STORAGE_KEY
         );
 
+
       if (
         saved &&
-        hasLanguage(saved)
+        hasLanguage(
+          saved
+        )
       ) {
 
         return saved;
@@ -5094,6 +5550,7 @@ window.I18n = (() => {
     const saved =
       getSavedLanguage();
 
+
     if (saved) {
       return saved;
     }
@@ -5103,6 +5560,7 @@ window.I18n = (() => {
       findBestLanguage(
         getBrowserLanguages()
       );
+
 
     if (detected) {
       return detected;
@@ -5134,24 +5592,30 @@ window.I18n = (() => {
       !source ||
       !path
     ) {
+
       return undefined;
     }
 
 
     const parts =
-      String(path).split('.');
+      String(path)
+        .split('.');
 
 
     let current =
       source;
 
 
-    for (const key of parts) {
+    for (
+      const key of
+      parts
+    ) {
 
       if (
         current === null ||
         current === undefined
       ) {
+
         return undefined;
       }
 
@@ -5162,6 +5626,7 @@ window.I18n = (() => {
           key
         )
       ) {
+
         return undefined;
       }
 
@@ -5188,6 +5653,7 @@ window.I18n = (() => {
       typeof value !==
       'string'
     ) {
+
       return value;
     }
 
@@ -5197,6 +5663,7 @@ window.I18n = (() => {
       typeof data !==
       'object'
     ) {
+
       return value;
     }
 
@@ -5255,7 +5722,13 @@ window.I18n = (() => {
       );
 
 
-    if (value === undefined) {
+    // ----------------------------------------------------------
+    // FALLBACK TO ENGLISH
+    // ----------------------------------------------------------
+
+    if (
+      value === undefined
+    ) {
 
       value =
         getNestedValue(
@@ -5265,9 +5738,17 @@ window.I18n = (() => {
     }
 
 
-    if (value === undefined) {
+    // ----------------------------------------------------------
+    // UNKNOWN KEY
+    // ----------------------------------------------------------
 
-      return String(key);
+    if (
+      value === undefined
+    ) {
+
+      return String(
+        key
+      );
     }
 
 
@@ -5288,6 +5769,7 @@ window.I18n = (() => {
       typeof document ===
       'undefined'
     ) {
+
       return;
     }
 
@@ -5326,7 +5808,9 @@ window.I18n = (() => {
       );
 
 
-    if (title) {
+    if (
+      title
+    ) {
 
       document.title =
         title;
@@ -5346,12 +5830,13 @@ window.I18n = (() => {
       !element ||
       element.nodeType !== 1
     ) {
+
       return;
     }
 
 
     // ----------------------------------------------------------
-    // data-i18n
+    // DATA I18N
     // ----------------------------------------------------------
 
     if (
@@ -5365,7 +5850,10 @@ window.I18n = (() => {
           'data-i18n'
         );
 
-      if (key) {
+
+      if (
+        key
+      ) {
 
         element.textContent =
           t(key);
@@ -5374,7 +5862,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // data-i18n-html
+    // DATA I18N HTML
     // ----------------------------------------------------------
 
     if (
@@ -5388,7 +5876,10 @@ window.I18n = (() => {
           'data-i18n-html'
         );
 
-      if (key) {
+
+      if (
+        key
+      ) {
 
         element.innerHTML =
           t(key);
@@ -5397,7 +5888,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // placeholder
+    // PLACEHOLDER
     // ----------------------------------------------------------
 
     if (
@@ -5411,7 +5902,10 @@ window.I18n = (() => {
           'data-i18n-placeholder'
         );
 
-      if (key) {
+
+      if (
+        key
+      ) {
 
         element.setAttribute(
           'placeholder',
@@ -5422,7 +5916,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // title
+    // TITLE
     // ----------------------------------------------------------
 
     if (
@@ -5436,7 +5930,10 @@ window.I18n = (() => {
           'data-i18n-title'
         );
 
-      if (key) {
+
+      if (
+        key
+      ) {
 
         element.setAttribute(
           'title',
@@ -5447,7 +5944,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // aria-label
+    // ARIA LABEL
     // ----------------------------------------------------------
 
     if (
@@ -5461,7 +5958,10 @@ window.I18n = (() => {
           'data-i18n-aria-label'
         );
 
-      if (key) {
+
+      if (
+        key
+      ) {
 
         element.setAttribute(
           'aria-label',
@@ -5472,7 +5972,7 @@ window.I18n = (() => {
 
 
     // ----------------------------------------------------------
-    // aria-description
+    // ARIA DESCRIPTION
     // ----------------------------------------------------------
 
     if (
@@ -5486,7 +5986,10 @@ window.I18n = (() => {
           'data-i18n-aria-description'
         );
 
-      if (key) {
+
+      if (
+        key
+      ) {
 
         element.setAttribute(
           'aria-description',
@@ -5501,12 +6004,15 @@ window.I18n = (() => {
   // APPLY TRANSLATIONS
   // ============================================================
 
-  function applyTranslations(root) {
+  function applyTranslations(
+    root
+  ) {
 
     if (
       typeof document ===
       'undefined'
     ) {
+
       return;
     }
 
@@ -5531,6 +6037,7 @@ window.I18n = (() => {
       typeof container.querySelectorAll !==
       'function'
     ) {
+
       return;
     }
 
@@ -5767,16 +6274,23 @@ window.I18n = (() => {
       typeof MutationObserver ===
       'undefined'
     ) {
+
       return;
     }
 
 
-    if (observer) {
+    if (
+      observer
+    ) {
+
       return;
     }
 
 
-    if (!document.body) {
+    if (
+      !document.body
+    ) {
+
       return;
     }
 
@@ -5799,27 +6313,29 @@ window.I18n = (() => {
             }
 
 
-            mutation.addedNodes.forEach(
-              node => {
+            mutation.addedNodes
+              .forEach(
+                node => {
 
-                if (
-                  node.nodeType !==
-                  1
-                ) {
-                  return;
+                  if (
+                    node.nodeType !==
+                    1
+                  ) {
+
+                    return;
+                  }
+
+
+                  translateElement(
+                    node
+                  );
+
+
+                  applyTranslations(
+                    node
+                  );
                 }
-
-
-                translateElement(
-                  node
-                );
-
-
-                applyTranslations(
-                  node
-                );
-              }
-            );
+              );
           }
         }
       );
@@ -5844,7 +6360,10 @@ window.I18n = (() => {
 
   function stopObserver() {
 
-    if (!observer) {
+    if (
+      !observer
+    ) {
+
       return;
     }
 
