@@ -3,14 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Workshop Utility BY KITTO</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
 <link
   href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
@@ -18,12 +17,6 @@
 >
 
 <link rel="stylesheet" href="css/style.css">
-
-<!-- ============================================================ -->
-<!-- NOTEPAD CSS                                                   -->
-<!-- ============================================================ -->
-
-<link rel="stylesheet" href="css/notepad.css">
 
 </head>
 
@@ -45,11 +38,9 @@
 
     </div>
 
-
     <h1>
       ชุดเครื่องมือจัดการไฟล์
     </h1>
-
 
     <p class="sub">
       แปลงและแก้ไขรูปภาพ/PDF ทั้งหมดในเบราว์เซอร์ของคุณ
@@ -63,12 +54,11 @@
   <!-- CATEGORY SWITCHER                                             -->
   <!-- ============================================================ -->
 
-  <nav
-    class="cat-bar"
-    id="catBar"
-  >
+  <nav class="cat-bar" id="catBar">
 
-    <!-- IMAGE -->
+    <!-- ========================================================== -->
+    <!-- IMAGE                                                       -->
+    <!-- ========================================================== -->
 
     <button
       class="cat-btn is-active"
@@ -108,7 +98,9 @@
     </button>
 
 
-    <!-- PDF -->
+    <!-- ========================================================== -->
+    <!-- PDF                                                         -->
+    <!-- ========================================================== -->
 
     <button
       class="cat-btn"
@@ -138,12 +130,15 @@
     </button>
 
 
-    <!-- NOTEPAD -->
+    <!-- ========================================================== -->
+    <!-- NOTEPAD                                                     -->
+    <!-- ========================================================== -->
 
     <button
       class="cat-btn"
-      data-cat="notepad"
+      id="open-notepad"
       type="button"
+      title="เปิด Online Notepad"
     >
 
       <svg
@@ -159,21 +154,13 @@
           d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
         />
 
-        <path
-          d="M14 2v6h6"
-        />
+        <path d="M14 2v6h6"/>
 
-        <path
-          d="M8 13h8"
-        />
+        <path d="M8 13h8"/>
 
-        <path
-          d="M8 17h6"
-        />
+        <path d="M8 17h6"/>
 
-        <path
-          d="M8 9h1"
-        />
+        <path d="M8 9h4"/>
 
       </svg>
 
@@ -282,26 +269,6 @@
       type="button"
     >
       ใส่เลขหน้า
-    </button>
-
-  </nav>
-
-
-  <!-- ============================================================ -->
-  <!-- NOTEPAD TOOL CHIPS                                            -->
-  <!-- ============================================================ -->
-
-  <nav
-    class="tool-chips hidden"
-    data-cat-group="notepad"
-  >
-
-    <button
-      class="tool-chip is-active"
-      data-tool="notepad"
-      type="button"
-    >
-      📝 จดข้อความออนไลน์
     </button>
 
   </nav>
@@ -575,6 +542,7 @@
                     PNG
                   </button>
 
+
                   <button
                     type="button"
                     class="seg-btn"
@@ -582,6 +550,7 @@
                   >
                     JPG
                   </button>
+
 
                   <button
                     type="button"
@@ -637,9 +606,7 @@
                         rx="1.5"
                       />
 
-                      <path
-                        d="M8 11V7a4 4 0 0 1 8 0v4"
-                      />
+                      <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
 
                     </svg>
 
@@ -676,6 +643,7 @@
                     ⟲
                   </button>
 
+
                   <button
                     type="button"
                     class="seg-btn"
@@ -685,6 +653,7 @@
                     ⟳
                   </button>
 
+
                   <button
                     type="button"
                     class="seg-btn"
@@ -693,6 +662,7 @@
                   >
                     ⇋
                   </button>
+
 
                   <button
                     type="button"
@@ -827,13 +797,9 @@
             stroke-width="1.4"
           >
 
-            <path
-              d="M6 2v14a2 2 0 0 0 2 2h14"
-            />
+            <path d="M6 2v14a2 2 0 0 0 2 2h14"/>
 
-            <path
-              d="M18 22V8a2 2 0 0 0-2-2H2"
-            />
+            <path d="M18 22V8a2 2 0 0 0-2-2H2"/>
 
           </svg>
 
@@ -893,15 +859,18 @@
                   data-dir="nw"
                 ></span>
 
+
                 <span
                   class="crop-handle ne"
                   data-dir="ne"
                 ></span>
 
+
                 <span
                   class="crop-handle sw"
                   data-dir="sw"
                 ></span>
+
 
                 <span
                   class="crop-handle se"
@@ -974,6 +943,7 @@
                     อิสระ
                   </button>
 
+
                   <button
                     type="button"
                     class="seg-btn"
@@ -982,6 +952,7 @@
                     1:1
                   </button>
 
+
                   <button
                     type="button"
                     class="seg-btn"
@@ -989,6 +960,7 @@
                   >
                     4:3
                   </button>
+
 
                   <button
                     type="button"
@@ -1019,6 +991,7 @@
                   >
                     PNG
                   </button>
+
 
                   <button
                     type="button"
@@ -1158,13 +1131,9 @@
 
             <path d="M3 3l18 18"/>
 
-            <path
-              d="M10.5 4.5H19a2 2 0 0 1 2 2v11.5"
-            />
+            <path d="M10.5 4.5H19a2 2 0 0 1 2 2v11.5"/>
 
-            <path
-              d="M4 7v11a2 2 0 0 0 2 2h11.5"
-            />
+            <path d="M4 7v11a2 2 0 0 0 2 2h11.5"/>
 
             <circle
               cx="9"
@@ -1293,9 +1262,7 @@
 
                 <path d="M5 12h14"/>
 
-                <path
-                  d="M13 6l6 6-6 6"
-                />
+                <path d="M13 6l6 6-6 6"/>
 
               </svg>
 
@@ -2761,362 +2728,6 @@
 
     </section>
 
-
-    <!-- ========================================================== -->
-    <!-- NOTEPAD                                                      -->
-    <!-- ========================================================== -->
-
-    <section
-      class="tool-panel hidden"
-      id="panel-notepad"
-      data-cat="notepad"
-    >
-
-      <div class="notepad-page">
-
-
-        <!-- ====================================================== -->
-        <!-- NOTEPAD HEADER                                          -->
-        <!-- ====================================================== -->
-
-        <header class="notepad-header">
-
-          <div class="notepad-title">
-
-            <div class="notepad-icon">
-              📝
-            </div>
-
-
-            <div>
-
-              <h1>
-                Online Notepad
-              </h1>
-
-
-              <p>
-                จดข้อความของคุณได้ง่าย ๆ และบันทึกอัตโนมัติ
-              </p>
-
-            </div>
-
-          </div>
-
-
-          <div class="notepad-status">
-
-            <span class="status-dot"></span>
-
-            <span id="notepad-save-status">
-              พร้อมใช้งาน
-            </span>
-
-          </div>
-
-        </header>
-
-
-        <!-- ====================================================== -->
-        <!-- TOOLBAR                                                 -->
-        <!-- ====================================================== -->
-
-        <section class="notepad-toolbar">
-
-
-          <div class="toolbar-group">
-
-            <button
-              type="button"
-              class="notepad-btn"
-              id="btn-new-note"
-              title="สร้างโน้ตใหม่"
-            >
-
-              <span>
-                📄
-              </span>
-
-              <span>
-                ใหม่
-              </span>
-
-            </button>
-
-
-            <button
-              type="button"
-              class="notepad-btn"
-              id="btn-copy-note"
-              title="คัดลอกข้อความทั้งหมด"
-            >
-
-              <span>
-                📋
-              </span>
-
-              <span>
-                คัดลอก
-              </span>
-
-            </button>
-
-
-            <button
-              type="button"
-              class="notepad-btn"
-              id="btn-clear-note"
-              title="ล้างข้อความ"
-            >
-
-              <span>
-                🗑️
-              </span>
-
-              <span>
-                ล้าง
-              </span>
-
-            </button>
-
-          </div>
-
-
-          <div class="toolbar-divider"></div>
-
-
-          <div class="toolbar-group">
-
-            <button
-              type="button"
-              class="notepad-btn icon-only"
-              id="btn-undo"
-              title="ย้อนกลับ (Ctrl + Z)"
-              aria-label="Undo"
-            >
-              ↶
-            </button>
-
-
-            <button
-              type="button"
-              class="notepad-btn icon-only"
-              id="btn-redo"
-              title="ทำซ้ำ (Ctrl + Y)"
-              aria-label="Redo"
-            >
-              ↷
-            </button>
-
-          </div>
-
-
-          <div class="toolbar-divider"></div>
-
-
-          <div class="toolbar-group toolbar-search">
-
-            <div class="search-box">
-
-              <span class="search-icon">
-                🔍
-              </span>
-
-
-              <input
-                type="search"
-                id="notepad-search"
-                placeholder="ค้นหา..."
-                autocomplete="off"
-                spellcheck="false"
-              >
-
-
-              <button
-                type="button"
-                id="btn-search-clear"
-                class="search-clear"
-                title="ล้างการค้นหา"
-                aria-label="ล้างการค้นหา"
-              >
-                ×
-              </button>
-
-            </div>
-
-          </div>
-
-        </section>
-
-
-        <!-- ====================================================== -->
-        <!-- EDITOR                                                  -->
-        <!-- ====================================================== -->
-
-        <section class="notepad-editor-wrapper">
-
-          <div class="notepad-editor">
-
-            <textarea
-              id="notepad-textarea"
-              class="notepad-textarea"
-              placeholder="เริ่มพิมพ์ข้อความของคุณที่นี่..."
-              spellcheck="false"
-              autocomplete="off"
-              autocorrect="off"
-              autocapitalize="off"
-            ></textarea>
-
-          </div>
-
-        </section>
-
-
-        <!-- ====================================================== -->
-        <!-- FOOTER                                                  -->
-        <!-- ====================================================== -->
-
-        <footer class="notepad-footer">
-
-
-          <div class="notepad-info">
-
-            <span>
-              ตัวอักษร:
-              <strong id="notepad-character-count">
-                0
-              </strong>
-            </span>
-
-
-            <span class="info-divider">
-              •
-            </span>
-
-
-            <span>
-              คำ:
-              <strong id="notepad-word-count">
-                0
-              </strong>
-            </span>
-
-
-            <span class="info-divider">
-              •
-            </span>
-
-
-            <span>
-              บรรทัด:
-              <strong id="notepad-line-count">
-                0
-              </strong>
-            </span>
-
-          </div>
-
-
-          <div class="notepad-shortcuts">
-
-            <span>
-
-              <kbd>
-                Ctrl
-              </kbd>
-
-              <kbd>
-                S
-              </kbd>
-
-              บันทึก
-
-            </span>
-
-
-            <span>
-
-              <kbd>
-                Ctrl
-              </kbd>
-
-              <kbd>
-                Z
-              </kbd>
-
-              ย้อนกลับ
-
-            </span>
-
-          </div>
-
-        </footer>
-
-
-        <!-- ====================================================== -->
-        <!-- NEW NOTE MODAL                                          -->
-        <!-- ====================================================== -->
-
-        <div
-          class="notepad-modal"
-          id="notepad-confirm-modal"
-          hidden
-        >
-
-          <div class="notepad-modal-backdrop"></div>
-
-
-          <div
-            class="notepad-modal-box"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="notepad-confirm-title"
-          >
-
-            <div class="modal-icon">
-              ⚠️
-            </div>
-
-
-            <h2 id="notepad-confirm-title">
-              สร้างโน้ตใหม่?
-            </h2>
-
-
-            <p>
-              ข้อความปัจจุบันจะถูกล้างออก
-            </p>
-
-
-            <div class="modal-actions">
-
-              <button
-                type="button"
-                class="modal-btn modal-btn-cancel"
-                id="btn-modal-cancel"
-              >
-                ยกเลิก
-              </button>
-
-
-              <button
-                type="button"
-                class="modal-btn modal-btn-confirm"
-                id="btn-modal-confirm"
-              >
-                สร้างใหม่
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </section>
-
   </main>
 
 
@@ -3140,19 +2751,11 @@
 <!-- LIBRARIES                                                       -->
 <!-- ============================================================ -->
 
-<script
-  src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
-></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
-<script
-  src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"
-></script>
-
-
-<script
-  src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
-></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 
 <!-- ============================================================ -->
@@ -3166,7 +2769,7 @@
    */
 
   pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    "https://cdnjs.cloudflare.com/ajax/libs/pdfjs/3.11.174/pdf.worker.min.js";
 
 
   /*
@@ -3198,7 +2801,6 @@
 
       canvas.width =
         Math.ceil(width);
-
 
       canvas.height =
         Math.ceil(height);
@@ -3255,7 +2857,6 @@
 
       canvas.width =
         Math.ceil(width);
-
 
       canvas.height =
         Math.ceil(height);
@@ -3345,10 +2946,37 @@
 
 
 <!-- ============================================================ -->
-<!-- NOTEPAD SCRIPT                                                 -->
+<!-- NOTEPAD NAVIGATION                                             -->
 <!-- ============================================================ -->
 
-<script src="js/notepad.js"></script>
+<script>
+
+  (() => {
+
+    'use strict';
+
+    const openNotepad =
+      document.getElementById('open-notepad');
+
+
+    if (!openNotepad) {
+      return;
+    }
+
+
+    openNotepad.addEventListener(
+      'click',
+      () => {
+
+        window.location.href =
+          'notepad.html';
+
+      }
+    );
+
+  })();
+
+</script>
 
 
 </body>
