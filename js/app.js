@@ -21,6 +21,11 @@
   // ------------------------------------------------------------
 
   const TOOL_META = {
+
+    /* ==========================================================
+       IMAGE
+    ========================================================== */
+
     'img-convert': [
       'image',
       'พร้อมแปลงรูปให้แล้ว ✨'
@@ -35,6 +40,16 @@
       'image',
       'ค่อย ๆ ลบพื้นหลังให้เนียนกริบ 🫧'
     ],
+
+    'img-compress': [
+      'image',
+      'บีบขนาดรูปให้เล็กลงแบบคงคุณภาพไว้ 📦'
+    ],
+
+
+    /* ==========================================================
+       PDF
+    ========================================================== */
 
     'pdf-from-images': [
       'pdf',
@@ -65,6 +80,7 @@
       'pdf',
       'ใส่เลขหน้าให้เอกสารดูเป็นระเบียบ 🔖'
     ]
+
   };
 
 
@@ -78,25 +94,32 @@
       currentCat &&
       currentCat !== cat
     ) {
+
       runAutoClearCache();
     }
 
-    currentCat = cat;
+
+    currentCat =
+      cat;
 
 
     catButtons.forEach(button => {
+
       button.classList.toggle(
         'is-active',
         button.dataset.cat === cat
       );
+
     });
 
 
     chipGroups.forEach(group => {
+
       group.classList.toggle(
         'hidden',
         group.dataset.catGroup !== cat
       );
+
     });
 
 
@@ -121,10 +144,13 @@
 
 
     if (activeChip) {
+
       showTool(
         activeChip.dataset.tool
       );
+
     }
+
   }
 
 
@@ -137,23 +163,28 @@
     document
       .querySelectorAll('.tool-chip')
       .forEach(button => {
+
         button.classList.toggle(
           'is-active',
           button.dataset.tool === tool
         );
+
       });
 
 
     panels.forEach(panel => {
+
       panel.classList.toggle(
         'hidden',
         panel.id !==
           'panel-' + tool
       );
+
     });
 
 
     scheduleCuteRefresh();
+
   }
 
 
@@ -162,28 +193,36 @@
   // ------------------------------------------------------------
 
   catButtons.forEach(button => {
+
     button.addEventListener(
       'click',
       () => {
+
         showCategory(
           button.dataset.cat
         );
+
       }
     );
+
   });
 
 
   document
     .querySelectorAll('.tool-chip')
     .forEach(button => {
+
       button.addEventListener(
         'click',
         () => {
+
           showTool(
             button.dataset.tool
           );
+
         }
       );
+
     });
 
 
@@ -213,6 +252,7 @@
       panel.dataset.tool =
         tool;
 
+
       panel.dataset.toolKind =
         meta[0];
 
@@ -226,20 +266,27 @@
           '.cute-character'
         )
       ) {
+
         const dot =
           document.createElement(
             'span'
           );
 
+
         dot.className =
           'cute-character';
+
 
         dot.setAttribute(
           'aria-hidden',
           'true'
         );
 
-        panel.appendChild(dot);
+
+        panel.appendChild(
+          dot
+        );
+
       }
 
 
@@ -263,10 +310,12 @@
           '.cute-empty-state'
         )
       ) {
+
         const empty =
           document.createElement(
             'div'
           );
+
 
         empty.className =
           'cute-empty-state';
@@ -286,7 +335,10 @@
         (
           inner ||
           dz
-        ).appendChild(empty);
+        ).appendChild(
+          empty
+        );
+
       }
 
 
@@ -297,8 +349,10 @@
 
 
       if (copy) {
+
         copy.textContent =
           meta[1];
+
       }
 
 
@@ -311,6 +365,7 @@
           '.cute-progress'
         )
       ) {
+
         const progress =
           document.createElement(
             'div'
@@ -323,19 +378,29 @@
 
         progress.innerHTML = `
           <div class="cute-progress-head">
-            <strong>กำลังทำงาน…</strong>
+
+            <strong>
+              กำลังทำงาน…
+            </strong>
+
             <span class="cute-progress-count">
               กำลังประมวลผล
             </span>
+
           </div>
 
           <div class="cute-progress-track">
+
             <div class="cute-progress-bar"></div>
+
           </div>
         `;
 
 
-        dz.appendChild(progress);
+        dz.appendChild(
+          progress
+        );
+
       }
 
 
@@ -345,22 +410,26 @@
 
       const setDrag =
         on => {
+
           dz.classList.toggle(
             'is-dragover',
             on
           );
+
         };
 
 
       dz.addEventListener(
         'dragenter',
-        () => setDrag(true)
+        () =>
+          setDrag(true)
       );
 
 
       dz.addEventListener(
         'dragover',
-        () => setDrag(true)
+        () =>
+          setDrag(true)
       );
 
 
@@ -373,7 +442,9 @@
               event.relatedTarget
             )
           ) {
+
             setDrag(false);
+
           }
 
         }
@@ -382,13 +453,15 @@
 
       dz.addEventListener(
         'drop',
-        () => setDrag(false)
+        () =>
+          setDrag(false)
       );
 
     });
 
 
     refreshCuteStates();
+
   }
 
 
@@ -413,12 +486,16 @@
 
     requestAnimationFrame(
       () => {
+
         cuteRefreshQueued =
           false;
 
+
         refreshCuteStates();
+
       }
     );
+
   }
 
 
@@ -428,7 +505,9 @@
       card.dataset.processing ===
       'true'
     ) {
+
       return true;
+
     }
 
 
@@ -436,11 +515,14 @@
       card.dataset.processing ===
       'false'
     ) {
+
       return false;
+
     }
 
 
     // fallback สำหรับ tool เดิม
+
     const text =
       (
         card.textContent ||
@@ -451,6 +533,7 @@
     return /กำลัง|processing|converting|removing|loading|building|merging|exporting|saving|working|จัดทำ|ประมวลผล/.test(
       text
     );
+
   }
 
 
@@ -512,10 +595,12 @@
 
 
       if (empty) {
+
         empty.classList.toggle(
           'is-hidden',
           hasFiles
         );
+
       }
 
 
@@ -550,7 +635,9 @@
           'hidden'
         )
       ) {
-        processing = false;
+
+        processing =
+          false;
       }
 
 
@@ -591,12 +678,14 @@
 
 
           if (strong) {
+
             strong.textContent =
               'พร้อมแล้ว ✨';
           }
 
 
           if (count) {
+
             count.textContent =
               'ทำงานเสร็จ';
           }
@@ -622,6 +711,7 @@
 
 
           if (strong) {
+
             strong.textContent =
               'กำลังทำงาน…';
           }
@@ -644,6 +734,7 @@
           );
 
         }
+
       }
 
 
@@ -653,6 +744,7 @@
       );
 
     });
+
   }
 
 
@@ -696,8 +788,13 @@
                 mutation.removedNodes.length
               )
             ) {
-              relevant = true;
+
+              relevant =
+                true;
+
+
               break;
+
             }
 
 
@@ -721,8 +818,13 @@
                   )
                 )
               ) {
-                relevant = true;
+
+                relevant =
+                  true;
+
+
                 break;
+
               }
 
             }
@@ -731,7 +833,9 @@
 
 
           if (relevant) {
+
             scheduleCuteRefresh();
+
           }
 
         }
@@ -741,9 +845,15 @@
     cuteObserver.observe(
       panelContainer,
       {
-        childList: true,
-        subtree: true,
-        attributes: true,
+        childList:
+          true,
+
+        subtree:
+          true,
+
+        attributes:
+          true,
+
         attributeFilter: [
           'class',
           'data-processing'
@@ -765,7 +875,9 @@
       typeof window.Utils.clearCache ===
         'function'
     ) {
+
       window.Utils.clearCache();
+
     }
 
 
@@ -774,11 +886,14 @@
       typeof window.PdfWorkerClient.dispose ===
         'function'
     ) {
+
       window.PdfWorkerClient.dispose();
+
     }
 
 
     scheduleCuteRefresh();
+
   }
 
 
@@ -795,8 +910,10 @@
 
 
   function markActivity() {
+
     lastActivity =
       Date.now();
+
   }
 
 
@@ -813,8 +930,11 @@
       eventName,
       markActivity,
       {
-        passive: true,
-        capture: true
+        passive:
+          true,
+
+        capture:
+          true
       }
     );
 
@@ -879,22 +999,36 @@
         idleFor <
         IDLE_LIMIT_MS
       ) {
+
         return;
+
       }
 
 
-      if (hasProcessingWork()) {
+      if (
+        hasProcessingWork()
+      ) {
+
         return;
+
       }
 
 
-      if (hasVisibleResult()) {
+      if (
+        hasVisibleResult()
+      ) {
+
         return;
+
       }
 
 
-      if (isUserEditing()) {
+      if (
+        isUserEditing()
+      ) {
+
         return;
+
       }
 
 
@@ -922,7 +1056,9 @@
         typeof window.Utils.clearCache ===
           'function'
       ) {
+
         window.Utils.clearCache();
+
       }
 
 
@@ -931,14 +1067,20 @@
         typeof window.PdfWorkerClient.dispose ===
           'function'
       ) {
+
         window.PdfWorkerClient.dispose();
+
       }
 
 
       if (cuteObserver) {
+
         try {
+
           cuteObserver.disconnect();
+
         } catch (_) {}
+
       }
 
     }
@@ -949,6 +1091,8 @@
   // START
   // ------------------------------------------------------------
 
-  showCategory('image');
+  showCategory(
+    'image'
+  );
 
 })();
