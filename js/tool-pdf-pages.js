@@ -183,6 +183,11 @@
   // LOCALIZED HELPERS
   // ============================================================
 
+  /*
+   * สำคัญ:
+   * i18n ใช้ {page}
+   * ดังนั้นต้องส่ง page: number
+   */
   function pageLabel(
     number
   ) {
@@ -190,21 +195,41 @@
     return t(
       'pdf.pageLabel',
       {
-        number
+        page:
+          number
       }
     );
 
   }
 
 
+  /*
+   * i18n ใช้ {count}
+   */
   function pageCountLabel(
     number
   ) {
 
     return t(
-      'pdf.pageCountLabel',
+      'pdf.pagesCount',
       {
-        number
+        count:
+          number
+      }
+    );
+
+  }
+
+
+  function fileCountLabel(
+    number
+  ) {
+
+    return t(
+      'pdf.filesCount',
+      {
+        count:
+          number
       }
     );
 
@@ -217,11 +242,29 @@
 
     return deleted
       ? t(
-          'pdf.restoreThisPage'
+          'pdf.restorePage'
         )
       : t(
-          'pdf.deleteThisPage'
+          'pdf.deletePage'
         );
+
+  }
+
+
+  function getBuildingPdfText() {
+
+    return t(
+      'pdf.creating'
+    );
+
+  }
+
+
+  function getDropPositionText() {
+
+    return t(
+      'pdf.dropPosition'
+    );
 
   }
 
@@ -232,11 +275,9 @@
 
   function updateLanguageUI() {
 
-    /*
-     * ----------------------------------------------------------
-     * Static button text
-     * ----------------------------------------------------------
-     */
+    // ----------------------------------------------------------
+    // Download buttons
+    // ----------------------------------------------------------
 
     if (
       downloadBtn
@@ -247,9 +288,7 @@
       ) {
 
         downloadBtn.textContent =
-          t(
-            'pdf.buildingPdf'
-          );
+          getBuildingPdfText();
 
       } else {
 
@@ -272,9 +311,7 @@
       ) {
 
         downloadSelectedBtn.textContent =
-          t(
-            'pdf.buildingPdf'
-          );
+          getBuildingPdfText();
 
       } else {
 
@@ -288,11 +325,26 @@
     }
 
 
-    /*
-     * ----------------------------------------------------------
-     * Existing cards
-     * ----------------------------------------------------------
-     */
+    // ----------------------------------------------------------
+    // File / page count area
+    // ----------------------------------------------------------
+
+    if (
+      nameEl &&
+      currentFile
+    ) {
+
+      nameEl.textContent =
+        `${currentFile.name} · ${U.formatBytes(
+          currentFile.size
+        )}`;
+
+    }
+
+
+    // ----------------------------------------------------------
+    // Existing cards
+    // ----------------------------------------------------------
 
     grid
       .querySelectorAll(
@@ -320,15 +372,19 @@
           }
 
 
-          const label =
-            card.querySelector(
-              '.js-pagelabel'
-            );
-
-
           const position =
             pageItems.indexOf(
               item
+            );
+
+
+          // ----------------------------------------------------
+          // Page label
+          // ----------------------------------------------------
+
+          const label =
+            card.querySelector(
+              '.js-pagelabel'
             );
 
 
@@ -341,6 +397,10 @@
 
           }
 
+
+          // ----------------------------------------------------
+          // Image alt
+          // ----------------------------------------------------
 
           const img =
             card.querySelector(
@@ -358,6 +418,10 @@
           }
 
 
+          // ----------------------------------------------------
+          // Delete button
+          // ----------------------------------------------------
+
           const deleteBtn =
             card.querySelector(
               '.js-delete'
@@ -373,15 +437,49 @@
 
           }
 
+
+          // ----------------------------------------------------
+          // Move buttons
+          // ----------------------------------------------------
+
+          const upBtn =
+            card.querySelector(
+              '.js-move-up'
+            );
+
+
+          if (upBtn) {
+
+            upBtn.title =
+              t(
+                'pdf.moveUp'
+              );
+
+          }
+
+
+          const downBtn =
+            card.querySelector(
+              '.js-move-down'
+            );
+
+
+          if (downBtn) {
+
+            downBtn.title =
+              t(
+                'pdf.moveDown'
+              );
+
+          }
+
         }
       );
 
 
-    /*
-     * ----------------------------------------------------------
-     * Drag placeholder
-     * ----------------------------------------------------------
-     */
+    // ----------------------------------------------------------
+    // Drag placeholder
+    // ----------------------------------------------------------
 
     if (
       dragState &&
@@ -397,11 +495,35 @@
       if (text) {
 
         text.textContent =
-          t(
-            'pdf.dropPageHere'
-          );
+          getDropPositionText();
 
       }
+
+    }
+
+
+    // ----------------------------------------------------------
+    // Instruction / empty dynamic text
+    // ----------------------------------------------------------
+
+    const dynamicInstruction =
+      document.querySelector(
+        '#panel-pdf-pages [data-i18n]'
+      );
+
+
+    if (
+      dynamicInstruction &&
+      I18n &&
+      typeof I18n.applyTranslations ===
+        'function'
+    ) {
+
+      I18n.applyTranslations(
+        document.getElementById(
+          'panel-pdf-pages'
+        )
+      );
 
     }
 
@@ -431,6 +553,7 @@
       on
         ? 'true'
         : 'false';
+
   }
 
 
@@ -756,6 +879,7 @@
 
             viewport:
               renderViewport
+
           }).promise;
 
 
@@ -763,6 +887,9 @@
             expectedLoadSeq !==
             loadSeq
           ) {
+
+            canvas.width = 1;
+            canvas.height = 1;
 
             continue;
 
@@ -780,11 +907,15 @@
             );
 
 
+          canvas.width = 1;
+          canvas.height = 1;
+
+
           if (!blob) {
 
             throw new Error(
               t(
-                'errors.thumbnailCreateFailed'
+                'pdf.thumbnailFailed'
               )
             );
 
@@ -947,7 +1078,7 @@
 
       alert(
         t(
-          'errors.pdfOnly'
+          'pdf.invalidPdf'
         )
       );
 
@@ -1080,6 +1211,7 @@
 
           canvasFactory:
             window.KittoCanvasFactory
+
         });
 
 
@@ -1098,7 +1230,6 @@
 
         } catch (_) {}
 
-
         return;
 
       }
@@ -1115,6 +1246,7 @@
       ) {
 
         pageItems.push({
+
           origIndex:
             i,
 
@@ -1132,6 +1264,7 @@
 
           thumbError:
             false
+
         });
 
       }
@@ -1209,14 +1342,14 @@
 
       alert(
         t(
-          'errors.pdfOpenFailed',
-          {
-            message:
-              error?.message ||
-              t(
-                'errors.somethingWentWrong'
-              )
-          }
+          'pdf.loadingFailed'
+        ) +
+        '\n\n' +
+        (
+          error?.message ||
+          t(
+            'errors.somethingWentWrong'
+          )
         )
       );
 
@@ -1399,7 +1532,6 @@
                   card
                 );
 
-
                 return;
 
               }
@@ -1567,7 +1699,7 @@
 
 
         // ------------------------------------------------------
-        // thumbnail
+        // Thumbnail
         // ------------------------------------------------------
 
         const img =
@@ -1594,7 +1726,7 @@
 
 
         // ------------------------------------------------------
-        // label
+        // Label
         // ------------------------------------------------------
 
         const label =
@@ -1614,7 +1746,7 @@
 
 
         // ------------------------------------------------------
-        // checkbox
+        // Checkbox
         // ------------------------------------------------------
 
         const checkbox =
@@ -1665,7 +1797,6 @@
                 checkbox.checked =
                   false;
 
-
                 return;
 
               }
@@ -1690,7 +1821,7 @@
 
 
         // ------------------------------------------------------
-        // click card = select
+        // Click card = select
         // ------------------------------------------------------
 
         card.addEventListener(
@@ -1744,7 +1875,7 @@
 
 
         // ------------------------------------------------------
-        // move up
+        // Move up
         // ------------------------------------------------------
 
         const upBtn =
@@ -1784,7 +1915,7 @@
 
 
         // ------------------------------------------------------
-        // move down
+        // Move down
         // ------------------------------------------------------
 
         const downBtn =
@@ -1825,7 +1956,7 @@
 
 
         // ------------------------------------------------------
-        // delete / restore
+        // Delete / Restore
         // ------------------------------------------------------
 
         const deleteBtn =
@@ -1899,9 +2030,9 @@
         }
 
 
-        // ======================================================
-        // DRAG
-        // ======================================================
+        // ------------------------------------------------------
+        // Drag
+        // ------------------------------------------------------
 
         setupCardDrag(
           card,
@@ -2075,10 +2206,6 @@
         };
 
 
-        /*
-         * ไม่ใช้ setPointerCapture
-         * เพราะ card จะถูกย้ายไป body
-         */
         event.preventDefault();
 
       },
@@ -2128,7 +2255,7 @@
 
 
       // --------------------------------------------------------
-      // START DISTANCE
+      // Start distance
       // --------------------------------------------------------
 
       if (
@@ -2146,7 +2273,7 @@
 
 
       // --------------------------------------------------------
-      // START REAL DRAG
+      // Start real drag
       // --------------------------------------------------------
 
       if (
@@ -2166,7 +2293,7 @@
 
 
       // --------------------------------------------------------
-      // FLOATING CARD
+      // Floating card
       // --------------------------------------------------------
 
       if (
@@ -2296,7 +2423,7 @@
 
 
     // ----------------------------------------------------------
-    // PLACEHOLDER
+    // Placeholder
     // ----------------------------------------------------------
 
     const placeholder =
@@ -2325,15 +2452,13 @@
 
     placeholder.innerHTML = `
       <div class="page-drag-placeholder-inner">
-        <span>${t(
-          'pdf.dropPageHere'
-        )}</span>
+        <span>${getDropPositionText()}</span>
       </div>
     `;
 
 
     // ----------------------------------------------------------
-    // INSERT PLACEHOLDER
+    // Insert placeholder
     // ----------------------------------------------------------
 
     if (
@@ -2356,7 +2481,7 @@
 
 
     // ----------------------------------------------------------
-    // FLOATING CARD
+    // Floating card
     // ----------------------------------------------------------
 
     card.classList.add(
@@ -2410,7 +2535,7 @@
 
 
     // ----------------------------------------------------------
-    // SAVE STATE
+    // Save state
     // ----------------------------------------------------------
 
     dragState.placeholder =
@@ -2524,7 +2649,7 @@
 
 
     // ----------------------------------------------------------
-    // DIRECT HIT
+    // Direct hit
     // ----------------------------------------------------------
 
     for (
@@ -2553,7 +2678,7 @@
 
 
     // ----------------------------------------------------------
-    // NEAREST CARD
+    // Nearest card
     // ----------------------------------------------------------
 
     let nearest =
@@ -2708,7 +2833,7 @@
 
 
     // ----------------------------------------------------------
-    // PLACEHOLDER
+    // Placeholder
     // ----------------------------------------------------------
 
     if (
@@ -2861,7 +2986,7 @@
 
 
     // ----------------------------------------------------------
-    // NOT A REAL DRAG
+    // Not a real drag
     // ----------------------------------------------------------
 
     if (
@@ -2894,7 +3019,7 @@
 
 
     // ----------------------------------------------------------
-    // READ FINAL ORDER
+    // Read final order
     // ----------------------------------------------------------
 
     const children =
@@ -2956,7 +3081,7 @@
 
 
     // ----------------------------------------------------------
-    // SAFETY
+    // Safety
     // ----------------------------------------------------------
 
     if (
@@ -2973,7 +3098,7 @@
 
 
     // ----------------------------------------------------------
-    // APPLY ORDER
+    // Apply order
     // ----------------------------------------------------------
 
     applyFinalOrder(
@@ -2982,7 +3107,7 @@
 
 
     // ----------------------------------------------------------
-    // CLEAN FLOATING UI
+    // Clean floating UI
     // ----------------------------------------------------------
 
     if (
@@ -3306,7 +3431,7 @@
 
       throw new Error(
         t(
-          'errors.pdfFileNotSelected'
+          'pdf.pageNotFound'
         )
       );
 
@@ -3319,7 +3444,7 @@
 
       throw new Error(
         t(
-          'errors.noPdfPages'
+          'pdf.noPages'
         )
       );
 
@@ -3346,7 +3471,7 @@
 
       throw new Error(
         t(
-          'errors.pdfWorkerNoOutput'
+          'pdf.workerFailed'
         )
       );
 
@@ -3402,7 +3527,7 @@
 
           alert(
             t(
-              'errors.noPagesRemaining'
+              'pdf.pageNotFound'
             )
           );
 
@@ -3421,9 +3546,7 @@
 
 
         downloadBtn.textContent =
-          t(
-            'pdf.buildingPdf'
-          );
+          getBuildingPdfText();
 
 
         setToolProcessing(
@@ -3457,7 +3580,7 @@
 
           alert(
             t(
-              'errors.pdfBuildFailed',
+              'pdf.buildFailed',
               {
                 message:
                   error?.message ||
@@ -3533,7 +3656,7 @@
 
           alert(
             t(
-              'errors.selectAtLeastOnePage'
+              'pdf.selectPageRequired'
             )
           );
 
@@ -3552,9 +3675,7 @@
 
 
         downloadSelectedBtn.textContent =
-          t(
-            'pdf.buildingPdf'
-          );
+          getBuildingPdfText();
 
 
         setToolProcessing(
@@ -3588,7 +3709,7 @@
 
           alert(
             t(
-              'errors.pdfBuildFailed',
+              'pdf.buildFailed',
               {
                 message:
                   error?.message ||
