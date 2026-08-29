@@ -204,6 +204,22 @@
         false;
 
 
+      /*
+       * เก็บ key/params ของ error ล่าสุดไว้
+       * เพื่อให้แปลภาษาใหม่ได้ตอน languagechange
+       */
+      this.errorKey =
+        null;
+
+
+      this.errorParams =
+        null;
+
+
+      this.imageReadFailed =
+        false;
+
+
       this.el =
         jobTemplate
           .content
@@ -444,6 +460,10 @@
       this.thumbImg.onerror =
         () => {
 
+          this.imageReadFailed =
+            true;
+
+
           if (
             originalDimEl
           ) {
@@ -460,9 +480,16 @@
             this.statusEl
           ) {
 
+            this.errorKey =
+              'image.openFailed';
+
+            this.errorParams =
+              null;
+
+
             this.statusEl.textContent =
               t(
-                'image.openFailed'
+                this.errorKey
               );
 
 
@@ -939,13 +966,26 @@
 
       /*
        * ถ้า error อยู่
-       * อย่าเขียนทับ error เดิม
+       * แปล error เดิมใหม่ด้วย key/params ที่เก็บไว้
        */
       if (
         this.statusEl.classList.contains(
           'is-error'
         )
       ) {
+
+        if (
+          this.errorKey
+        ) {
+
+          this.statusEl.textContent =
+            t(
+              this.errorKey,
+              this.errorParams ||
+                undefined
+            );
+
+        }
 
         return;
 
@@ -1046,6 +1086,16 @@
       }
 
 
+      this.errorKey =
+        null;
+
+      this.errorParams =
+        null;
+
+      this.imageReadFailed =
+        false;
+
+
       if (
         this.statusEl
       ) {
@@ -1125,9 +1175,16 @@
         !this.naturalH
       ) {
 
+        this.errorKey =
+          'image.readInfoFailed';
+
+        this.errorParams =
+          null;
+
+
         this.statusEl.textContent =
           t(
-            'image.readInfoFailed'
+            this.errorKey
           );
 
 
@@ -1513,12 +1570,19 @@
               );
 
 
+        this.errorKey =
+          'image.conversionFailed';
+
+        this.errorParams =
+          {
+            message
+          };
+
+
         this.statusEl.textContent =
           t(
-            'image.conversionFailed',
-            {
-              message
-            }
+            this.errorKey,
+            this.errorParams
           );
 
 
