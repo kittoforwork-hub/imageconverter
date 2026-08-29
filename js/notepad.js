@@ -64,6 +64,11 @@
       'btn-copy-note'
     );
 
+  const saveTxtBtn =
+    document.getElementById(
+      'btn-save-txt'
+    );
+
   const clearBtn =
     document.getElementById(
       'btn-clear-note'
@@ -301,8 +306,8 @@
 
 
     /*
-     * ป้องกันการดาวน์โหลดไฟล์ว่าง
-     * หรือข้อความที่มีแต่ช่องว่าง
+     * ไม่ให้ดาวน์โหลดถ้าไม่มีข้อความ
+     * หรือมีเพียงช่องว่าง
      */
 
     if (
@@ -326,8 +331,8 @@
     /*
      * UTF-8 BOM
      *
-     * ช่วยให้ Windows Notepad
-     * อ่านภาษาไทยได้ถูกต้อง
+     * ช่วยให้ภาษาไทยเปิดใน
+     * Windows Notepad ได้ถูกต้อง
      */
 
     const BOM =
@@ -363,6 +368,10 @@
       url;
 
 
+    /*
+     * ไฟล์ที่จะดาวน์โหลด
+     */
+
     link.download =
       'notepad.txt';
 
@@ -395,110 +404,24 @@
     }, 1000);
 
 
+    /*
+     * แสดงสถานะ
+     */
+
     setStatus(
       'บันทึกเป็น .txt แล้ว',
       'saved'
     );
 
 
-    return true;
-  }
-
-
-  /* ==========================================================
-     GLOBAL CTRL + S PROTECTION
-  ========================================================== */
-
-  function handleSaveShortcut(
-    event
-  ) {
-
     /*
-     * ตรวจ Ctrl + S / Cmd + S
+     * Animation ปุ่ม
      */
 
-    const key =
-      String(
-        event.key || ''
-      ).toLowerCase();
-
-
-    const isSaveShortcut =
-      (event.ctrlKey ||
-        event.metaKey) &&
-      key === 's';
-
-
-    if (!isSaveShortcut) {
-      return false;
-    }
-
-
-    /*
-     * สำคัญมาก
-     *
-     * ป้องกัน Browser ไม่ให้เปิด
-     * "Save Page As..." ซึ่งจะบันทึกเป็น HTML
-     */
-
-    event.preventDefault();
-
-    event.stopPropagation();
-
-    event.stopImmediatePropagation();
-
-
-    /*
-     * ยกเลิก Auto Save timer
-     */
-
-    clearTimeout(
-      saveTimer
+    showTemporaryButtonText(
+      saveTxtBtn,
+      '✓ บันทึกแล้ว'
     );
-
-
-    /*
-     * ตรวจข้อความก่อน
-     */
-
-    const text =
-      textarea.value;
-
-
-    const hasText =
-      text.trim().length > 0;
-
-
-    /*
-     * ไม่มีข้อความ
-     * => ห้ามดาวน์โหลด
-     */
-
-    if (!hasText) {
-
-      setStatus(
-        'ยังไม่มีข้อความให้บันทึก',
-        'error'
-      );
-
-
-      focusTextarea();
-
-
-      return true;
-    }
-
-
-    /*
-     * มีข้อความ
-     *
-     * 1. Save localStorage
-     * 2. Download .txt
-     */
-
-    saveNote();
-
-    downloadTxt();
 
 
     return true;
@@ -1268,32 +1191,8 @@
 
 
     /* --------------------------------------------------------
-       Ctrl + S / Cmd + S
-       -------------------------------------------------------- */
-
-    if (
-      (event.ctrlKey ||
-        event.metaKey) &&
-      key === 's'
-    ) {
-
-      /*
-       * ดักไว้ตรงนี้ด้วย
-       * สำหรับกรณีที่ Cursor อยู่ใน textarea
-       */
-
-      handleSaveShortcut(
-        event
-      );
-
-
-      return;
-    }
-
-
-    /* --------------------------------------------------------
        Ctrl + Z
-       -------------------------------------------------------- */
+    -------------------------------------------------------- */
 
     if (
       (event.ctrlKey ||
@@ -1314,7 +1213,7 @@
 
     /* --------------------------------------------------------
        Ctrl + Y
-       -------------------------------------------------------- */
+    -------------------------------------------------------- */
 
     if (
       event.ctrlKey &&
@@ -1333,7 +1232,7 @@
 
     /* --------------------------------------------------------
        Cmd + Shift + Z
-       -------------------------------------------------------- */
+    -------------------------------------------------------- */
 
     if (
       event.metaKey &&
@@ -1353,7 +1252,7 @@
 
     /* --------------------------------------------------------
        Escape
-       -------------------------------------------------------- */
+    -------------------------------------------------------- */
 
     if (
       key === 'escape' &&
@@ -1366,65 +1265,6 @@
       focusTextarea();
     }
   }
-
-
-  /* ==========================================================
-     GLOBAL KEYBOARD PROTECTION
-  ========================================================== */
-
-  /*
-   * ใช้ capture phase
-   *
-   * ตรงนี้สำคัญมาก เพราะต่อให้ไม่ได้ focus
-   * อยู่ใน textarea Browser ก็จะไม่สามารถใช้
-   * Ctrl + S เพื่อ Save หน้าเว็บเป็น HTML ได้
-   */
-
-  document.addEventListener(
-    'keydown',
-    (event) => {
-
-      const key =
-        String(
-          event.key || ''
-        ).toLowerCase();
-
-
-      const isSaveShortcut =
-        (event.ctrlKey ||
-          event.metaKey) &&
-        key === 's';
-
-
-      if (!isSaveShortcut) {
-        return;
-      }
-
-
-      /*
-       * ถ้า textarea เป็น target
-       * ให้ handleKeyboard() จัดการ
-       */
-      if (
-        event.target === textarea
-      ) {
-
-        return;
-      }
-
-
-      /*
-       * ถ้าไม่ได้อยู่ใน textarea
-       * ให้ global handler จัดการ
-       */
-
-      handleSaveShortcut(
-        event
-      );
-
-    },
-    true
-  );
 
 
   /* ==========================================================
@@ -1472,20 +1312,56 @@
   }
 
 
-  if (clearBtn) {
-
-    clearBtn.addEventListener(
-      'click',
-      clearNote
-    );
-  }
-
-
   if (copyBtn) {
 
     copyBtn.addEventListener(
       'click',
       copyNote
+    );
+  }
+
+
+  if (saveTxtBtn) {
+
+    saveTxtBtn.addEventListener(
+      'click',
+      () => {
+
+        /*
+         * Save localStorage ก่อน
+         * เพื่อให้ข้อมูลล่าสุดถูกเก็บไว้
+         */
+
+        clearTimeout(
+          saveTimer
+        );
+
+
+        if (
+          textarea.value.trim().length > 0
+        ) {
+
+          saveNote();
+
+        }
+
+
+        /*
+         * Export TXT
+         */
+
+        downloadTxt();
+
+      }
+    );
+  }
+
+
+  if (clearBtn) {
+
+    clearBtn.addEventListener(
+      'click',
+      clearNote
     );
   }
 
@@ -1538,6 +1414,7 @@
 
           clearSearch();
         }
+
       }
     );
   }
