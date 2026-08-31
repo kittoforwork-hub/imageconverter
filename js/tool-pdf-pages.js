@@ -183,11 +183,6 @@
   // LOCALIZED HELPERS
   // ============================================================
 
-  /*
-   * สำคัญ:
-   * i18n ใช้ {page}
-   * ดังนั้นต้องส่ง page: number
-   */
   function pageLabel(
     number
   ) {
@@ -203,9 +198,6 @@
   }
 
 
-  /*
-   * i18n ใช้ {count}
-   */
   function pageCountLabel(
     number
   ) {
@@ -275,10 +267,6 @@
 
   function updateLanguageUI() {
 
-    // ----------------------------------------------------------
-    // Download buttons
-    // ----------------------------------------------------------
-
     if (
       downloadBtn
     ) {
@@ -325,10 +313,6 @@
     }
 
 
-    // ----------------------------------------------------------
-    // File / page count area
-    // ----------------------------------------------------------
-
     if (
       nameEl &&
       currentFile
@@ -341,10 +325,6 @@
 
     }
 
-
-    // ----------------------------------------------------------
-    // Existing cards
-    // ----------------------------------------------------------
 
     grid
       .querySelectorAll(
@@ -378,10 +358,6 @@
             );
 
 
-          // ----------------------------------------------------
-          // Page label
-          // ----------------------------------------------------
-
           const label =
             card.querySelector(
               '.js-pagelabel'
@@ -397,10 +373,6 @@
 
           }
 
-
-          // ----------------------------------------------------
-          // Image alt
-          // ----------------------------------------------------
 
           const img =
             card.querySelector(
@@ -418,10 +390,6 @@
           }
 
 
-          // ----------------------------------------------------
-          // Delete button
-          // ----------------------------------------------------
-
           const deleteBtn =
             card.querySelector(
               '.js-delete'
@@ -437,10 +405,6 @@
 
           }
 
-
-          // ----------------------------------------------------
-          // Move buttons
-          // ----------------------------------------------------
 
           const upBtn =
             card.querySelector(
@@ -477,10 +441,6 @@
       );
 
 
-    // ----------------------------------------------------------
-    // Drag placeholder
-    // ----------------------------------------------------------
-
     if (
       dragState &&
       dragState.placeholder
@@ -501,10 +461,6 @@
 
     }
 
-
-    // ----------------------------------------------------------
-    // Instruction / empty dynamic text
-    // ----------------------------------------------------------
 
     const dynamicInstruction =
       document.querySelector(
@@ -627,6 +583,11 @@
     pageItems.forEach(
       item => {
 
+        if (!item) {
+          return;
+        }
+
+
         if (!item.thumbUrl) {
           return;
         }
@@ -658,9 +619,6 @@
 
     renderQueue =
       [];
-
-    queueRunning =
-      false;
 
   }
 
@@ -720,6 +678,11 @@
         renderQueue.length
       ) {
 
+        if (!currentDoc) {
+          break;
+        }
+
+
         const index =
           renderQueue.shift();
 
@@ -753,18 +716,27 @@
         const expectedLoadSeq =
           loadSeq;
 
+        const doc =
+          currentDoc;
+
+
+        if (!doc) {
+          break;
+        }
+
 
         try {
 
           const page =
-            await currentDoc.getPage(
+            await doc.getPage(
               index + 1
             );
 
 
           if (
             expectedLoadSeq !==
-            loadSeq
+            loadSeq ||
+            currentDoc !== doc
           ) {
 
             continue;
@@ -779,9 +751,22 @@
             });
 
 
-          const baseScale =
+          let baseScale =
             THUMB_TARGET_WIDTH /
             originalViewport.width;
+
+
+          if (
+            !Number.isFinite(
+              baseScale
+            ) ||
+            baseScale <= 0
+          ) {
+
+            baseScale =
+              1;
+
+          }
 
 
           const viewport =
@@ -873,6 +858,18 @@
             );
 
 
+          context.fillStyle =
+            '#ffffff';
+
+
+          context.fillRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          );
+
+
           await page.render({
             canvasContext:
               context,
@@ -885,11 +882,15 @@
 
           if (
             expectedLoadSeq !==
-            loadSeq
+            loadSeq ||
+            currentDoc !== doc
           ) {
 
-            canvas.width = 1;
-            canvas.height = 1;
+            canvas.width =
+              1;
+
+            canvas.height =
+              1;
 
             continue;
 
@@ -907,8 +908,11 @@
             );
 
 
-          canvas.width = 1;
-          canvas.height = 1;
+          canvas.width =
+            1;
+
+          canvas.height =
+            1;
 
 
           if (!blob) {
@@ -924,7 +928,8 @@
 
           if (
             expectedLoadSeq !==
-            loadSeq
+            loadSeq ||
+            currentDoc !== doc
           ) {
 
             continue;
@@ -1005,7 +1010,11 @@
         currentDoc
       ) {
 
-        processQueue();
+        queueMicrotask(
+          () => {
+            processQueue();
+          }
+        );
 
       }
 
@@ -1035,7 +1044,14 @@
 
     try {
 
-      await doc.destroy();
+      if (
+        typeof doc.destroy ===
+        'function'
+      ) {
+
+        await doc.destroy();
+
+      }
 
     } catch (error) {
 
@@ -1107,6 +1123,19 @@
       );
 
 
+      // --------------------------------------------------------
+      // Cancel current drag before changing DOM
+      // --------------------------------------------------------
+
+      if (dragState) {
+
+        cancelDrag(
+          false
+        );
+
+      }
+
+
       if (observer) {
 
         observer.disconnect();
@@ -1123,13 +1152,6 @@
 
       pageItems =
         [];
-
-
-      if (dragState) {
-
-        cleanupDragState();
-
-      }
 
 
       clearDropIndicators();
@@ -1303,6 +1325,11 @@
         [];
 
 
+      resetQueue();
+
+      revokeThumbs();
+
+
       grid.innerHTML =
         '';
 
@@ -1379,10 +1406,34 @@
     index
   ) {
 
-    const card =
-      grid.querySelector(
-        `.page-card-manage[data-idx="${index}"]`
+    const cards =
+      grid.querySelectorAll(
+        '.page-card-manage'
       );
+
+
+    let card =
+      null;
+
+
+    for (
+      const candidate of cards
+    ) {
+
+      if (
+        Number(
+          candidate.dataset.idx
+        ) === index
+      ) {
+
+        card =
+          candidate;
+
+        break;
+
+      }
+
+    }
 
 
     if (!card) {
@@ -1477,9 +1528,47 @@
     }
 
 
+    if (
+      typeof IntersectionObserver !==
+      'function'
+    ) {
+
+      observer =
+        null;
+
+
+      pageItems.forEach(
+        (item, index) => {
+
+          if (
+            item &&
+            !item.deleted &&
+            !item.thumbUrl
+          ) {
+
+            queueRender(
+              item.origIndex
+            );
+
+          }
+
+        }
+      );
+
+
+      return;
+
+    }
+
+
     observer =
       new IntersectionObserver(
         entries => {
+
+          if (!currentDoc) {
+            return;
+          }
+
 
           entries.forEach(
             entry => {
@@ -1528,9 +1617,13 @@
                 item.thumbUrl
               ) {
 
-                observer.unobserve(
-                  card
-                );
+                try {
+
+                  observer.unobserve(
+                    card
+                  );
+
+                } catch (_) {}
 
                 return;
 
@@ -1542,9 +1635,13 @@
               );
 
 
-              observer.unobserve(
-                card
-              );
+              try {
+
+                observer.unobserve(
+                  card
+                );
+
+              } catch (_) {}
 
             }
           );
@@ -1664,9 +1761,26 @@
 
   function renderGrid() {
 
+    /*
+     * ห้าม render ใหม่ระหว่าง real drag
+     * เพราะจะทำให้ card ที่ลอยอยู่หลุดจาก DOM
+     */
+    if (
+      dragState &&
+      dragState.started
+    ) {
+
+      return;
+
+    }
+
+
     if (observer) {
 
       observer.disconnect();
+
+      observer =
+        null;
 
     }
 
@@ -1678,12 +1792,32 @@
     pageItems.forEach(
       (item, position) => {
 
-        const card =
+        const templateRoot =
           cardTemplate.content
-            .firstElementChild
-            .cloneNode(
-              true
-            );
+            ?.firstElementChild;
+
+
+        if (!templateRoot) {
+
+          console.error(
+            'PDF Pages: page card template is empty'
+          );
+
+
+          return;
+
+        }
+
+
+        const card =
+          templateRoot.cloneNode(
+            true
+          );
+
+
+        card.classList.add(
+          'page-card-manage'
+        );
 
 
         card.dataset.idx =
@@ -1708,19 +1842,28 @@
           );
 
 
-        if (
-          img &&
-          item.thumbUrl
-        ) {
-
-          img.src =
-            item.thumbUrl;
-
+        if (img) {
 
           img.alt =
             pageLabel(
               position + 1
             );
+
+
+          if (
+            item.thumbUrl
+          ) {
+
+            img.src =
+              item.thumbUrl;
+
+          } else {
+
+            img.removeAttribute(
+              'src'
+            );
+
+          }
 
         }
 
@@ -2050,6 +2193,8 @@
 
     setupObserver();
 
+    updateCounts();
+
   }
 
 
@@ -2061,6 +2206,15 @@
     position,
     direction
   ) {
+
+    if (
+      dragState
+    ) {
+
+      return;
+
+    }
+
 
     const target =
       position +
@@ -2147,6 +2301,15 @@
 
 
         if (
+          dragState
+        ) {
+
+          return;
+
+        }
+
+
+        if (
           event.target.closest(
             'button, input, select, textarea, a'
           )
@@ -2203,7 +2366,36 @@
             pageItems.indexOf(
               item
             )
+
         };
+
+
+        /*
+         * สำคัญ:
+         * capture pointer ไว้ที่ card
+         * เพื่อไม่ให้ลากแล้ว pointer event หาย
+         * เมื่อ mouse ออกจากตัว card
+         */
+        try {
+
+          card.setPointerCapture(
+            event.pointerId
+          );
+
+          dragState.hasPointerCapture =
+            true;
+
+        } catch (_) {
+
+          dragState.hasPointerCapture =
+            false;
+
+        }
+
+
+        card.classList.add(
+          'is-drag-ready'
+        );
 
 
         event.preventDefault();
@@ -2390,6 +2582,47 @@
 
 
   // ============================================================
+  // WINDOW BLUR
+  // ============================================================
+
+  window.addEventListener(
+    'blur',
+    () => {
+
+      if (
+        dragState
+      ) {
+
+        cancelDrag();
+
+      }
+
+    }
+  );
+
+
+  // ============================================================
+  // VISIBILITY CHANGE
+  // ============================================================
+
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+
+      if (
+        document.hidden &&
+        dragState
+      ) {
+
+        cancelDrag();
+
+      }
+
+    }
+  );
+
+
+  // ============================================================
   // START REAL DRAG
   // ============================================================
 
@@ -2412,6 +2645,20 @@
       !card ||
       !card.isConnected
     ) {
+
+      cancelDrag();
+
+      return;
+
+    }
+
+
+    if (
+      card.parentNode !==
+      grid
+    ) {
+
+      cancelDrag();
 
       return;
 
@@ -2458,31 +2705,23 @@
 
 
     // ----------------------------------------------------------
-    // Insert placeholder
+    // Insert placeholder before moving card
     // ----------------------------------------------------------
 
-    if (
-      card.parentNode ===
-      grid
-    ) {
-
-      grid.insertBefore(
-        placeholder,
-        card
-      );
-
-    } else {
-
-      grid.appendChild(
-        placeholder
-      );
-
-    }
+    grid.insertBefore(
+      placeholder,
+      card
+    );
 
 
     // ----------------------------------------------------------
     // Floating card
     // ----------------------------------------------------------
+
+    card.classList.remove(
+      'is-drag-ready'
+    );
+
 
     card.classList.add(
       'is-dragging'
@@ -2534,10 +2773,6 @@
       'top left';
 
 
-    // ----------------------------------------------------------
-    // Save state
-    // ----------------------------------------------------------
-
     dragState.placeholder =
       placeholder;
 
@@ -2546,6 +2781,10 @@
       true;
 
 
+    /*
+     * เราจะไม่ clear placeholder ที่เพิ่งสร้าง
+     * เพราะต้องใช้เป็นตำแหน่งอ้างอิงตอน drop
+     */
     clearDropIndicators();
 
   }
@@ -2750,6 +2989,7 @@
 
     if (
       !dragState ||
+      !dragState.started ||
       !dragState.placeholder
     ) {
 
@@ -2769,6 +3009,12 @@
 
       clearDropIndicators();
 
+      dragState.targetCard =
+        null;
+
+      dragState.dropBefore =
+        null;
+
       return;
 
     }
@@ -2782,6 +3028,26 @@
 
     const placeholder =
       dragState.placeholder;
+
+
+    if (!placeholder.isConnected) {
+
+      /*
+       * ป้องกันกรณี placeholder ถูก DOM อื่นถอดออก
+       */
+      if (
+        card.isConnected &&
+        card.parentNode === grid
+      ) {
+
+        grid.insertBefore(
+          placeholder,
+          card
+        );
+
+      }
+
+    }
 
 
     clearDropIndicators();
@@ -2830,6 +3096,14 @@
         centerY;
 
     }
+
+
+    dragState.targetCard =
+      card;
+
+
+    dragState.dropBefore =
+      insertBefore;
 
 
     // ----------------------------------------------------------
@@ -2900,6 +3174,48 @@
 
 
   // ============================================================
+  // RELEASE POINTER CAPTURE
+  // ============================================================
+
+  function releaseDragPointer(
+    state
+  ) {
+
+    if (
+      !state ||
+      !state.card ||
+      !state.hasPointerCapture
+    ) {
+
+      return;
+
+    }
+
+
+    try {
+
+      if (
+        state.card.hasPointerCapture(
+          state.pointerId
+        )
+      ) {
+
+        state.card.releasePointerCapture(
+          state.pointerId
+        );
+
+      }
+
+    } catch (_) {}
+
+
+    state.hasPointerCapture =
+      false;
+
+  }
+
+
+  // ============================================================
   // CLEANUP DRAG STATE
   // ============================================================
 
@@ -2922,6 +3238,11 @@
       state.placeholder;
 
 
+    releaseDragPointer(
+      state
+    );
+
+
     if (
       placeholder &&
       placeholder.isConnected
@@ -2933,20 +3254,50 @@
 
 
     if (
-      card &&
-      card.isConnected &&
-      card.parentNode !==
-        grid
+      card
     ) {
 
-      card.remove();
+      /*
+       * ถ้า card ยังอยู่ใน body จาก real drag
+       * ต้องคืนกลับ grid ก่อนล้าง state
+       */
+      if (
+        card.isConnected &&
+        card.parentNode !==
+          grid
+      ) {
+
+        const next =
+          state.originalNextSibling;
+
+
+        if (
+          next &&
+          next.parentNode ===
+            grid
+        ) {
+
+          grid.insertBefore(
+            card,
+            next
+          );
+
+        } else {
+
+          grid.appendChild(
+            card
+          );
+
+        }
+
+      }
+
+
+      resetDragStyles(
+        card
+      );
 
     }
-
-
-    resetDragStyles(
-      card
-    );
 
 
     clearDropIndicators();
@@ -2994,14 +3345,9 @@
       !state.moved
     ) {
 
-      if (
-        placeholder &&
-        placeholder.isConnected
-      ) {
-
-        placeholder.remove();
-
-      }
+      releaseDragPointer(
+        state
+      );
 
 
       resetDragStyles(
@@ -3012,6 +3358,24 @@
       dragState =
         null;
 
+
+      return;
+
+    }
+
+
+    // ----------------------------------------------------------
+    // Ensure placeholder still exists
+    // ----------------------------------------------------------
+
+    if (
+      !placeholder ||
+      !placeholder.isConnected ||
+      placeholder.parentNode !==
+        grid
+    ) {
+
+      cancelDrag();
 
       return;
 
@@ -3107,8 +3471,22 @@
 
 
     // ----------------------------------------------------------
-    // Clean floating UI
+    // Suppress click after drag
     // ----------------------------------------------------------
+
+    suppressClickUntil =
+      Date.now() +
+      350;
+
+
+    // ----------------------------------------------------------
+    // Cleanup
+    // ----------------------------------------------------------
+
+    releaseDragPointer(
+      state
+    );
+
 
     if (
       placeholder &&
@@ -3127,14 +3505,11 @@
         grid
     ) {
 
-      card.remove();
+      grid.appendChild(
+        card
+      );
 
     }
-
-
-    suppressClickUntil =
-      Date.now() +
-      300;
 
 
     resetDragStyles(
@@ -3160,7 +3535,9 @@
   // CANCEL DRAG
   // ============================================================
 
-  function cancelDrag() {
+  function cancelDrag(
+    rerender = true
+  ) {
 
     if (!dragState) {
       return;
@@ -3177,6 +3554,16 @@
 
     const placeholder =
       state.placeholder;
+
+
+    suppressClickUntil =
+      Date.now() +
+      350;
+
+
+    releaseDragPointer(
+      state
+    );
 
 
     if (
@@ -3196,14 +3583,84 @@
         grid
     ) {
 
-      card.remove();
+      /*
+       * คืนตำแหน่งเดิมไว้ก่อน
+       * แล้ว render ใหม่เพื่อให้ event bindings สมบูรณ์
+       */
+      const next =
+        state.originalNextSibling;
+
+
+      if (
+        next &&
+        next.parentNode ===
+          grid
+      ) {
+
+        grid.insertBefore(
+          card,
+          next
+        );
+
+      } else {
+
+        const originalIndex =
+          state.originalIndex;
+
+
+        if (
+          Number.isInteger(
+            originalIndex
+          ) &&
+          originalIndex >= 0 &&
+          originalIndex < grid.children.length
+        ) {
+
+          const children =
+            Array.from(
+              grid.querySelectorAll(
+                '.page-card-manage'
+              )
+            );
+
+
+          const target =
+            children[
+              Math.min(
+                originalIndex,
+                children.length
+              )
+            ];
+
+
+          if (
+            target
+          ) {
+
+            grid.insertBefore(
+              card,
+              target
+            );
+
+          } else {
+
+            grid.appendChild(
+              card
+            );
+
+          }
+
+        } else {
+
+          grid.appendChild(
+            card
+          );
+
+        }
+
+      }
 
     }
-
-
-    suppressClickUntil =
-      Date.now() +
-      300;
 
 
     resetDragStyles(
@@ -3218,9 +3675,15 @@
       null;
 
 
-    renderGrid();
+    if (
+      rerender
+    ) {
 
-    updateCounts();
+      renderGrid();
+
+      updateCounts();
+
+    }
 
   }
 
@@ -3439,6 +3902,7 @@
 
 
     if (
+      !Array.isArray(indices) ||
       !indices.length
     ) {
 
@@ -3505,7 +3969,8 @@
 
         if (
           downloadRunning ||
-          !currentFile
+          !currentFile ||
+          dragState
         ) {
 
           return;
@@ -3545,6 +4010,16 @@
           true;
 
 
+        if (
+          downloadSelectedBtn
+        ) {
+
+          downloadSelectedBtn.disabled =
+            true;
+
+        }
+
+
         downloadBtn.textContent =
           getBuildingPdfText();
 
@@ -3562,13 +4037,18 @@
             );
 
 
-          U.downloadBlob(
-            blob,
-            `${U.baseName(
-              currentFile.name
-            )}-edited.pdf`
-          );
+          if (
+            currentFile
+          ) {
 
+            U.downloadBlob(
+              blob,
+              `${U.baseName(
+                currentFile.name
+              )}-edited.pdf`
+            );
+
+          }
 
         } catch (error) {
 
@@ -3600,6 +4080,16 @@
 
           downloadBtn.disabled =
             false;
+
+
+          if (
+            downloadSelectedBtn
+          ) {
+
+            downloadSelectedBtn.disabled =
+              false;
+
+          }
 
 
           downloadBtn.textContent =
@@ -3634,7 +4124,8 @@
 
         if (
           downloadRunning ||
-          !currentFile
+          !currentFile ||
+          dragState
         ) {
 
           return;
@@ -3674,6 +4165,16 @@
           true;
 
 
+        if (
+          downloadBtn
+        ) {
+
+          downloadBtn.disabled =
+            true;
+
+        }
+
+
         downloadSelectedBtn.textContent =
           getBuildingPdfText();
 
@@ -3691,13 +4192,18 @@
             );
 
 
-          U.downloadBlob(
-            blob,
-            `${U.baseName(
-              currentFile.name
-            )}-selected.pdf`
-          );
+          if (
+            currentFile
+          ) {
 
+            U.downloadBlob(
+              blob,
+              `${U.baseName(
+                currentFile.name
+              )}-selected.pdf`
+            );
+
+          }
 
         } catch (error) {
 
@@ -3731,6 +4237,16 @@
             false;
 
 
+          if (
+            downloadBtn
+          ) {
+
+            downloadBtn.disabled =
+              false;
+
+          }
+
+
           downloadSelectedBtn.textContent =
             t(
               'pdf.downloadSelected'
@@ -3757,6 +4273,15 @@
     dropzone,
     fileInput,
     files => {
+
+      if (
+        dragState
+      ) {
+
+        cancelDrag();
+
+      }
+
 
       const file =
         Array.from(
@@ -3807,6 +4332,21 @@
       ++loadSeq;
 
 
+      /*
+       * ยกเลิก drag ก่อนทุกอย่าง
+       * เพื่อไม่ให้ floating card ค้างใน body
+       */
+      if (
+        dragState
+      ) {
+
+        cancelDrag(
+          false
+        );
+
+      }
+
+
       if (observer) {
 
         observer.disconnect();
@@ -3817,36 +4357,43 @@
       }
 
 
-      if (dragState) {
-
-        cleanupDragState();
-
-      }
-
-
-      suppressClickUntil =
-        0;
-
-
       resetQueue();
 
       revokeThumbs();
 
+
+      const oldDoc =
+        currentDoc;
+
+
+      currentDoc =
+        null;
+
+
+      if (
+        oldDoc &&
+        typeof oldDoc.destroy ===
+          'function'
+      ) {
+
+        oldDoc
+          .destroy()
+          .catch(
+            err => {
+
+              console.warn(
+                'PDF cleanup warning:',
+                err
+              );
+
+            }
+          );
+
+      }
+
+
       pageItems =
         [];
-
-
-      destroyCurrentDoc()
-        .catch(
-          err => {
-
-            console.warn(
-              'PDF cleanup warning:',
-              err
-            );
-
-          }
-        );
 
 
       currentFile =
@@ -3891,9 +4438,20 @@
         '';
 
 
+      clearDropIndicators();
+
+
       bulkbar.classList.add(
         'hidden'
       );
+
+
+      if (nameEl) {
+
+        nameEl.textContent =
+          '';
+
+      }
 
 
       if (noteEl) {
@@ -3923,6 +4481,10 @@
           false;
 
       }
+
+
+      suppressClickUntil =
+        0;
 
 
       setToolProcessing(
