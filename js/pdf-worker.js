@@ -3,6 +3,7 @@
 'use strict';
 
 
+
 // ============================================================
 // LOAD LIBRARIES
 // ============================================================
@@ -13,11 +14,13 @@ importScripts(
 );
 
 
+
 const {
   PDFDocument,
   rgb,
   degrees
 } = PDFLib;
+
 
 
 // ============================================================
@@ -32,22 +35,41 @@ const THAI_FONT_MIRRORS = [
 let thaiFontPromise = null;
 
 
+
+// ============================================================
+// WORKER ERROR
+// ============================================================
+
 function createWorkerError(
   errorKey,
   errorData = {}
 ) {
+
   const error =
-    new Error(errorKey);
+    new Error(
+      errorKey
+    );
+
+
 
   error.errorKey =
     errorKey;
 
+
+
   error.errorData =
     errorData;
+
+
 
   return error;
 }
 
+
+
+// ============================================================
+// THAI FONT LOADER
+// ============================================================
 
 function loadThaiFontBytes() {
 
@@ -56,7 +78,9 @@ function loadThaiFontBytes() {
     thaiFontPromise =
       (async () => {
 
-        let lastErr = null;
+        let lastErr =
+          null;
+
 
 
         for (
@@ -72,6 +96,7 @@ function loadThaiFontBytes() {
               );
 
 
+
             if (!res.ok) {
 
               throw createWorkerError(
@@ -85,8 +110,10 @@ function loadThaiFontBytes() {
             }
 
 
+
             const bytes =
               await res.arrayBuffer();
+
 
 
             if (
@@ -101,6 +128,7 @@ function loadThaiFontBytes() {
             }
 
 
+
             return bytes;
 
           } catch (err) {
@@ -110,6 +138,7 @@ function loadThaiFontBytes() {
 
           }
         }
+
 
 
         throw createWorkerError(
@@ -136,11 +165,14 @@ function loadThaiFontBytes() {
 
           }
         );
+
   }
+
 
 
   return thaiFontPromise;
 }
+
 
 
 async function embedThaiFont(
@@ -148,13 +180,15 @@ async function embedThaiFont(
 ) {
 
   if (
+    !pdfDoc ||
     typeof pdfDoc.registerFontkit !==
-    'function'
+      'function'
   ) {
 
     return null;
 
   }
+
 
 
   if (
@@ -168,8 +202,10 @@ async function embedThaiFont(
   }
 
 
+
   const bytes =
     await loadThaiFontBytes();
+
 
 
   return pdfDoc.embedFont(
@@ -182,6 +218,7 @@ async function embedThaiFont(
 }
 
 
+
 // ------------------------------------------------------------
 // Preload font
 // ------------------------------------------------------------
@@ -190,6 +227,7 @@ loadThaiFontBytes()
   .catch(
     () => {}
   );
+
 
 
 // ============================================================
@@ -207,12 +245,14 @@ function normalizeNumber(
     );
 
 
+
   return Number.isFinite(
     number
   )
     ? number
     : fallback;
 }
+
 
 
 function clamp(
@@ -231,6 +271,7 @@ function clamp(
 }
 
 
+
 function ensureArrayBuffer(
   value,
   label
@@ -245,13 +286,41 @@ function ensureArrayBuffer(
   }
 
 
+
   if (
     value instanceof Uint8Array
   ) {
 
-    return value.buffer;
+    /*
+     * สำคัญ:
+     * ห้ามคืน value.buffer ตรง ๆ เสมอไป
+     *
+     * Uint8Array อาจใช้ buffer ที่ใหญ่กว่าช่วง
+     * byteOffset/byteLength จริง
+     *
+     * จึงต้องคืนเฉพาะช่วงข้อมูลที่ใช้งานจริง
+     */
+
+    if (
+      value.byteOffset === 0 &&
+      value.byteLength ===
+        value.buffer.byteLength
+    ) {
+
+      return value.buffer;
+
+    }
+
+
+
+    return value.buffer.slice(
+      value.byteOffset,
+      value.byteOffset +
+        value.byteLength
+    );
 
   }
+
 
 
   throw createWorkerError(
@@ -262,6 +331,7 @@ function ensureArrayBuffer(
     }
   );
 }
+
 
 
 // ============================================================
@@ -279,10 +349,12 @@ function getImageSize(
     ) || 1;
 
 
+
   const sourceHeight =
     Number(
       image.height
     ) || 1;
+
 
 
   const width =
@@ -292,9 +364,11 @@ function getImageSize(
     );
 
 
+
   const ratio =
     sourceHeight /
     sourceWidth;
+
 
 
   return {
@@ -302,9 +376,12 @@ function getImageSize(
     width,
 
     height:
-      width * ratio
+      width *
+      ratio
+
   };
 }
+
 
 
 // ============================================================
@@ -325,10 +402,12 @@ function getCenteredRotatedPosition({
     180;
 
 
+
   const cos =
     Math.cos(
       radians
     );
+
 
 
   const sin =
@@ -337,9 +416,11 @@ function getCenteredRotatedPosition({
     );
 
 
+
   const centerX =
     pageWidth /
     2;
+
 
 
   const centerY =
@@ -347,26 +428,33 @@ function getCenteredRotatedPosition({
     2;
 
 
+
   const rotatedCenterX =
     (
       objectWidth /
       2
-    ) * cos -
+    ) *
+      cos -
     (
       objectHeight /
       2
-    ) * sin;
+    ) *
+      sin;
+
 
 
   const rotatedCenterY =
     (
       objectWidth /
       2
-    ) * sin +
+    ) *
+      sin +
     (
       objectHeight /
       2
-    ) * cos;
+    ) *
+      cos;
+
 
 
   return {
@@ -378,8 +466,10 @@ function getCenteredRotatedPosition({
     y:
       centerY -
       rotatedCenterY
+
   };
 }
+
 
 
 // ============================================================
@@ -410,8 +500,10 @@ const handlers = {
     }
 
 
+
     const outDoc =
       await PDFDocument.create();
+
 
 
     for (
@@ -427,10 +519,12 @@ const handlers = {
         );
 
 
+
       const srcDoc =
         await PDFDocument.load(
           buffer
         );
+
 
 
       const copiedPages =
@@ -438,6 +532,7 @@ const handlers = {
           srcDoc,
           srcDoc.getPageIndices()
         );
+
 
 
       copiedPages.forEach(
@@ -449,11 +544,14 @@ const handlers = {
 
         }
       );
+
     }
+
 
 
     const bytes =
       await outDoc.save();
+
 
 
     return {
@@ -462,8 +560,11 @@ const handlers = {
 
       pageCount:
         outDoc.getPageCount()
+
     };
+
   },
+
 
 
   // ----------------------------------------------------------
@@ -482,6 +583,7 @@ const handlers = {
       );
 
 
+
     if (
       !Array.isArray(
         indices
@@ -496,14 +598,17 @@ const handlers = {
     }
 
 
+
     const srcDoc =
       await PDFDocument.load(
         sourceBuffer
       );
 
 
+
     const pageCount =
       srcDoc.getPageCount();
+
 
 
     const safeIndices =
@@ -521,6 +626,7 @@ const handlers = {
         );
 
 
+
     if (
       !safeIndices.length
     ) {
@@ -532,8 +638,10 @@ const handlers = {
     }
 
 
+
     const outDoc =
       await PDFDocument.create();
+
 
 
     const copiedPages =
@@ -541,6 +649,7 @@ const handlers = {
         srcDoc,
         safeIndices
       );
+
 
 
     copiedPages.forEach(
@@ -554,14 +663,20 @@ const handlers = {
     );
 
 
+
     const bytes =
       await outDoc.save();
 
 
+
     return {
+
       bytes
+
     };
+
   },
+
 
 
   // ----------------------------------------------------------
@@ -585,14 +700,17 @@ const handlers = {
       );
 
 
+
     const pdfDoc =
       await PDFDocument.load(
         sourceBuffer
       );
 
 
+
     const pages =
       pdfDoc.getPages();
+
 
 
     if (
@@ -606,6 +724,7 @@ const handlers = {
     }
 
 
+
     // --------------------------------------------------------
     // TEXT
     // --------------------------------------------------------
@@ -614,6 +733,7 @@ const handlers = {
       typeof text === 'string'
         ? text.trim()
         : '';
+
 
 
     const textSize =
@@ -625,6 +745,7 @@ const handlers = {
         1,
         1000
       );
+
 
 
     // --------------------------------------------------------
@@ -642,11 +763,13 @@ const handlers = {
       );
 
 
+
     const watermarkAngle =
       normalizeNumber(
         angle,
         0
       );
+
 
 
     const pngSize =
@@ -660,6 +783,7 @@ const handlers = {
       );
 
 
+
     // --------------------------------------------------------
     // PREPARE TEXT
     // --------------------------------------------------------
@@ -668,12 +792,15 @@ const handlers = {
       null;
 
 
+
     let textWidth =
       0;
 
 
+
     let textHeight =
       textSize;
+
 
 
     if (
@@ -686,6 +813,7 @@ const handlers = {
         );
 
 
+
       if (!font) {
 
         throw createWorkerError(
@@ -695,11 +823,13 @@ const handlers = {
       }
 
 
+
       textWidth =
         font.widthOfTextAtSize(
           cleanText,
           textSize
         );
+
 
 
       if (
@@ -713,7 +843,9 @@ const handlers = {
           );
 
       }
+
     }
+
 
 
     // --------------------------------------------------------
@@ -722,6 +854,7 @@ const handlers = {
 
     let embeddedImage =
       null;
+
 
 
     if (
@@ -745,19 +878,24 @@ const handlers = {
               );
 
 
+
         embeddedImage =
           await pdfDoc.embedPng(
             imageBytes
           );
 
-      } catch (_) {
+      } catch (
+        _
+      ) {
 
         throw createWorkerError(
           'pdfWorker.invalidWatermarkPng'
         );
 
       }
+
     }
+
 
 
     // --------------------------------------------------------
@@ -776,6 +914,7 @@ const handlers = {
     }
 
 
+
     // --------------------------------------------------------
     // DRAW
     // --------------------------------------------------------
@@ -788,6 +927,7 @@ const handlers = {
           height
         } =
           page.getSize();
+
 
 
         // ====================================================
@@ -817,8 +957,10 @@ const handlers = {
 
                 angle:
                   watermarkAngle
+
               }
             );
+
 
 
           page.drawText(
@@ -850,9 +992,12 @@ const handlers = {
                 degrees(
                   watermarkAngle
                 )
+
             }
           );
+
         }
+
 
 
         // ====================================================
@@ -870,12 +1015,15 @@ const handlers = {
             );
 
 
+
           const drawWidth =
             dimensions.width;
 
 
+
           const drawHeight =
             dimensions.height;
+
 
 
           const position =
@@ -896,8 +1044,10 @@ const handlers = {
 
                 angle:
                   watermarkAngle
+
               }
             );
+
 
 
           page.drawImage(
@@ -923,12 +1073,15 @@ const handlers = {
                 degrees(
                   watermarkAngle
                 )
+
             }
           );
+
         }
 
       }
     );
+
 
 
     // --------------------------------------------------------
@@ -939,10 +1092,15 @@ const handlers = {
       await pdfDoc.save();
 
 
+
     return {
+
       bytes
+
     };
+
   },
+
 
 
   // ----------------------------------------------------------
@@ -964,16 +1122,19 @@ const handlers = {
       );
 
 
+
     const pdfDoc =
       await PDFDocument.load(
         sourceBuffer
       );
 
 
+
     const font =
       await embedThaiFont(
         pdfDoc
       );
+
 
 
     if (!font) {
@@ -985,12 +1146,15 @@ const handlers = {
     }
 
 
+
     const pages =
       pdfDoc.getPages();
 
 
+
     const total =
       pages.length;
+
 
 
     const pageSize =
@@ -1004,6 +1168,7 @@ const handlers = {
       );
 
 
+
     const firstPage =
       Math.trunc(
         normalizeNumber(
@@ -1013,11 +1178,13 @@ const handlers = {
       );
 
 
+
     const pageTemplate =
       typeof template ===
       'string'
         ? template
         : '{n} / {total}';
+
 
 
     const placement =
@@ -1027,8 +1194,10 @@ const handlers = {
         : 'bottom-center';
 
 
+
     const MARGIN =
       34;
+
 
 
     pages.forEach(
@@ -1040,6 +1209,7 @@ const handlers = {
         const pageNumber =
           firstPage +
           index;
+
 
 
         const text =
@@ -1058,6 +1228,7 @@ const handlers = {
             );
 
 
+
         const {
           width,
           height
@@ -1065,11 +1236,13 @@ const handlers = {
           page.getSize();
 
 
+
         const textWidth =
           font.widthOfTextAtSize(
             text,
             pageSize
           );
+
 
 
         const [
@@ -1081,8 +1254,10 @@ const handlers = {
           );
 
 
+
         let x =
           MARGIN;
+
 
 
         if (
@@ -1105,7 +1280,9 @@ const handlers = {
             width -
             textWidth -
             MARGIN;
+
         }
+
 
 
         const y =
@@ -1115,6 +1292,7 @@ const handlers = {
               MARGIN
             : MARGIN -
               10;
+
 
 
         page.drawText(
@@ -1136,22 +1314,138 @@ const handlers = {
                 0.2,
                 0.2
               )
+
           }
         );
+
       }
     );
+
 
 
     const bytes =
       await pdfDoc.save();
 
 
+
     return {
+
       bytes
+
     };
+
   }
 
 };
+
+
+
+// ============================================================
+// RPC RESPONSE HELPERS
+// ============================================================
+
+function postSuccess(
+  reqId,
+  result
+) {
+
+  const transfer =
+    result &&
+    result.bytes instanceof Uint8Array
+      ? [result.bytes.buffer]
+      : [];
+
+
+
+  self.postMessage(
+    {
+
+      reqId,
+
+      ok:
+        true,
+
+      result
+
+    },
+    transfer
+  );
+}
+
+
+
+function postWorkerError(
+  reqId,
+  error
+) {
+
+  /*
+   * P0 FIX:
+   *
+   * Worker และ Client ต้องใช้ field ชุดเดียวกัน
+   *
+   * Worker:
+   *   errorKey
+   *   errorData
+   *
+   * Client ต้องอ่าน field เหล่านี้โดยตรง
+   *
+   * และเรายังคงส่ง `error` ไว้ด้วยเพื่อรองรับ
+   * client รุ่นเก่าหรือ fallback ภายนอก
+   */
+
+  const errorKey =
+    error &&
+    typeof error.errorKey ===
+      'string'
+      ? error.errorKey
+      : 'pdfWorker.genericError';
+
+
+
+  const errorData =
+    error &&
+    error.errorData &&
+    typeof error.errorData === 'object'
+      ? error.errorData
+      : {};
+
+
+
+  const errorMessage =
+    error &&
+    typeof error.message ===
+      'string'
+      ? error.message
+      : String(
+          error || ''
+        );
+
+
+
+  self.postMessage(
+    {
+
+      reqId,
+
+      ok:
+        false,
+
+      errorKey,
+
+      errorData,
+
+      /*
+       * เก็บไว้สำหรับ backward compatibility
+       * และ debugging
+       */
+      error:
+        errorMessage
+
+    }
+  );
+}
+
 
 
 // ============================================================
@@ -1162,7 +1456,11 @@ self.onmessage =
   async event => {
 
     const data =
-      event.data || {};
+      event &&
+      event.data
+        ? event.data
+        : {};
+
 
 
     const {
@@ -1173,8 +1471,10 @@ self.onmessage =
       data;
 
 
+
     const handler =
       handlers[type];
+
 
 
     // --------------------------------------------------------
@@ -1183,23 +1483,21 @@ self.onmessage =
 
     if (!handler) {
 
-      self.postMessage({
+      postWorkerError(
         reqId,
-
-        ok:
-          false,
-
-        errorKey:
+        createWorkerError(
           'pdfWorker.unknownCommand',
+          {
+            type
+          }
+        )
+      );
 
-        errorData: {
-          type
-        }
-      });
 
 
       return;
     }
+
 
 
     try {
@@ -1210,28 +1508,12 @@ self.onmessage =
         );
 
 
-      const transfer =
-        result &&
-        result.bytes
-          ? [
-              result.bytes.buffer
-            ]
-          : [];
 
-
-      self.postMessage(
-        {
-
-          reqId,
-
-          ok:
-            true,
-
-          result
-
-        },
-        transfer
+      postSuccess(
+        reqId,
+        result
       );
+
 
 
     } catch (
@@ -1239,58 +1521,61 @@ self.onmessage =
     ) {
 
       /*
-       * ถ้าเป็น error ที่เราสร้างเอง
-       * ให้ส่ง key กลับไป
+       * ------------------------------------------------------
+       * P0 ERROR PROTOCOL
+       * ------------------------------------------------------
+       *
+       * Error ที่สร้างด้วย createWorkerError()
+       * จะรักษา errorKey/errorData กลับไปยัง client
+       *
+       * Error จาก pdf-lib/browser
+       * จะถูก normalize เป็น generic key
+       *
+       * ห้ามส่งข้อความ localized จาก Worker
        */
+
       if (
         err &&
-        err.errorKey
+        typeof err.errorKey ===
+          'string'
       ) {
 
-        self.postMessage({
+        postWorkerError(
           reqId,
+          err
+        );
 
-          ok:
-            false,
-
-          errorKey:
-            err.errorKey,
-
-          errorData:
-            err.errorData || {}
-        });
 
 
         return;
       }
 
 
-      /*
-       * Error จาก pdf-lib / browser
-       *
-       * ไม่ส่งข้อความไทยออกจาก Worker
-       * ใช้ generic key แทน
-       */
-      self.postMessage({
+
+      postWorkerError(
         reqId,
-
-        ok:
-          false,
-
-        errorKey:
+        createWorkerError(
           'pdfWorker.genericError',
+          {
 
-        errorData: {
+            /*
+             * สำหรับ debugging เท่านั้น
+             * Client สามารถเลือกว่าจะโชว์หรือไม่โชว์
+             */
 
-          message:
-            (
-              err &&
-              err.message
-            ) ||
-            String(
-              err
-            )
-        }
-      });
+            message:
+              (
+                err &&
+                err.message
+              ) ||
+              String(
+                err
+              )
+
+          }
+        )
+      );
+
     }
+
   };
