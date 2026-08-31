@@ -39,6 +39,7 @@
     return String(
       key
     );
+
   }
 
 
@@ -108,6 +109,10 @@
     !jobTemplate
   ) {
 
+    console.warn(
+      '[Image Background Removal] Required elements not found.'
+    );
+
     return;
 
   }
@@ -120,6 +125,7 @@
   let jobSeq =
     0;
 
+
   const jobs =
     [];
 
@@ -128,6 +134,10 @@
   // AI LIBRARY
   // ============================================================
 
+  /*
+   * ใช้ version เดิมของโปรเจกต์
+   * เพื่อไม่ให้ behavior เปลี่ยนโดยไม่ตั้งใจ
+   */
   const LIB_URL =
     'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm';
 
@@ -135,8 +145,65 @@
   let removeBackgroundFn =
     null;
 
+
   let libPromise =
     null;
+
+
+  /*
+   * นับจำนวน job ที่กำลังใช้งาน library
+   * ป้องกัน release reference ระหว่าง inference
+   */
+  let activeLibraryUsers =
+    0;
+
+
+  // ============================================================
+  // AI CONFIGURATION
+  // ============================================================
+
+  /*
+   * เน้นคุณภาพ
+   *
+   * isnet:
+   * - คุณภาพสูงกว่า quantized model
+   * - ใช้ทรัพยากรมากกว่า
+   *
+   * device:
+   * - gpu ช่วยให้ browser ที่รองรับ WebGPU ทำงานเร็วขึ้น
+   * - library สามารถใช้ execution device ตาม config
+   *
+   * proxyToWorker:
+   * - ช่วยไม่ให้ inference หนักบน main thread
+   */
+  const AI_CONFIG = {
+
+    debug:
+      false,
+
+    proxyToWorker:
+      true,
+
+    device:
+      'gpu',
+
+    model:
+      'isnet',
+
+    output: {
+
+      format:
+        'image/png',
+
+      type:
+        'foreground',
+
+      quality:
+        1
+
+    }
+
+  };
 
 
   // ============================================================
@@ -144,6 +211,15 @@
   // ============================================================
 
   async function loadLibrary() {
+
+    if (
+      removeBackgroundFn
+    ) {
+
+      return removeBackgroundFn;
+
+    }
+
 
     if (
       !libPromise
@@ -164,9 +240,7 @@
               ) {
 
                 throw new Error(
-                  t(
-                    'errors.backgroundFunctionNotFound'
-                  )
+                  'BACKGROUND_FUNCTION_NOT_FOUND'
                 );
 
               }
@@ -181,48 +255,151 @@
             }
           )
           .catch(
-            err => {
+            error => {
 
               removeBackgroundFn =
                 null;
+
 
               libPromise =
                 null;
 
 
-              throw new Error(
-                t(
-                  'errors.backgroundLibraryLoadFailed',
-                  {
-                    message:
-                      err?.message ||
-                      String(
-                        err
-                      )
-                  }
-                )
-              );
+              throw error;
 
             }
           );
+
     }
 
 
     return libPromise;
+
   }
 
 
   // ============================================================
-  // RELEASE LIBRARY REFERENCE
+  // ACQUIRE LIBRARY
   // ============================================================
 
-  function releaseLibraryReference() {
+  async function acquireLibrary() {
+
+    const fn =
+      await loadLibrary();
+
+
+    activeLibraryUsers++;
+
+
+    return fn;
+
+  }
+
+
+  // ============================================================
+  // RELEASE ONE LIBRARY USER
+  // ============================================================
+
+  function releaseLibraryUser() {
+
+    activeLibraryUsers =
+      Math.max(
+        0,
+        activeLibraryUsers -
+          1
+      );
+
+
+    /*
+     * อย่า clear function ทันที
+     * เพราะ job อื่นอาจยังใช้งานอยู่
+     *
+     * การ cache function ไว้ยังมีประโยชน์มาก
+     * เพราะ model assets ถูก cache ใน browser
+     */
+  }
+
+
+  // ============================================================
+  // RELEASE LIBRARY
+  // ============================================================
+
+  function releaseLibraryReference(
+    force = false
+  ) {
+
+    if (
+      !force &&
+      activeLibraryUsers >
+        0
+    ) {
+
+      return;
+
+    }
+
 
     removeBackgroundFn =
       null;
 
+
     libPromise =
       null;
+
+  }
+
+
+  // ============================================================
+  // FILE KEY
+  // ============================================================
+
+  function getFileKey(
+    file
+  ) {
+
+    if (
+      !file
+    ) {
+
+      return '';
+
+    }
+
+
+    return [
+
+      file.name,
+
+      file.size,
+
+      file.lastModified,
+
+      file.type
+
+    ].join('|');
+
+  }
+
+
+  function hasDuplicateFile(
+    file
+  ) {
+
+    const key =
+      getFileKey(
+        file
+      );
+
+
+    return jobs.some(
+      job =>
+        job &&
+        !job.disposed &&
+        getFileKey(
+          job.file
+        ) === key
+    );
+
   }
 
 
@@ -253,18 +430,22 @@
         null;
 
 
-      this.isProcessing =
-        false;
-
-
       this.objectUrl =
         null;
 
 
-      /*
-       * เก็บ key/params ของ error ล่าสุดไว้
-       * เพื่อให้แปลภาษาใหม่ได้ตอน languagechange
-       */
+      this.isProcessing =
+        false;
+
+
+      this.disposed =
+        false;
+
+
+      this.hasError =
+        false;
+
+
       this.errorKey =
         null;
 
@@ -283,6 +464,7 @@
 
 
       this.buildDom();
+
     }
 
 
@@ -296,11 +478,19 @@
         this.el;
 
 
+      // ------------------------------------------------------
+      // Source URL
+      // ------------------------------------------------------
+
       this.objectUrl =
         URL.createObjectURL(
           this.file
         );
 
+
+      // ------------------------------------------------------
+      // Elements
+      // ------------------------------------------------------
 
       this.beforeImg =
         el.querySelector(
@@ -356,6 +546,31 @@
         );
 
 
+      // ------------------------------------------------------
+      // Basic validation
+      // ------------------------------------------------------
+
+      if (
+        !this.beforeImg ||
+        !this.processBtn
+      ) {
+
+        this.disposed =
+          true;
+
+
+        this.revokeSource();
+
+
+        return;
+
+      }
+
+
+      // ------------------------------------------------------
+      // File info
+      // ------------------------------------------------------
+
       if (
         filenameEl
       ) {
@@ -367,7 +582,10 @@
 
 
       if (
-        sizeEl
+        sizeEl &&
+        U &&
+        typeof U.formatBytes ===
+          'function'
       ) {
 
         sizeEl.textContent =
@@ -378,16 +596,69 @@
       }
 
 
-      this.beforeImg.src =
-        this.objectUrl;
-
-
       // ------------------------------------------------------
       // Processing state
       // ------------------------------------------------------
 
       el.dataset.processing =
         'false';
+
+
+      // ------------------------------------------------------
+      // Before image
+      // ------------------------------------------------------
+
+      this.beforeImg.src =
+        this.objectUrl;
+
+
+      this.beforeImg.onload =
+        () => {
+
+          if (
+            this.disposed
+          ) {
+
+            return;
+
+          }
+
+
+          const originalDimEl =
+            el.querySelector(
+              '.js-origdim'
+            );
+
+
+          if (
+            originalDimEl
+          ) {
+
+            originalDimEl.textContent =
+              `${this.beforeImg.naturalWidth}×${this.beforeImg.naturalHeight}`;
+
+          }
+
+        };
+
+
+      this.beforeImg.onerror =
+        () => {
+
+          if (
+            this.disposed
+          ) {
+
+            return;
+
+          }
+
+
+          this.setError(
+            'image.openFailed'
+          );
+
+        };
 
 
       // ------------------------------------------------------
@@ -435,7 +706,8 @@
 
 
             if (
-              idx >= 0
+              idx >=
+              0
             ) {
 
               jobs.splice(
@@ -459,6 +731,7 @@
       // ------------------------------------------------------
 
       this.updateLanguageUI();
+
     }
 
 
@@ -469,6 +742,7 @@
     updateLanguageUI() {
 
       if (
+        this.disposed ||
         !this.statusEl
       ) {
 
@@ -478,8 +752,9 @@
 
 
       /*
-       * ตอนกำลัง process
-       * progress callback จะเป็นคนกำหนดข้อความ
+       * Processing
+       *
+       * progress callback owns the dynamic message
        */
       if (
         this.isProcessing
@@ -520,17 +795,15 @@
 
 
         return;
+
       }
 
 
       /*
        * Error
-       * แปล error เดิมใหม่ด้วย key/params ที่เก็บไว้
        */
       if (
-        this.statusEl.classList.contains(
-          'is-error'
-        )
+        this.hasError
       ) {
 
         if (
@@ -545,6 +818,17 @@
             );
 
         }
+
+
+        this.statusEl.classList.remove(
+          'is-ready'
+        );
+
+
+        this.statusEl.classList.add(
+          'is-error'
+        );
+
 
         return;
 
@@ -561,8 +845,66 @@
 
 
       this.statusEl.classList.remove(
-        'is-ready'
+        'is-ready',
+        'is-error'
       );
+
+    }
+
+
+    // ========================================================
+    // ERROR
+    // ========================================================
+
+    setError(
+      key,
+      params = null
+    ) {
+
+      if (
+        this.disposed
+      ) {
+
+        return;
+
+      }
+
+
+      this.hasError =
+        true;
+
+
+      this.errorKey =
+        key;
+
+
+      this.errorParams =
+        params;
+
+
+      if (
+        this.statusEl
+      ) {
+
+        this.statusEl.textContent =
+          t(
+            key,
+            params ||
+              undefined
+          );
+
+
+        this.statusEl.classList.remove(
+          'is-ready'
+        );
+
+
+        this.statusEl.classList.add(
+          'is-error'
+        );
+
+      }
+
     }
 
 
@@ -575,6 +917,7 @@
     ) {
 
       if (
+        this.disposed ||
         !this.progressFill
       ) {
 
@@ -598,6 +941,60 @@
       this.progressFill.style.width =
         value +
         '%';
+
+    }
+
+
+    // ========================================================
+    // PROGRESS TEXT
+    // ========================================================
+
+    updateProgressText(
+      key,
+      pct
+    ) {
+
+      if (
+        this.disposed ||
+        !this.statusEl
+      ) {
+
+        return;
+
+      }
+
+
+      const keyText =
+        typeof key ===
+          'string'
+          ? key.toLowerCase()
+          : '';
+
+
+      /*
+       * library progress keys มักอยู่ในรูป
+       * fetch / load / compute / decode / inference / mask
+       */
+      const loadingModel =
+        keyText.includes(
+          'fetch'
+        ) ||
+        keyText.includes(
+          'load'
+        );
+
+
+      this.statusEl.textContent =
+        t(
+          loadingModel
+            ? 'image.loadingModelProgress'
+            : 'image.removingBackgroundProgress',
+          {
+            percent:
+              pct
+          }
+        );
+
     }
 
 
@@ -608,6 +1005,7 @@
     async process() {
 
       if (
+        this.disposed ||
         this.resultBlob ||
         this.isProcessing
       ) {
@@ -626,6 +1024,21 @@
       }
 
 
+      /*
+       * Reset old error
+       */
+      this.hasError =
+        false;
+
+
+      this.errorKey =
+        null;
+
+
+      this.errorParams =
+        null;
+
+
       this.isProcessing =
         true;
 
@@ -634,20 +1047,14 @@
         'true';
 
 
-      this.processBtn.disabled =
-        true;
+      if (
+        this.processBtn
+      ) {
 
+        this.processBtn.disabled =
+          true;
 
-      this.statusEl.classList.remove(
-        'is-ready',
-        'is-error'
-      );
-
-
-      this.statusEl.textContent =
-        t(
-          'image.preparingModel'
-        );
+      }
 
 
       this.setProgress(
@@ -655,105 +1062,200 @@
       );
 
 
+      if (
+        this.statusEl
+      ) {
+
+        this.statusEl.classList.remove(
+          'is-ready',
+          'is-error'
+        );
+
+
+        this.statusEl.textContent =
+          t(
+            'image.preparingModel'
+          );
+
+      }
+
+
+      let libraryAcquired =
+        false;
+
+
       try {
 
-        const removeBackground =
-          await loadLibrary();
+        // ----------------------------------------------------
+        // Acquire AI library
+        // ----------------------------------------------------
 
+        const removeBackground =
+          await acquireLibrary();
+
+
+        libraryAcquired =
+          true;
+
+
+        if (
+          this.disposed
+        ) {
+
+          return;
+
+        }
+
+
+        this.setProgress(
+          4
+        );
+
+
+        if (
+          this.statusEl
+        ) {
+
+          this.statusEl.textContent =
+            t(
+              'image.loadingModelProgress',
+              {
+                percent:
+                  4
+              }
+            );
+
+        }
+
+
+        // ----------------------------------------------------
+        // Run background removal
+        // ----------------------------------------------------
 
         const blob =
           await removeBackground(
             this.file,
             {
 
-              proxyToWorker:
-                true,
+              ...AI_CONFIG,
 
-              output: {
-                format:
-                  'image/png'
-              },
+              progress:
+                (
+                  key,
+                  current,
+                  total
+                ) => {
 
-              progress: (
-                key,
-                current,
-                total
-              ) => {
+                  if (
+                    this.disposed ||
+                    !this.isProcessing
+                  ) {
 
-                if (
-                  !total
-                ) {
+                    return;
 
-                  return;
+                  }
+
+
+                  const currentNumber =
+                    Number(
+                      current
+                    );
+
+
+                  const totalNumber =
+                    Number(
+                      total
+                    );
+
+
+                  if (
+                    !Number.isFinite(
+                      currentNumber
+                    ) ||
+                    !Number.isFinite(
+                      totalNumber
+                    ) ||
+                    totalNumber <=
+                      0
+                  ) {
+
+                    return;
+
+                  }
+
+
+                  const pct =
+                    Math.max(
+                      0,
+                      Math.min(
+                        100,
+                        Math.round(
+                          (
+                            currentNumber /
+                            totalNumber
+                          ) *
+                          100
+                        )
+                      )
+                    );
+
+
+                  this.setProgress(
+                    pct
+                  );
+
+
+                  this.updateProgressText(
+                    key,
+                    pct
+                  );
 
                 }
 
-
-                const pct =
-                  Math.round(
-                    (
-                      current /
-                      total
-                    ) *
-                    100
-                  );
-
-
-                this.setProgress(
-                  pct
-                );
-
-
-                const keyText =
-                  typeof key ===
-                    'string'
-                    ? key.toLowerCase()
-                    : '';
-
-
-                const downloading =
-                  keyText.includes(
-                    'fetch'
-                  ) ||
-                  keyText.includes(
-                    'load'
-                  );
-
-
-                this.statusEl.textContent =
-                  t(
-                    downloading
-                      ? 'image.loadingModelProgress'
-                      : 'image.removingBackgroundProgress',
-                    {
-                      percent:
-                        pct
-                    }
-                  );
-              }
             }
           );
 
 
         // ----------------------------------------------------
-        // Previous URL
+        // Job may have been removed while inference ran
+        // ----------------------------------------------------
+
+        if (
+          this.disposed
+        ) {
+
+          return;
+
+        }
+
+
+        if (
+          !blob
+        ) {
+
+          throw new Error(
+            'BACKGROUND_EMPTY_RESULT'
+          );
+
+        }
+
+
+        // ----------------------------------------------------
+        // Previous result URL
         // ----------------------------------------------------
 
         if (
           this.resultUrl
         ) {
 
-          try {
-
-            URL.revokeObjectURL(
-              this.resultUrl
-            );
-
-          } catch (_) {}
+          revokeUrl(
+            this.resultUrl
+          );
 
 
           this.resultUrl =
             null;
+
         }
 
 
@@ -771,55 +1273,91 @@
           );
 
 
-        this.afterImg.src =
-          this.resultUrl;
+        // ----------------------------------------------------
+        // Preview
+        // ----------------------------------------------------
+
+        if (
+          this.afterImg
+        ) {
+
+          this.afterImg.src =
+            this.resultUrl;
+
+        }
 
 
-        this.afterWrap.classList.remove(
-          'hidden'
-        );
+        if (
+          this.afterWrap
+        ) {
+
+          this.afterWrap.classList.remove(
+            'hidden'
+          );
+
+        }
 
 
-        this.downloadBtn.href =
-          this.resultUrl;
+        // ----------------------------------------------------
+        // Download
+        // ----------------------------------------------------
+
+        if (
+          this.downloadBtn
+        ) {
+
+          this.downloadBtn.href =
+            this.resultUrl;
 
 
-        this.downloadBtn.download =
-          `${U.baseName(
-            this.file.name
-          )}-nobg.png`;
+          this.downloadBtn.download =
+            `${U.baseName(
+              this.file.name
+            )}-nobg.png`;
 
 
-        this.downloadBtn.classList.remove(
-          'hidden'
-        );
+          this.downloadBtn.classList.remove(
+            'hidden'
+          );
 
+        }
+
+
+        // ----------------------------------------------------
+        // Success
+        // ----------------------------------------------------
 
         this.setProgress(
           100
         );
 
 
-        this.statusEl.textContent =
-          t(
-            'image.readyDownload',
-            {
-              size:
-                U.formatBytes(
-                  blob.size
-                )
-            }
+        if (
+          this.statusEl
+        ) {
+
+          this.statusEl.textContent =
+            t(
+              'image.readyDownload',
+              {
+                size:
+                  U.formatBytes(
+                    blob.size
+                  )
+              }
+            );
+
+
+          this.statusEl.classList.remove(
+            'is-error'
           );
 
 
-        this.statusEl.classList.remove(
-          'is-error'
-        );
+          this.statusEl.classList.add(
+            'is-ready'
+          );
 
-
-        this.statusEl.classList.add(
-          'is-ready'
-        );
+        }
 
 
       } catch (
@@ -827,38 +1365,70 @@
       ) {
 
         console.error(
-          'Background removal error:',
+          '[Image Background Removal]',
           err
         );
 
 
-        this.errorKey =
+        if (
+          this.disposed
+        ) {
+
+          return;
+
+        }
+
+
+        /*
+         * อย่าเก็บ err.message ที่อาจเป็นภาษา
+         * หรือข้อความจาก library โดยตรง
+         *
+         * เก็บ translation key แทน
+         */
+        let key =
           'image.backgroundRemovalFailed';
 
-        this.errorParams =
-          {
-            message:
-              err?.message ||
-              String(
-                err
-              )
-          };
+
+        const code =
+          err &&
+          typeof err.message ===
+            'string'
+            ? err.message
+            : '';
 
 
-        this.statusEl.textContent =
-          t(
-            this.errorKey,
-            this.errorParams
-          );
+        if (
+          code ===
+          'BACKGROUND_FUNCTION_NOT_FOUND'
+        ) {
+
+          key =
+            'errors.backgroundFunctionNotFound';
+
+        } else if (
+          code ===
+          'BACKGROUND_EMPTY_RESULT'
+        ) {
+
+          key =
+            'image.backgroundRemovalFailed';
+
+        } else if (
+          code
+            .toLowerCase()
+            .includes(
+              'out of memory'
+            )
+        ) {
+
+          key =
+            'image.backgroundRemovalFailed';
+
+        }
 
 
-        this.statusEl.classList.remove(
-          'is-ready'
-        );
-
-
-        this.statusEl.classList.add(
-          'is-error'
+        this.setError(
+          key
         );
 
 
@@ -868,6 +1438,18 @@
 
       } finally {
 
+        if (
+          libraryAcquired
+        ) {
+
+          releaseLibraryUser();
+
+          libraryAcquired =
+            false;
+
+        }
+
+
         this.isProcessing =
           false;
 
@@ -876,15 +1458,61 @@
           'false';
 
 
-        this.processBtn.disabled =
-          false;
+        if (
+          !this.disposed &&
+          this.processBtn
+        ) {
+
+          this.processBtn.disabled =
+            false;
+
+        }
 
 
-        releaseLibraryReference();
+        if (
+          U &&
+          typeof U.yieldToUI ===
+            'function'
+        ) {
 
+          await U.yieldToUI();
 
-        await U.yieldToUI();
+        } else {
+
+          await new Promise(
+            resolve =>
+              requestAnimationFrame(
+                resolve
+              )
+          );
+
+        }
+
       }
+
+    }
+
+
+    // ========================================================
+    // REVOKE SOURCE
+    // ========================================================
+
+    revokeSource() {
+
+      if (
+        this.objectUrl
+      ) {
+
+        revokeUrl(
+          this.objectUrl
+        );
+
+
+        this.objectUrl =
+          null;
+
+      }
+
     }
 
 
@@ -894,58 +1522,61 @@
 
     dispose() {
 
+      if (
+        this.disposed
+      ) {
+
+        return;
+
+      }
+
+
+      /*
+       * สำคัญที่สุด:
+       * ป้องกัน async inference ที่กลับมาเขียน
+       * result ลง job ที่ถูกลบไปแล้ว
+       */
+      this.disposed =
+        true;
+
+
       this.isProcessing =
         false;
 
 
-      if (
-        this.el
-      ) {
-
-        this.el.dataset.processing =
-          'false';
-
-      }
+      this.el.dataset.processing =
+        'false';
 
 
-      if (
-        this.objectUrl
-      ) {
-
-        try {
-
-          URL.revokeObjectURL(
-            this.objectUrl
-          );
-
-        } catch (_) {}
-
-
-        this.objectUrl =
-          null;
-      }
+      this.revokeSource();
 
 
       if (
         this.resultUrl
       ) {
 
-        try {
-
-          URL.revokeObjectURL(
-            this.resultUrl
-          );
-
-        } catch (_) {}
+        revokeUrl(
+          this.resultUrl
+        );
 
 
         this.resultUrl =
           null;
+
       }
 
 
       this.resultBlob =
         null;
+
+
+      this.errorKey =
+        null;
+
+
+      this.errorParams =
+        null;
+
     }
 
   }
@@ -957,34 +1588,59 @@
 
   function updateBulkUI() {
 
+    const activeJobs =
+      jobs.filter(
+        job =>
+          job &&
+          !job.disposed
+      );
+
+
     countEl.textContent =
       String(
-        jobs.length
+        activeJobs.length
       );
 
 
     bulkbar.classList.toggle(
       'hidden',
-      jobs.length === 0
+      activeJobs.length ===
+        0
     );
+
+
+    const hasReady =
+      activeJobs.some(
+        job =>
+          !!job.resultBlob
+      );
 
 
     downloadZipBtn.classList.toggle(
       'hidden',
-      !jobs.some(
-        job =>
-          !!job.resultBlob
-      )
+      !hasReady
     );
 
 
-    jobs.forEach(
+    /*
+     * ไม่เรียก updateLanguageUI
+     * ตอนมี processing
+     * เพื่อไม่ไปทับข้อความ progress
+     */
+    activeJobs.forEach(
       job => {
 
-        job.updateLanguageUI();
+        if (
+          !job.isProcessing
+        ) {
+
+          job.updateLanguageUI();
+
+        }
 
       }
     );
+
   }
 
 
@@ -997,7 +1653,7 @@
   ) {
 
     Array.from(
-      fileList
+      fileList || []
     )
       .filter(
         file =>
@@ -1011,10 +1667,33 @@
       .forEach(
         file => {
 
+          /*
+           * กัน duplicate file
+           */
+          if (
+            hasDuplicateFile(
+              file
+            )
+          ) {
+
+            return;
+
+          }
+
+
           const job =
             new BgJob(
               file
             );
+
+
+          if (
+            job.disposed
+          ) {
+
+            return;
+
+          }
 
 
           jobs.push(
@@ -1031,6 +1710,7 @@
 
 
     updateBulkUI();
+
   }
 
 
@@ -1045,7 +1725,13 @@
       jobs.forEach(
         job => {
 
-          job.dispose();
+          if (
+            job
+          ) {
+
+            job.dispose();
+
+          }
 
         }
       );
@@ -1059,7 +1745,19 @@
         '';
 
 
-      releaseLibraryReference();
+      /*
+       * force release เฉพาะกรณีไม่มี jobs ใช้งานแล้ว
+       */
+      if (
+        activeLibraryUsers ===
+          0
+      ) {
+
+        releaseLibraryReference(
+          true
+        );
+
+      }
 
 
       updateBulkUI();
@@ -1077,7 +1775,25 @@
     async () => {
 
       if (
-        !jobs.length
+        processAllBtn.disabled
+      ) {
+
+        return;
+
+      }
+
+
+      const queue =
+        jobs.filter(
+          job =>
+            job &&
+            !job.disposed &&
+            !job.resultBlob
+        );
+
+
+      if (
+        !queue.length
       ) {
 
         return;
@@ -1098,16 +1814,19 @@
       try {
 
         /*
-         * ประมวลผลทีละรูป
-         * เพื่อควบคุม RAM
+         * Intentional sequential processing
+         *
+         * Background removal ใช้ model + memory สูง
+         * การทำทีละรูปช่วยลด peak memory
          */
-
         for (
           const job of
-          jobs
+          queue
         ) {
 
           if (
+            !job ||
+            job.disposed ||
             job.resultBlob
           ) {
 
@@ -1119,16 +1838,39 @@
           await job.process();
 
 
-          await U.yieldToUI();
+          if (
+            U &&
+            typeof U.yieldToUI ===
+              'function'
+          ) {
+
+            await U.yieldToUI();
+
+          } else {
+
+            await new Promise(
+              resolve =>
+                requestAnimationFrame(
+                  resolve
+                )
+            );
+
+          }
 
         }
 
       } finally {
 
-        releaseLibraryReference();
+        if (
+          activeLibraryUsers ===
+            0
+        ) {
 
+          releaseLibraryReference(
+            true
+          );
 
-        await U.yieldToUI();
+        }
 
 
         processAllBtn.disabled =
@@ -1141,15 +1883,10 @@
           );
 
 
-        downloadZipBtn.classList.toggle(
-          'hidden',
-          !jobs.some(
-            job =>
-              !!job.resultBlob
-          )
-        );
+        updateBulkUI();
 
       }
+
     }
   );
 
@@ -1162,9 +1899,20 @@
     'click',
     async () => {
 
+      if (
+        downloadZipBtn.disabled
+      ) {
+
+        return;
+
+      }
+
+
       const ready =
         jobs.filter(
           job =>
+            job &&
+            !job.disposed &&
             !!job.resultBlob
         );
 
@@ -1190,6 +1938,18 @@
 
       try {
 
+        if (
+          typeof JSZip !==
+          'function'
+        ) {
+
+          throw new Error(
+            'JSZIP_NOT_AVAILABLE'
+          );
+
+        }
+
+
         const zip =
           new JSZip();
 
@@ -1200,6 +1960,16 @@
 
         ready.forEach(
           job => {
+
+            if (
+              job.disposed ||
+              !job.resultBlob
+            ) {
+
+              return;
+
+            }
+
 
             const base =
               U.baseName(
@@ -1245,7 +2015,10 @@
           await zip.generateAsync(
             {
               type:
-                'blob'
+                'blob',
+
+              compression:
+                'STORE'
             }
           );
 
@@ -1261,10 +2034,9 @@
       ) {
 
         console.error(
-          'Background removal ZIP failed:',
+          '[Image Background Removal] ZIP failed:',
           err
         );
-
 
       } finally {
 
@@ -1277,7 +2049,11 @@
             'image.downloadZip'
           );
 
+
+        updateBulkUI();
+
       }
+
     }
   );
 
@@ -1286,44 +2062,75 @@
   // DROPZONE
   // ============================================================
 
-  U.setupDropzone(
-    dropzone,
-    fileInput,
-    addFiles
-  );
+  if (
+    U &&
+    typeof U.setupDropzone ===
+      'function'
+  ) {
+
+    U.setupDropzone(
+      dropzone,
+      fileInput,
+      addFiles
+    );
+
+  }
 
 
   // ============================================================
   // CLEAR CACHE
   // ============================================================
 
-  U.onClearCache(
-    () => {
+  if (
+    U &&
+    typeof U.onClearCache ===
+      'function'
+  ) {
 
-      jobs.forEach(
-        job => {
+    U.onClearCache(
+      () => {
 
-          job.dispose();
+        jobs.forEach(
+          job => {
+
+            if (
+              job
+            ) {
+
+              job.dispose();
+
+            }
+
+          }
+        );
+
+
+        jobs.length =
+          0;
+
+
+        jobsEl.innerHTML =
+          '';
+
+
+        if (
+          activeLibraryUsers ===
+            0
+        ) {
+
+          releaseLibraryReference(
+            true
+          );
 
         }
-      );
 
 
-      jobs.length =
-        0;
+        updateBulkUI();
 
+      }
+    );
 
-      jobsEl.innerHTML =
-        '';
-
-
-      releaseLibraryReference();
-
-
-      updateBulkUI();
-
-    }
-  );
+  }
 
 
   // ============================================================
@@ -1365,11 +2172,17 @@
       /*
        * Job statuses
        */
-
       jobs.forEach(
         job => {
 
-          job.updateLanguageUI();
+          if (
+            job &&
+            !job.disposed
+          ) {
+
+            job.updateLanguageUI();
+
+          }
 
         }
       );
