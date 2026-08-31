@@ -138,16 +138,17 @@
   /*
    * Speed-first model.
    *
-   * 'isnet' (full precision) is the most accurate but also the
-   * heaviest/slowest model shipped by @imgly/background-removal.
-   * For fast, bulk, product-photo style removal (the iloveimg-like
-   * use case this tool targets) 'isnet_fp16' gives near-identical
-   * visual quality at a fraction of the inference time and download
-   * size. Swap to 'isnet' if maximum edge accuracy ever matters more
-   * than speed.
+   * 'isnet_fp16' was tried here for speed but produced broken/empty
+   * masks in testing (background AND subject both wiped out on some
+   * inputs) — the quantized weights are not reliable enough in the
+   * currently pinned library version. Staying on full-precision
+   * 'isnet' until that's verified fixed upstream. It's slower, but
+   * correct results matter more than speed. The image downscaling
+   * below (MAX_INPUT_DIMENSION) is what actually gives most of the
+   * real-world speedup, independent of which model is used.
    */
   const MODEL =
-    'isnet_fp16';
+    'isnet';
 
 
   const OUTPUT_FORMAT =
