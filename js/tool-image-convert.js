@@ -39,6 +39,7 @@
     return String(
       key
     );
+
   }
 
 
@@ -146,6 +147,53 @@
 
 
   // ============================================================
+  // FILE KEY
+  // ============================================================
+
+  function getFileKey(
+    file
+  ) {
+
+    if (
+      !file
+    ) {
+
+      return '';
+
+    }
+
+
+    return [
+      file.name,
+      file.size,
+      file.lastModified,
+      file.type
+    ].join('|');
+
+  }
+
+
+  function hasDuplicateFile(
+    file
+  ) {
+
+    const key =
+      getFileKey(
+        file
+      );
+
+
+    return jobs.some(
+      job =>
+        getFileKey(
+          job.file
+        ) === key
+    );
+
+  }
+
+
+  // ============================================================
   // CONVERT JOB
   // ============================================================
 
@@ -204,9 +252,13 @@
         false;
 
 
+      this.disposed =
+        false;
+
+
       /*
-       * เก็บ key/params ของ error ล่าสุดไว้
-       * เพื่อให้แปลภาษาใหม่ได้ตอน languagechange
+       * Error key / params
+       * เก็บไว้เพื่อแปลใหม่เมื่อ language เปลี่ยน
        */
       this.errorKey =
         null;
@@ -389,7 +441,7 @@
 
 
       // ------------------------------------------------------
-      // Processing state for app.js
+      // Processing state
       // ------------------------------------------------------
 
       this.el.dataset.processing =
@@ -400,12 +452,17 @@
       // Image
       // ------------------------------------------------------
 
-      this.thumbImg.src =
-        url;
-
-
       this.thumbImg.onload =
         () => {
+
+          if (
+            this.disposed
+          ) {
+
+            return;
+
+          }
+
 
           this.naturalW =
             this.thumbImg.naturalWidth;
@@ -433,12 +490,16 @@
             this.naturalH
           ) {
 
+            const rotated =
+              this.getRotatedNaturalSize();
+
+
             if (
               !this.widthInput.value
             ) {
 
               this.widthInput.value =
-                this.naturalW;
+                rotated.w;
 
             }
 
@@ -448,7 +509,7 @@
             ) {
 
               this.heightInput.value =
-                this.naturalH;
+                rotated.h;
 
             }
 
@@ -459,6 +520,15 @@
 
       this.thumbImg.onerror =
         () => {
+
+          if (
+            this.disposed
+          ) {
+
+            return;
+
+          }
+
 
           this.imageReadFailed =
             true;
@@ -476,33 +546,9 @@
           }
 
 
-          if (
-            this.statusEl
-          ) {
-
-            this.errorKey =
-              'image.openFailed';
-
-            this.errorParams =
-              null;
-
-
-            this.statusEl.textContent =
-              t(
-                this.errorKey
-              );
-
-
-            this.statusEl.classList.remove(
-              'is-ready'
-            );
-
-
-            this.statusEl.classList.add(
-              'is-error'
-            );
-
-          }
+          this.setError(
+            'image.openFailed'
+          );
 
 
           if (
@@ -515,6 +561,10 @@
           }
 
         };
+
+
+      this.thumbImg.src =
+        url;
 
 
       // ------------------------------------------------------
@@ -530,316 +580,440 @@
       // Format
       // ------------------------------------------------------
 
-      this.formatGroup.addEventListener(
-        'click',
-        event => {
+      if (
+        this.formatGroup
+      ) {
 
-          const btn =
-            event.target.closest(
-              '.seg-btn'
+        this.formatGroup.addEventListener(
+          'click',
+          event => {
+
+            if (
+              this.isConverting ||
+              this.disposed
+            ) {
+
+              return;
+
+            }
+
+
+            const btn =
+              event.target.closest(
+                '.seg-btn'
+              );
+
+
+            if (
+              !btn
+            ) {
+
+              return;
+
+            }
+
+
+            this.formatGroup
+              .querySelectorAll(
+                '.seg-btn'
+              )
+              .forEach(
+                button =>
+                  button.classList.remove(
+                    'is-active'
+                  )
+              );
+
+
+            btn.classList.add(
+              'is-active'
             );
 
 
-          if (
-            !btn
-          ) {
+            this.format =
+              btn.dataset.format;
 
-            return;
+
+            this.updateQualityVisibility();
+
+            this.markStale();
 
           }
+        );
 
-
-          this.formatGroup
-            .querySelectorAll(
-              '.seg-btn'
-            )
-            .forEach(
-              button =>
-                button.classList.remove(
-                  'is-active'
-                )
-            );
-
-
-          btn.classList.add(
-            'is-active'
-          );
-
-
-          this.format =
-            btn.dataset.format;
-
-
-          this.updateQualityVisibility();
-
-          this.markStale();
-
-        }
-      );
+      }
 
 
       // ------------------------------------------------------
       // Rotate / Flip
       // ------------------------------------------------------
 
-      this.rotateGroup.addEventListener(
-        'click',
-        event => {
+      if (
+        this.rotateGroup
+      ) {
 
-          const btn =
-            event.target.closest(
-              '.seg-btn'
+        this.rotateGroup.addEventListener(
+          'click',
+          event => {
+
+            if (
+              this.isConverting ||
+              this.disposed
+            ) {
+
+              return;
+
+            }
+
+
+            const btn =
+              event.target.closest(
+                '.seg-btn'
+              );
+
+
+            if (
+              !btn
+            ) {
+
+              return;
+
+            }
+
+
+            const action =
+              btn.dataset.action;
+
+
+            if (
+              action ===
+              'rotate-left'
+            ) {
+
+              this.rotation =
+                (
+                  this.rotation +
+                  270
+                ) %
+                360;
+
+
+              this.swapDimensions();
+
+            } else if (
+              action ===
+              'rotate-right'
+            ) {
+
+              this.rotation =
+                (
+                  this.rotation +
+                  90
+                ) %
+                360;
+
+
+              this.swapDimensions();
+
+            } else if (
+              action ===
+              'flip-h'
+            ) {
+
+              this.flipH =
+                !this.flipH;
+
+            } else if (
+              action ===
+              'flip-v'
+            ) {
+
+              this.flipV =
+                !this.flipV;
+
+            }
+
+
+            btn.classList.toggle(
+              'is-active',
+              (
+                action ===
+                  'flip-h' &&
+                this.flipH
+              ) ||
+              (
+                action ===
+                  'flip-v' &&
+                this.flipV
+              )
             );
 
 
-          if (
-            !btn
-          ) {
-
-            return;
+            this.markStale();
 
           }
+        );
 
-
-          const action =
-            btn.dataset.action;
-
-
-          if (
-            action ===
-            'rotate-left'
-          ) {
-
-            this.rotation =
-              (
-                this.rotation +
-                270
-              ) %
-              360;
-
-          } else if (
-            action ===
-            'rotate-right'
-          ) {
-
-            this.rotation =
-              (
-                this.rotation +
-                90
-              ) %
-              360;
-
-          } else if (
-            action ===
-            'flip-h'
-          ) {
-
-            this.flipH =
-              !this.flipH;
-
-          } else if (
-            action ===
-            'flip-v'
-          ) {
-
-            this.flipV =
-              !this.flipV;
-
-          }
-
-
-          btn.classList.toggle(
-            'is-active',
-            (
-              action ===
-                'flip-h' &&
-              this.flipH
-            ) ||
-            (
-              action ===
-                'flip-v' &&
-              this.flipV
-            )
-          );
-
-
-          this.markStale();
-
-        }
-      );
+      }
 
 
       // ------------------------------------------------------
       // Aspect lock
       // ------------------------------------------------------
 
-      this.lockBtn.addEventListener(
-        'click',
-        () => {
+      if (
+        this.lockBtn
+      ) {
 
-          this.aspectLocked =
-            !this.aspectLocked;
+        this.lockBtn.addEventListener(
+          'click',
+          () => {
+
+            if (
+              this.isConverting ||
+              this.disposed
+            ) {
+
+              return;
+
+            }
 
 
-          this.lockBtn.classList.toggle(
-            'is-locked',
-            this.aspectLocked
-          );
+            this.aspectLocked =
+              !this.aspectLocked;
 
-        }
-      );
+
+            this.lockBtn.classList.toggle(
+              'is-locked',
+              this.aspectLocked
+            );
+
+          }
+        );
+
+      }
 
 
       // ------------------------------------------------------
       // Width
       // ------------------------------------------------------
 
-      this.widthInput.addEventListener(
-        'input',
-        () => {
+      if (
+        this.widthInput
+      ) {
 
-          if (
-            this.aspectLocked &&
-            this.widthInput.value &&
-            this.naturalW
-          ) {
-
-            const ratio =
-              this.naturalH /
-              this.naturalW;
-
-
-            const width =
-              parseFloat(
-                this.widthInput.value
-              );
-
+        this.widthInput.addEventListener(
+          'input',
+          () => {
 
             if (
-              Number.isFinite(
-                width
-              )
+              this.isConverting ||
+              this.disposed
             ) {
 
-              this.heightInput.value =
-                Math.max(
-                  1,
-                  Math.round(
-                    width *
-                    ratio
-                  )
-                );
+              return;
 
             }
 
+
+            if (
+              this.aspectLocked &&
+              this.widthInput.value &&
+              this.naturalW &&
+              this.naturalH
+            ) {
+
+              const natural =
+                this.getRotatedNaturalSize();
+
+
+              const ratio =
+                natural.h /
+                natural.w;
+
+
+              const width =
+                parseFloat(
+                  this.widthInput.value
+                );
+
+
+              if (
+                Number.isFinite(
+                  width
+                )
+              ) {
+
+                this.heightInput.value =
+                  Math.max(
+                    1,
+                    Math.round(
+                      width *
+                      ratio
+                    )
+                  );
+
+              }
+
+            }
+
+
+            this.markStale();
+
           }
+        );
 
-
-          this.markStale();
-
-        }
-      );
+      }
 
 
       // ------------------------------------------------------
       // Height
       // ------------------------------------------------------
 
-      this.heightInput.addEventListener(
-        'input',
-        () => {
+      if (
+        this.heightInput
+      ) {
 
-          if (
-            this.aspectLocked &&
-            this.heightInput.value &&
-            this.naturalH
-          ) {
-
-            const ratio =
-              this.naturalW /
-              this.naturalH;
-
-
-            const height =
-              parseFloat(
-                this.heightInput.value
-              );
-
+        this.heightInput.addEventListener(
+          'input',
+          () => {
 
             if (
-              Number.isFinite(
-                height
-              )
+              this.isConverting ||
+              this.disposed
             ) {
 
-              this.widthInput.value =
-                Math.max(
-                  1,
-                  Math.round(
-                    height *
-                    ratio
-                  )
-                );
+              return;
 
             }
 
+
+            if (
+              this.aspectLocked &&
+              this.heightInput.value &&
+              this.naturalW &&
+              this.naturalH
+            ) {
+
+              const natural =
+                this.getRotatedNaturalSize();
+
+
+              const ratio =
+                natural.w /
+                natural.h;
+
+
+              const height =
+                parseFloat(
+                  this.heightInput.value
+                );
+
+
+              if (
+                Number.isFinite(
+                  height
+                )
+              ) {
+
+                this.widthInput.value =
+                  Math.max(
+                    1,
+                    Math.round(
+                      height *
+                      ratio
+                    )
+                  );
+
+              }
+
+            }
+
+
+            this.markStale();
+
           }
+        );
 
-
-          this.markStale();
-
-        }
-      );
+      }
 
 
       // ------------------------------------------------------
       // Quality
       // ------------------------------------------------------
 
-      this.qualityInput.addEventListener(
-        'input',
-        () => {
+      if (
+        this.qualityInput
+      ) {
 
-          const value =
-            parseFloat(
-              this.qualityInput.value
-            );
+        this.qualityInput.addEventListener(
+          'input',
+          () => {
 
+            if (
+              this.isConverting ||
+              this.disposed
+            ) {
 
-          const percent =
-            Number.isFinite(
-              value
-            )
-              ? Math.round(
-                  value *
-                  100
-                )
-              : 0;
+              return;
+
+            }
 
 
-          this.qualityVal.textContent =
-            percent +
-            '%';
+            const value =
+              parseFloat(
+                this.qualityInput.value
+              );
 
 
-          this.markStale();
+            const percent =
+              Number.isFinite(
+                value
+              )
+                ? Math.round(
+                    value *
+                    100
+                  )
+                : 0;
 
-        }
-      );
+
+            if (
+              this.qualityVal
+            ) {
+
+              this.qualityVal.textContent =
+                percent +
+                '%';
+
+            }
+
+
+            this.markStale();
+
+          }
+        );
+
+      }
 
 
       // ------------------------------------------------------
       // Convert
       // ------------------------------------------------------
 
-      this.convertBtn.addEventListener(
-        'click',
-        () => {
+      if (
+        this.convertBtn
+      ) {
 
-          this.convert();
+        this.convertBtn.addEventListener(
+          'click',
+          () => {
 
-        }
-      );
+            this.convert();
+
+          }
+        );
+
+      }
 
 
       // ------------------------------------------------------
@@ -896,13 +1070,82 @@
 
 
     // ========================================================
+    // ROTATED NATURAL SIZE
+    // ========================================================
+
+    getRotatedNaturalSize() {
+
+      const swapped =
+        this.rotation %
+          180 !==
+        0;
+
+
+      return {
+
+        w:
+          swapped
+            ? this.naturalH
+            : this.naturalW,
+
+        h:
+          swapped
+            ? this.naturalW
+            : this.naturalH
+
+      };
+
+    }
+
+
+    // ========================================================
+    // SWAP DIMENSIONS
+    // ========================================================
+
+    swapDimensions() {
+
+      if (
+        !this.widthInput ||
+        !this.heightInput
+      ) {
+
+        return;
+
+      }
+
+
+      const width =
+        this.widthInput.value;
+
+
+      const height =
+        this.heightInput.value;
+
+
+      /*
+       * เวลา rotate 90 / 270
+       * ให้ output width / height สลับตาม
+       * เพื่อไม่ให้ภาพโดนยืดหรือบีบ
+       */
+      this.widthInput.value =
+        height;
+
+
+      this.heightInput.value =
+        width;
+
+    }
+
+
+    // ========================================================
     // LANGUAGE UI
     // ========================================================
 
     updateLanguageUI() {
 
       if (
-        !this.statusEl
+        !this.statusEl ||
+        this.disposed
       ) {
 
         return;
@@ -912,9 +1155,6 @@
 
       /*
        * กำลังแปลง
-       *
-       * ไม่แก้ข้อความตรงนี้ เพราะ convert()
-       * จะดูแลข้อความ dynamic เอง
        */
       if (
         this.isConverting
@@ -965,8 +1205,7 @@
 
 
       /*
-       * ถ้า error อยู่
-       * แปล error เดิมใหม่ด้วย key/params ที่เก็บไว้
+       * error
        */
       if (
         this.statusEl.classList.contains(
@@ -1004,6 +1243,49 @@
 
 
     // ========================================================
+    // ERROR
+    // ========================================================
+
+    setError(
+      key,
+      params = null
+    ) {
+
+      this.errorKey =
+        key;
+
+
+      this.errorParams =
+        params;
+
+
+      if (
+        this.statusEl
+      ) {
+
+        this.statusEl.textContent =
+          t(
+            key,
+            params ||
+              undefined
+          );
+
+
+        this.statusEl.classList.remove(
+          'is-ready'
+        );
+
+
+        this.statusEl.classList.add(
+          'is-error'
+        );
+
+      }
+
+    }
+
+
+    // ========================================================
     // QUALITY VISIBILITY
     // ========================================================
 
@@ -1028,13 +1310,129 @@
 
 
     // ========================================================
+    // SET CONTROL STATE
+    // ========================================================
+
+    setControlsDisabled(
+      disabled
+    ) {
+
+      if (
+        this.disposed
+      ) {
+
+        return;
+
+      }
+
+
+      if (
+        this.widthInput
+      ) {
+
+        this.widthInput.disabled =
+          disabled;
+
+      }
+
+
+      if (
+        this.heightInput
+      ) {
+
+        this.heightInput.disabled =
+          disabled;
+
+      }
+
+
+      if (
+        this.lockBtn
+      ) {
+
+        this.lockBtn.disabled =
+          disabled;
+
+      }
+
+
+      if (
+        this.qualityInput
+      ) {
+
+        this.qualityInput.disabled =
+          disabled;
+
+      }
+
+
+      if (
+        this.formatGroup
+      ) {
+
+        this.formatGroup
+          .querySelectorAll(
+            '.seg-btn'
+          )
+          .forEach(
+            btn => {
+
+              btn.disabled =
+                disabled;
+
+            }
+          );
+
+      }
+
+
+      if (
+        this.rotateGroup
+      ) {
+
+        this.rotateGroup
+          .querySelectorAll(
+            '.seg-btn'
+          )
+          .forEach(
+            btn => {
+
+              btn.disabled =
+                disabled;
+
+            }
+          );
+
+      }
+
+
+      const removeBtn =
+        this.el.querySelector(
+          '.js-remove-btn'
+        );
+
+
+      if (
+        removeBtn
+      ) {
+
+        removeBtn.disabled =
+          disabled;
+
+      }
+
+    }
+
+
+    // ========================================================
     // MARK STALE
     // ========================================================
 
     markStale() {
 
       if (
-        this.isConverting
+        this.isConverting ||
+        this.disposed
       ) {
 
         return;
@@ -1089,11 +1487,23 @@
       this.errorKey =
         null;
 
+
       this.errorParams =
         null;
 
-      this.imageReadFailed =
-        false;
+
+      /*
+       * ถ้าแก้ option แล้ว
+       * reset read-failed state เฉพาะกรณีรูปเดิมยังอ่านได้
+       */
+      if (
+        !this.imageReadFailed
+      ) {
+
+        this.imageReadFailed =
+          false;
+
+      }
 
 
       if (
@@ -1117,13 +1527,205 @@
 
 
     // ========================================================
+    // WAIT FOR IMAGE
+    // ========================================================
+
+    async waitForImage() {
+
+      if (
+        this.disposed
+      ) {
+
+        return false;
+
+      }
+
+
+      if (
+        this.naturalW &&
+        this.naturalH
+      ) {
+
+        return true;
+
+      }
+
+
+      if (
+        this.imageReadFailed
+      ) {
+
+        return false;
+
+      }
+
+
+      /*
+       * Browser อาจโหลด image สำเร็จไปแล้ว
+       * แต่ onload ยังไม่ถูกใช้งานตาม flow ปกติ
+       */
+      if (
+        this.thumbImg.complete
+      ) {
+
+        if (
+          this.thumbImg.naturalWidth &&
+          this.thumbImg.naturalHeight
+        ) {
+
+          this.naturalW =
+            this.thumbImg.naturalWidth;
+
+
+          this.naturalH =
+            this.thumbImg.naturalHeight;
+
+
+          return true;
+
+        }
+
+
+        this.imageReadFailed =
+          true;
+
+
+        return false;
+
+      }
+
+
+      return new Promise(
+        resolve => {
+
+          let settled =
+            false;
+
+
+          const cleanup =
+            () => {
+
+              this.thumbImg.removeEventListener(
+                'load',
+                onLoad
+              );
+
+
+              this.thumbImg.removeEventListener(
+                'error',
+                onError
+              );
+
+            };
+
+
+          const finish =
+            value => {
+
+              if (
+                settled
+              ) {
+
+                return;
+
+              }
+
+
+              settled =
+                true;
+
+
+              cleanup();
+
+              resolve(
+                value
+              );
+
+            };
+
+
+          const onLoad =
+            () => {
+
+              if (
+                this.disposed
+              ) {
+
+                finish(
+                  false
+                );
+
+                return;
+
+              }
+
+
+              this.naturalW =
+                this.thumbImg.naturalWidth;
+
+
+              this.naturalH =
+                this.thumbImg.naturalHeight;
+
+
+              finish(
+                !!(
+                  this.naturalW &&
+                  this.naturalH
+                )
+              );
+
+            };
+
+
+          const onError =
+            () => {
+
+              this.imageReadFailed =
+                true;
+
+
+              finish(
+                false
+              );
+
+            };
+
+
+          this.thumbImg.addEventListener(
+            'load',
+            onLoad,
+            {
+              once:
+                true
+            }
+          );
+
+
+          this.thumbImg.addEventListener(
+            'error',
+            onError,
+            {
+              once:
+                true
+            }
+          );
+
+        }
+      );
+
+    }
+
+
+    // ========================================================
     // CONVERT
     // ========================================================
 
     async convert() {
 
       if (
-        this.isConverting
+        this.isConverting ||
+        this.disposed
       ) {
 
         return;
@@ -1135,67 +1737,38 @@
       // Wait for image metadata
       // ------------------------------------------------------
 
+      const loaded =
+        await this.waitForImage();
+
+
       if (
-        !this.naturalW ||
-        !this.naturalH
+        this.disposed
       ) {
 
-        await new Promise(
-          resolve => {
-
-            if (
-              this.naturalW &&
-              this.naturalH
-            ) {
-
-              resolve();
-
-              return;
-
-            }
-
-
-            this.thumbImg.addEventListener(
-              'load',
-              resolve,
-              {
-                once:
-                  true
-              }
-            );
-
-          }
-        );
+        return;
 
       }
 
 
       if (
+        !loaded ||
         !this.naturalW ||
         !this.naturalH
       ) {
 
-        this.errorKey =
-          'image.readInfoFailed';
-
-        this.errorParams =
-          null;
-
-
-        this.statusEl.textContent =
-          t(
-            this.errorKey
-          );
-
-
-        this.statusEl.classList.remove(
-          'is-ready'
+        this.setError(
+          'image.readInfoFailed'
         );
 
 
-        this.statusEl.classList.add(
-          'is-error'
-        );
+        if (
+          this.convertBtn
+        ) {
+
+          this.convertBtn.disabled =
+            true;
+
+        }
 
 
         return;
@@ -1215,20 +1788,37 @@
         'true';
 
 
-      this.convertBtn.disabled =
-        true;
-
-
-      this.statusEl.classList.remove(
-        'is-ready',
-        'is-error'
+      this.setControlsDisabled(
+        true
       );
 
 
-      this.statusEl.textContent =
-        t(
-          'image.converting'
+      if (
+        this.convertBtn
+      ) {
+
+        this.convertBtn.disabled =
+          true;
+
+      }
+
+
+      if (
+        this.statusEl
+      ) {
+
+        this.statusEl.classList.remove(
+          'is-ready',
+          'is-error'
         );
+
+
+        this.statusEl.textContent =
+          t(
+            'image.converting'
+          );
+
+      }
 
 
       try {
@@ -1237,22 +1827,8 @@
         // Rotation
         // --------------------------------------------------
 
-        const rotSwaps =
-          this.rotation %
-            180 !==
-          0;
-
-
-        const rotW =
-          rotSwaps
-            ? this.naturalH
-            : this.naturalW;
-
-
-        const rotH =
-          rotSwaps
-            ? this.naturalW
-            : this.naturalH;
+        const rotated =
+          this.getRotatedNaturalSize();
 
 
         // --------------------------------------------------
@@ -1266,7 +1842,7 @@
               this.widthInput.value,
               10
             ) ||
-            rotW
+            rotated.w
           );
 
 
@@ -1277,7 +1853,7 @@
               this.heightInput.value,
               10
             ) ||
-            rotH
+            rotated.h
           );
 
 
@@ -1310,12 +1886,21 @@
         ) {
 
           throw new Error(
-            t(
-              'errors.canvasContext'
-            )
+            'CANVAS_CONTEXT_FAILED'
           );
 
         }
+
+
+        /*
+         * ลดปัญหา image smoothing แบบหยาบ
+         */
+        ctx.imageSmoothingEnabled =
+          true;
+
+
+        ctx.imageSmoothingQuality =
+          'high';
 
 
         // --------------------------------------------------
@@ -1345,14 +1930,22 @@
         // Draw dimensions
         // --------------------------------------------------
 
+        /*
+         * เมื่อหมุน 90/270
+         * source width / height ต้องสลับตำแหน่ง
+         */
         const dw =
-          rotSwaps
+          this.rotation %
+            180 !==
+          0
             ? outH
             : outW;
 
 
         const dh =
-          rotSwaps
+          this.rotation %
+            180 !==
+          0
             ? outW
             : outH;
 
@@ -1436,9 +2029,7 @@
 
                     reject(
                       new Error(
-                        t(
-                          'errors.createFailed'
-                        )
+                        'CREATE_FAILED'
                       )
                     );
 
@@ -1453,14 +2044,25 @@
           );
 
 
+        /*
+         * ผู้ใช้ลบ job ระหว่าง toBlob()
+         * ไม่ต้องสร้าง result ต่อ
+         */
+        if (
+          this.disposed
+        ) {
+
+          return;
+
+        }
+
+
         if (
           !blob
         ) {
 
           throw new Error(
-            t(
-              'errors.createFailed'
-            )
+            'CREATE_FAILED'
           );
 
         }
@@ -1512,44 +2114,55 @@
           )}.${ext}`;
 
 
-        this.downloadBtn.href =
-          this.resultUrl;
+        if (
+          this.downloadBtn
+        ) {
+
+          this.downloadBtn.href =
+            this.resultUrl;
 
 
-        this.downloadBtn.download =
-          filename;
+          this.downloadBtn.download =
+            filename;
 
 
-        this.downloadBtn.classList.remove(
-          'hidden'
-        );
+          this.downloadBtn.classList.remove(
+            'hidden'
+          );
+
+        }
 
 
         // --------------------------------------------------
         // Success
         // --------------------------------------------------
 
-        this.statusEl.textContent =
-          t(
-            'image.readyDownload',
-            {
-              size:
-                U.formatBytes(
-                  blob.size
-                )
-            }
+        if (
+          this.statusEl
+        ) {
+
+          this.statusEl.textContent =
+            t(
+              'image.readyDownload',
+              {
+                size:
+                  U.formatBytes(
+                    blob.size
+                  )
+              }
+            );
+
+
+          this.statusEl.classList.remove(
+            'is-error'
           );
 
 
-        this.statusEl.classList.remove(
-          'is-error'
-        );
+          this.statusEl.classList.add(
+            'is-ready'
+          );
 
-
-        this.statusEl.classList.add(
-          'is-ready'
-        );
-
+        }
 
       } catch (
         err
@@ -1561,39 +2174,51 @@
         );
 
 
-        const message =
+        if (
+          this.disposed
+        ) {
+
+          return;
+
+        }
+
+
+        /*
+         * แปลง internal error เป็น i18n key
+         * ไม่เก็บข้อความที่ถูกแปลไว้ใน errorParams
+         */
+        const code =
           err &&
           err.message
             ? err.message
-            : t(
-                'errors.processingFailed'
-              );
+            : 'PROCESSING_FAILED';
 
 
-        this.errorKey =
-          'image.conversionFailed';
+        if (
+          code ===
+          'CANVAS_CONTEXT_FAILED'
+        ) {
 
-        this.errorParams =
-          {
-            message
-          };
-
-
-        this.statusEl.textContent =
-          t(
-            this.errorKey,
-            this.errorParams
+          this.setError(
+            'errors.canvasContext'
           );
 
+        } else if (
+          code ===
+          'CREATE_FAILED'
+        ) {
 
-        this.statusEl.classList.remove(
-          'is-ready'
-        );
+          this.setError(
+            'errors.createFailed'
+          );
 
+        } else {
 
-        this.statusEl.classList.add(
-          'is-error'
-        );
+          this.setError(
+            'image.conversionFailed'
+          );
+
+        }
 
       } finally {
 
@@ -1605,8 +2230,25 @@
           'false';
 
 
-        this.convertBtn.disabled =
-          false;
+        if (
+          !this.disposed
+        ) {
+
+          this.setControlsDisabled(
+            false
+          );
+
+
+          if (
+            this.convertBtn
+          ) {
+
+            this.convertBtn.disabled =
+              false;
+
+          }
+
+        }
 
       }
 
@@ -1618,6 +2260,24 @@
     // ========================================================
 
     dispose() {
+
+      if (
+        this.disposed
+      ) {
+
+        return;
+
+      }
+
+
+      /*
+       * สำคัญ:
+       * ป้องกัน async convert() ที่ยังทำงานอยู่
+       * ไม่ให้เอา result กลับมาใส่ job
+       */
+      this.disposed =
+        true;
+
 
       this.isConverting =
         false;
@@ -1632,6 +2292,10 @@
 
       }
 
+
+      // ------------------------------------------------------
+      // Source URL
+      // ------------------------------------------------------
 
       if (
         this.objectUrl
@@ -1651,6 +2315,10 @@
 
       }
 
+
+      // ------------------------------------------------------
+      // Result URL
+      // ------------------------------------------------------
 
       if (
         this.resultUrl
@@ -1720,6 +2388,10 @@
     fileList
   ) {
 
+    let added =
+      0;
+
+
     Array.from(
       fileList || []
     )
@@ -1734,6 +2406,20 @@
       )
       .forEach(
         file => {
+
+          /*
+           * ป้องกันไฟล์เดิมถูกเพิ่มซ้ำ
+           */
+          if (
+            hasDuplicateFile(
+              file
+            )
+          ) {
+
+            return;
+
+          }
+
 
           const job =
             new ConvertJob(
@@ -1750,11 +2436,17 @@
             job.el
           );
 
+
+          added++;
+
         }
       );
 
 
     updateBulkUI();
+
+
+    return added;
 
   }
 
@@ -1783,25 +2475,41 @@
       jobs.forEach(
         job => {
 
+          if (
+            job.disposed ||
+            job.isConverting
+          ) {
+
+            return;
+
+          }
+
+
           job.format =
             format;
 
 
-          job.formatGroup
-            .querySelectorAll(
-              '.seg-btn'
-            )
-            .forEach(
-              button => {
+          if (
+            job.formatGroup
+          ) {
 
-                button.classList.toggle(
-                  'is-active',
-                  button.dataset.format ===
-                    format
-                );
+            job.formatGroup
+              .querySelectorAll(
+                '.seg-btn'
+              )
+              .forEach(
+                button => {
 
-              }
-            );
+                  button.classList.toggle(
+                    'is-active',
+                    button.dataset.format ===
+                      format
+                  );
+
+                }
+              );
+
+          }
 
 
           job.updateQualityVisibility();
@@ -1858,7 +2566,8 @@
     async () => {
 
       if (
-        !jobs.length
+        !jobs.length ||
+        convertAllBtn.disabled
       ) {
 
         return;
@@ -1882,6 +2591,15 @@
           3;
 
 
+        /*
+         * snapshot เอาไว้
+         * เพื่อไม่ให้การ remove job ระหว่าง convert
+         * ทำให้ index ของ queue เพี้ยน
+         */
+        const queue =
+          jobs.slice();
+
+
         let index =
           0;
 
@@ -1889,18 +2607,32 @@
         async function worker() {
 
           while (
-            index <
-            jobs.length
+            true
           ) {
 
+            const currentIndex =
+              index++;
+
+
+            if (
+              currentIndex >=
+              queue.length
+            ) {
+
+              return;
+
+            }
+
+
             const job =
-              jobs[
-                index++
+              queue[
+                currentIndex
               ];
 
 
             if (
-              !job
+              !job ||
+              job.disposed
             ) {
 
               continue;
@@ -1921,7 +2653,7 @@
               length:
                 Math.min(
                   CONCURRENCY,
-                  jobs.length
+                  queue.length
                 )
             },
             () =>
@@ -1942,13 +2674,7 @@
           );
 
 
-        downloadZipBtn.classList.toggle(
-          'hidden',
-          !jobs.some(
-            job =>
-              !!job.resultBlob
-          )
-        );
+        updateBulkUI();
 
       }
 
@@ -1964,9 +2690,19 @@
     'click',
     async () => {
 
+      if (
+        downloadZipBtn.disabled
+      ) {
+
+        return;
+
+      }
+
+
       const ready =
         jobs.filter(
           job =>
+            !job.disposed &&
             !!job.resultBlob
         );
 
@@ -1992,6 +2728,18 @@
 
       try {
 
+        if (
+          typeof JSZip !==
+          'function'
+        ) {
+
+          throw new Error(
+            'JSZIP_NOT_AVAILABLE'
+          );
+
+        }
+
+
         const zip =
           new JSZip();
 
@@ -2002,6 +2750,17 @@
 
         ready.forEach(
           job => {
+
+            if (
+              !job ||
+              job.disposed ||
+              !job.resultBlob
+            ) {
+
+              return;
+
+            }
+
 
             const ext =
               EXT_BY_FORMAT[
@@ -2085,6 +2844,9 @@
             'image.downloadZip'
           );
 
+
+        updateBulkUI();
+
       }
 
     }
@@ -2095,41 +2857,55 @@
   // DROPZONE
   // ============================================================
 
-  U.setupDropzone(
-    dropzone,
-    fileInput,
-    addFiles
-  );
+  if (
+    typeof U.setupDropzone ===
+    'function'
+  ) {
+
+    U.setupDropzone(
+      dropzone,
+      fileInput,
+      addFiles
+    );
+
+  }
 
 
   // ============================================================
   // CLEAR CACHE
   // ============================================================
 
-  U.onClearCache(
-    () => {
+  if (
+    typeof U.onClearCache ===
+    'function'
+  ) {
 
-      jobs.forEach(
-        job => {
+    U.onClearCache(
+      () => {
 
-          job.dispose();
+        jobs.forEach(
+          job => {
 
-        }
-      );
+            job.dispose();
 
-
-      jobs.length =
-        0;
-
-
-      jobsEl.innerHTML =
-        '';
+          }
+        );
 
 
-      updateBulkUI();
+        jobs.length =
+          0;
 
-    }
-  );
+
+        jobsEl.innerHTML =
+          '';
+
+
+        updateBulkUI();
+
+      }
+    );
+
+  }
 
 
   // ============================================================
@@ -2171,11 +2947,16 @@
       /*
        * Existing jobs
        */
-
       jobs.forEach(
         job => {
 
-          job.updateLanguageUI();
+          if (
+            !job.disposed
+          ) {
+
+            job.updateLanguageUI();
+
+          }
 
         }
       );
