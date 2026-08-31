@@ -136,10 +136,18 @@
 
 
   /*
-   * Quality-first model.
+   * Speed-first model.
+   *
+   * 'isnet' (full precision) is the most accurate but also the
+   * heaviest/slowest model shipped by @imgly/background-removal.
+   * For fast, bulk, product-photo style removal (the iloveimg-like
+   * use case this tool targets) 'isnet_fp16' gives near-identical
+   * visual quality at a fraction of the inference time and download
+   * size. Swap to 'isnet' if maximum edge accuracy ever matters more
+   * than speed.
    */
   const MODEL =
-    'isnet';
+    'isnet_fp16';
 
 
   const OUTPUT_FORMAT =
@@ -163,24 +171,42 @@
   /*
    * WebGPU calculations can be proxied to Worker.
    *
-   * IMG.LY's current implementation uses
-   * worker proxy for WebGPU, while CPU/WASM
-   * does not use that path.
+   * Both the WebGPU and CPU/WASM code paths are routed through a
+   * worker so a slow removal never blocks the main thread and the
+   * page stays responsive (progress bar, cancel clicks, etc.) even
+   * on the CPU fallback.
    */
   const PROXY_TO_WORKER =
     true;
 
 
   /*
-   * Background removal is memory heavy.
-   * One inference at a time is the safest default.
+   * Background removal is memory heavy. Jobs are processed strictly
+   * one at a time in "Process all" (see the sequential for-loop
+   * below) rather than in parallel, since ISNet-family models can
+   * spike RAM/VRAM usage significantly per inference.
    */
-  const CONCURRENCY =
-    1;
 
 
   const ALLOWED_IMAGE_PREFIX =
     'image/';
+
+
+  /*
+   * Large source images (typical of phone/camera photos, 4000px+ on
+   * the long edge) slow inference down a lot and can exhaust GPU/WASM
+   * memory without adding visible quality to the cutout. Images with
+   * a longer side above this value are downscaled to it before being
+   * handed to the model. Output resolution therefore matches this
+   * cap for oversized inputs; images already at or under it are left
+   * untouched (no quality loss for typical product photos).
+   */
+  const MAX_INPUT_DIMENSION =
+    1800;
+
+
+  const RESIZE_OUTPUT_QUALITY =
+    0.92;
 
 
   // ============================================================
@@ -322,6 +348,240 @@
       );
 
     } catch (_) {}
+
+  }
+
+
+  // ============================================================
+  // IMAGE DOWNSCALE
+  // ============================================================
+
+  /*
+   * Loads `file` into an <img>, and if its longer side exceeds
+   * MAX_INPUT_DIMENSION, draws it to a canvas at a scaled-down size
+   * and returns a new File (same basename, JPEG/PNG per original
+   * type where practical) for the model to run on instead. If the
+   * image is already small enough, the original File is returned
+   * unchanged. Never throws — on any failure it falls back to the
+   * original file so processing can still proceed at full size.
+   */
+  async function downscaleIfNeeded(
+    file
+  ) {
+
+    if (
+      !file ||
+      typeof file.type !==
+        'string' ||
+      !file.type.startsWith(
+        ALLOWED_IMAGE_PREFIX
+      )
+    ) {
+
+      return file;
+
+    }
+
+
+    let objectUrl =
+      null;
+
+
+    try {
+
+      objectUrl =
+        URL.createObjectURL(
+          file
+        );
+
+
+      const img =
+        await new Promise(
+          (
+            resolve,
+            reject
+          ) => {
+
+            const el =
+              new Image();
+
+
+            el.onload =
+              () =>
+                resolve(
+                  el
+                );
+
+
+            el.onerror =
+              reject;
+
+
+            el.src =
+              objectUrl;
+
+          }
+        );
+
+
+      const width =
+        img.naturalWidth;
+
+
+      const height =
+        img.naturalHeight;
+
+
+      const longSide =
+        Math.max(
+          width,
+          height
+        );
+
+
+      if (
+        !width ||
+        !height ||
+        longSide <=
+          MAX_INPUT_DIMENSION
+      ) {
+
+        return file;
+
+      }
+
+
+      const scale =
+        MAX_INPUT_DIMENSION /
+        longSide;
+
+
+      const targetWidth =
+        Math.max(
+          1,
+          Math.round(
+            width *
+              scale
+          )
+        );
+
+
+      const targetHeight =
+        Math.max(
+          1,
+          Math.round(
+            height *
+              scale
+          )
+        );
+
+
+      const canvas =
+        document.createElement(
+          'canvas'
+        );
+
+
+      canvas.width =
+        targetWidth;
+
+
+      canvas.height =
+        targetHeight;
+
+
+      const ctx =
+        canvas.getContext(
+          '2d'
+        );
+
+
+      if (
+        !ctx
+      ) {
+
+        return file;
+
+      }
+
+
+      ctx.imageSmoothingEnabled =
+        true;
+
+
+      ctx.imageSmoothingQuality =
+        'high';
+
+
+      ctx.drawImage(
+        img,
+        0,
+        0,
+        targetWidth,
+        targetHeight
+      );
+
+
+      const outType =
+        file.type ===
+        'image/png'
+          ? 'image/png'
+          : 'image/jpeg';
+
+
+      const blob =
+        await new Promise(
+          resolve =>
+            canvas.toBlob(
+              resolve,
+              outType,
+              RESIZE_OUTPUT_QUALITY
+            )
+        );
+
+
+      if (
+        !blob
+      ) {
+
+        return file;
+
+      }
+
+
+      return new File(
+        [
+          blob
+        ],
+        file.name,
+        {
+          type:
+            outType,
+
+          lastModified:
+            file.lastModified
+        }
+      );
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        '[Image Background Removal] Downscale skipped, using original file:',
+        error
+      );
+
+
+      return file;
+
+    } finally {
+
+      revokeUrl(
+        objectUrl
+      );
+
+    }
 
   }
 
@@ -582,10 +842,13 @@
 
       },
 
+      /*
+       * Route both GPU and CPU/WASM inference through a worker so
+       * the main thread (and therefore the UI) never blocks on a
+       * slow removal.
+       */
       proxyToWorker:
-        useGpu
-          ? PROXY_TO_WORKER
-          : false
+        PROXY_TO_WORKER
 
     };
 
@@ -1392,7 +1655,8 @@
 
     async processWithMode(
       removeBackground,
-      mode
+      mode,
+      inputFile
     ) {
 
       if (
@@ -1505,7 +1769,7 @@
 
 
       return removeBackground(
-        this.file,
+        inputFile,
         config
       );
 
@@ -1628,6 +1892,30 @@
 
 
         // ----------------------------------------------------
+        // Downscale oversized source images before inference.
+        // This is the single biggest lever on wall-clock speed
+        // for typical phone/camera photos.
+        // ----------------------------------------------------
+
+        const inputFile =
+          await downscaleIfNeeded(
+            this.file
+          );
+
+
+        if (
+          this.disposed
+        ) {
+
+          return;
+
+        }
+
+
+        await yieldToUI();
+
+
+        // ----------------------------------------------------
         // Try WebGPU first
         // ----------------------------------------------------
 
@@ -1648,7 +1936,8 @@
             blob =
               await this.processWithMode(
                 removeBackground,
-                'gpu'
+                'gpu',
+                inputFile
               );
 
           } catch (
@@ -1679,6 +1968,16 @@
 
             blob =
               null;
+
+
+            /*
+             * A failed GPU attempt may have left the progress bar
+             * partway through. Reset it so the CPU fallback starts
+             * from a clean, honest 0% instead of a stale value.
+             */
+            this.setProgress(
+              0
+            );
 
           }
 
@@ -1712,7 +2011,8 @@
           blob =
             await this.processWithMode(
               removeBackground,
-              'cpu'
+              'cpu',
+              inputFile
             );
 
         }
@@ -1900,6 +2200,7 @@
 
 
         this.clearResult();
+
 
       } finally {
 
@@ -2236,10 +2537,33 @@
         true;
 
 
+      const total =
+        queue.length;
+
+
+      let done =
+        0;
+
+
+      const renderBatchLabel =
+        () =>
+          t(
+            'image.removeBackgroundAllProcessing',
+            {
+              current:
+                Math.min(
+                  done +
+                    1,
+                  total
+                ),
+
+              total
+            }
+          );
+
+
       processAllBtn.textContent =
-        t(
-          'image.removeBackgroundAllProcessing'
-        );
+        renderBatchLabel();
 
 
       try {
@@ -2261,12 +2585,22 @@
             job.resultBlob
           ) {
 
+            done++;
+
+
             continue;
 
           }
 
 
+          processAllBtn.textContent =
+            renderBatchLabel();
+
+
           await job.process();
+
+
+          done++;
 
 
           await yieldToUI();
