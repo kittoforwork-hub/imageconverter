@@ -26,9 +26,12 @@ window.PdfWorkerClient = (() => {
         key,
         values
       );
+
     }
 
-    return String(key);
+    return String(
+      key
+    );
   }
 
 
@@ -40,8 +43,32 @@ window.PdfWorkerClient = (() => {
     typeof Worker !== 'undefined';
 
   let worker = null;
+
   let workerPromise = null;
+
   let seq = 0;
+
+  /*
+   * Worker generation
+   *
+   * ทุกครั้งที่ dispose / reset Worker
+   * generation จะเพิ่มขึ้น
+   *
+   * Worker ที่ถูกสร้างจาก generation เก่า
+   * จะไม่มีสิทธิ์กลายเป็น Worker ตัวใหม่
+   *
+   * ใช้ป้องกัน race condition เช่น:
+   *
+   * createWorker()
+   *      ↓
+   * dispose()
+   *      ↓
+   * createWorker() เสร็จ
+   *
+   * Worker เก่าจะถูก terminate ทิ้งทันที
+   */
+  let workerGeneration = 0;
+
 
   const pending = new Map();
 
@@ -124,7 +151,9 @@ window.PdfWorkerClient = (() => {
           {
             message:
               error?.message ||
-              String(error)
+              String(
+                error
+              )
           }
         )
       );
@@ -195,7 +224,8 @@ window.PdfWorkerClient = (() => {
       );
 
 
-    let w = null;
+    let w =
+      null;
 
 
     try {
@@ -215,7 +245,9 @@ window.PdfWorkerClient = (() => {
           blobUrl
         );
 
-      } catch (_) {}
+      } catch (
+        _
+      ) {}
 
 
       throw error;
@@ -246,13 +278,14 @@ window.PdfWorkerClient = (() => {
 
     /*
      * ถ้า target เป็น Worker ตัวปัจจุบัน
-     * ให้ล้าง reference
+     * ให้ล้าง reference ก่อน
      */
     if (
       targetWorker === worker
     ) {
 
-      worker = null;
+      worker =
+        null;
 
     }
 
@@ -270,9 +303,15 @@ window.PdfWorkerClient = (() => {
 
       targetWorker.terminate();
 
-    } catch (_) {}
+    } catch (
+      _
+    ) {}
 
 
+    /*
+     * Blob URL เป็น resource ที่ต้อง revoke
+     * หลังจาก Worker ตัวนั้นหมดอายุ
+     */
     try {
 
       if (
@@ -289,7 +328,9 @@ window.PdfWorkerClient = (() => {
 
       }
 
-    } catch (_) {}
+    } catch (
+      _
+    ) {}
 
   }
 
@@ -333,9 +374,110 @@ window.PdfWorkerClient = (() => {
             err
           );
 
-        } catch (_) {}
+        } catch (
+          _
+        ) {}
 
       }
+    );
+
+  }
+
+
+  // ============================================================
+  // FORMAT WORKER ERROR
+  // ============================================================
+
+  function createClientErrorFromWorkerData(
+    data
+  ) {
+
+    /*
+     * P0 FIX:
+     *
+     * pdf-worker.js ส่ง:
+     *
+     *   errorKey
+     *   errorData
+     *   error
+     *
+     * Client เดิมอ่านเฉพาะ `error`
+     * ทำให้ localized error key หาย
+     *
+     * ตอนนี้จะใช้ errorKey/errorData ก่อน
+     * และ fallback เป็น error
+     */
+
+    const errorKey =
+      data &&
+      typeof data.errorKey ===
+        'string' &&
+      data.errorKey
+        ? data.errorKey
+        : null;
+
+
+    const errorData =
+      data &&
+      data.errorData &&
+      typeof data.errorData ===
+        'object'
+        ? data.errorData
+        : {};
+
+
+    if (
+      errorKey
+    ) {
+
+      const translated =
+        t(
+          errorKey,
+          errorData
+        );
+
+
+      /*
+       * เก็บ metadata ไว้กับ Error
+       * เผื่อ caller ต้องการตรวจสอบภายหลัง
+       */
+      const error =
+        new Error(
+          translated
+        );
+
+
+      error.errorKey =
+        errorKey;
+
+
+      error.errorData =
+        errorData;
+
+
+      return error;
+
+    }
+
+
+    if (
+      data &&
+      typeof data.error ===
+        'string' &&
+      data.error
+    ) {
+
+      return new Error(
+        data.error
+      );
+
+    }
+
+
+    return new Error(
+      t(
+        'pdfWorker.requestFailed'
+      )
     );
 
   }
@@ -373,14 +515,69 @@ window.PdfWorkerClient = (() => {
     }
 
 
-    // ----------------------------------------------------------
-    // สร้าง Worker
-    // ----------------------------------------------------------
+    /*
+     * จับ generation ปัจจุบันไว้
+     *
+     * ถ้ามี dispose() ระหว่าง createWorker()
+     * generation จะเปลี่ยน
+     * และ Worker ที่กำลังสร้างอยู่จะถูกถือว่า stale
+     */
+    const generation =
+      workerGeneration;
 
-    workerPromise =
+
+    const creationPromise =
       createWorker()
         .then(
           w => {
+
+            /*
+             * --------------------------------------------------
+             * P0 FIX: DISPOSE RACE
+             * --------------------------------------------------
+             *
+             * ถ้าระหว่าง createWorker() มี dispose()
+             * generation จะไม่ตรงกัน
+             *
+             * Worker ตัวนี้ห้ามถูกติดตั้งกลับเข้าระบบ
+             */
+            if (
+              generation !==
+              workerGeneration
+            ) {
+
+              terminateWorker(
+                w
+              );
+
+
+              throw new Error(
+                t(
+                  'pdfWorker.stopped'
+                )
+              );
+
+            }
+
+
+            /*
+             * ถ้ามี Worker ตัวอื่นติดตั้งไปแล้ว
+             * Worker ตัวนี้ถือว่า stale เช่นกัน
+             */
+            if (
+              worker &&
+              worker !== w
+            ) {
+
+              terminateWorker(
+                w
+              );
+
+
+              return worker;
+
+            }
+
 
             worker =
               w;
@@ -407,16 +604,18 @@ window.PdfWorkerClient = (() => {
 
 
                 const data =
-                  event.data ||
-                  {};
+                  event &&
+                  event.data
+                    ? event.data
+                    : {};
 
 
                 const {
                   reqId,
                   ok,
-                  result,
-                  error
-                } = data;
+                  result
+                } =
+                  data;
 
 
                 const entry =
@@ -425,8 +624,26 @@ window.PdfWorkerClient = (() => {
                   );
 
 
+                /*
+                 * request อาจถูก reject ไปแล้วโดย
+                 * dispose() หรือ worker error
+                 */
                 if (
                   !entry
+                ) {
+
+                  return;
+
+                }
+
+
+                /*
+                 * ป้องกัน request คนละ Worker
+                 * มา resolve entry นี้
+                 */
+                if (
+                  entry.worker !==
+                  w
                 ) {
 
                   return;
@@ -450,11 +667,8 @@ window.PdfWorkerClient = (() => {
                 } else {
 
                   entry.reject(
-                    new Error(
-                      error ||
-                      t(
-                        'pdfWorker.requestFailed'
-                      )
+                    createClientErrorFromWorkerData(
+                      data
                     )
                   );
 
@@ -504,6 +718,10 @@ window.PdfWorkerClient = (() => {
                 );
 
 
+                /*
+                 * terminateWorker จะ clear worker
+                 * และ revoke Blob URL
+                 */
                 terminateWorker(
                   w
                 );
@@ -551,8 +769,9 @@ window.PdfWorkerClient = (() => {
           error => {
 
             /*
-             * createWorker() อาจสร้าง Worker ได้แล้ว
-             * แต่เกิด error ระหว่าง setup
+             * ถ้ามีการติดตั้ง Worker ไประหว่างทาง
+             * แต่ Promise สุดท้าย fail
+             * อย่าปล่อย Worker ค้าง
              */
             if (
               worker
@@ -568,18 +787,45 @@ window.PdfWorkerClient = (() => {
             throw error;
 
           }
-        )
-        .finally(
-          () => {
-
-            workerPromise =
-              null;
-
-          }
         );
 
 
-    return workerPromise;
+    workerPromise =
+      creationPromise;
+
+
+    /*
+     * ----------------------------------------------------------
+     * P0 FIX: workerPromise ownership
+     * ----------------------------------------------------------
+     *
+     * สำคัญ:
+     * Promise รุ่นเก่าห้ามไปล้าง workerPromise
+     * ของ generation ใหม่
+     *
+     * จึงตรวจว่า workerPromise ยังเป็น Promise
+     * ตัวเดียวกับที่เราสร้าง
+     */
+    creationPromise.finally(
+      () => {
+
+        if (
+          workerPromise ===
+          creationPromise
+        ) {
+
+          workerPromise =
+            null;
+
+        }
+
+      }
+    ).catch(
+      () => {}
+    );
+
+
+    return creationPromise;
 
   }
 
@@ -622,9 +868,38 @@ window.PdfWorkerClient = (() => {
         : [];
 
 
+    /*
+     * จับ generation ตั้งแต่ตอนเริ่ม request
+     *
+     * ถ้ามี dispose() ระหว่าง ensureWorker()
+     * request นี้จะไม่ถูกส่งเข้า Worker รุ่นใหม่
+     */
+    const requestGeneration =
+      workerGeneration;
+
+
     return ensureWorker()
       .then(
         w => {
+
+          /*
+           * ----------------------------------------------------
+           * P0 FIX: GENERATION CHECK
+           * ----------------------------------------------------
+           */
+          if (
+            requestGeneration !==
+            workerGeneration
+          ) {
+
+            throw new Error(
+              t(
+                'pdfWorker.stoppedBeforeSend'
+              )
+            );
+
+          }
+
 
           /*
            * Worker อาจถูก dispose ระหว่างที่
@@ -649,13 +924,40 @@ window.PdfWorkerClient = (() => {
               reject
             ) => {
 
+              /*
+               * ตรวจอีกครั้งก่อนลง pending
+               */
+              if (
+                requestGeneration !==
+                workerGeneration ||
+                worker !== w
+              ) {
+
+                reject(
+                  new Error(
+                    t(
+                      'pdfWorker.stoppedBeforeSend'
+                    )
+                  )
+                );
+
+
+                return;
+
+              }
+
+
               pending.set(
                 reqId,
                 {
                   resolve,
                   reject,
+
                   worker:
-                    w
+                    w,
+
+                  generation:
+                    requestGeneration
                 }
               );
 
@@ -663,11 +965,19 @@ window.PdfWorkerClient = (() => {
               try {
 
                 /*
-                 * ตรวจอีกครั้งก่อน postMessage
+                 * ตรวจครั้งสุดท้ายก่อน postMessage
                  *
-                 * ป้องกัน race ตอน clear/dispose
+                 * ป้องกัน race ระหว่าง:
+                 *
+                 * pending.set()
+                 *
+                 * และ
+                 *
+                 * dispose()
                  */
                 if (
+                  requestGeneration !==
+                    workerGeneration ||
                   worker !== w
                 ) {
 
@@ -941,6 +1251,19 @@ window.PdfWorkerClient = (() => {
   function dispose() {
 
     /*
+     * ----------------------------------------------------------
+     * P0 FIX: INVALIDATE CURRENT GENERATION
+     * ----------------------------------------------------------
+     *
+     * ทำก่อนทุกอย่าง
+     *
+     * Worker ที่กำลังสร้างอยู่จะถูก mark เป็น stale
+     * แม้ createWorker() จะเสร็จทีหลัง
+     */
+    workerGeneration++;
+
+
+    /*
      * ยกเลิกทุก request ที่ยังรออยู่ก่อน
      * เพื่อไม่ให้ Promise ค้าง
      */
@@ -954,8 +1277,7 @@ window.PdfWorkerClient = (() => {
 
 
     /*
-     * ถ้ากำลังสร้าง Worker อยู่
-     * workerPromise จะถูกปล่อยให้จบตาม lifecycle
+     * terminate Worker ที่ใช้งานอยู่
      */
     if (
       worker
@@ -966,6 +1288,24 @@ window.PdfWorkerClient = (() => {
       );
 
     }
+
+
+    /*
+     * ----------------------------------------------------------
+     * IMPORTANT
+     * ----------------------------------------------------------
+     *
+     * ไม่ terminate Worker ที่ยังไม่เสร็จจาก createWorker()
+     * ตรงนี้ เพราะเรายังไม่มี reference ของ Worker
+     *
+     * แต่ generation check ใน ensureWorker()
+     * จะจับ stale Worker แล้ว terminate ให้เองทันที
+     * เมื่อ createWorker() resolve
+     *
+     * เราไม่ set workerPromise = null ตรงนี้
+     * เพื่อไม่ให้ request ใหม่เข้าใจผิดว่า
+     * Worker รุ่นเก่ายังเป็น Worker ที่ใช้ได้
+     */
 
   }
 
