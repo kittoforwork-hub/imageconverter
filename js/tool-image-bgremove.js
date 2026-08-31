@@ -1,4 +1,4 @@
-/* global window, document, URL, JSZip */
+/* global window, document, URL, JSZip, requestAnimationFrame */
 
 (() => {
   'use strict';
@@ -119,6 +119,67 @@
 
 
   // ============================================================
+  // CONSTANTS
+  // ============================================================
+
+  const ALLOWED_IMAGE_PREFIX =
+    'image/';
+
+
+  const OUTPUT_FORMAT =
+    'image/png';
+
+
+  const OUTPUT_EXTENSION =
+    'png';
+
+
+  /*
+   * ใช้รุ่นที่เน้นคุณภาพ
+   *
+   * isnet:
+   * - คุณภาพสูงกว่า quantized variants
+   * - ใช้ RAM / CPU มากกว่า
+   */
+  const MODEL =
+    'isnet';
+
+
+  /*
+   * IMPORTANT
+   *
+   * ไม่กำหนด device: 'gpu'
+   *
+   * เพราะ WebGPU บาง environment มี backend incompatibility
+   * เช่น requestAdapterInfo is not a function
+   *
+   * เมื่อไม่กำหนด device library จะใช้ CPU/WASM path
+   */
+  const DEVICE =
+    null;
+
+
+  /*
+   * สำหรับ 1.5.5:
+   *
+   * proxyToWorker ไม่ได้ช่วย CPU/WASM ใน implementation
+   * ตาม source ของ package
+   *
+   * จึงไม่บังคับให้ true
+   */
+  const PROXY_TO_WORKER =
+    false;
+
+
+  const LIB_URL =
+    'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm';
+
+
+  const CONCURRENCY =
+    1;
+
+
+  // ============================================================
   // STATE
   // ============================================================
 
@@ -130,223 +191,24 @@
     [];
 
 
-  // ============================================================
-  // AI LIBRARY
-  // ============================================================
-
   /*
-   * ใช้ version เดิมของโปรเจกต์
-   * เพื่อไม่ให้ behavior เปลี่ยนโดยไม่ตั้งใจ
+   * Library promise
+   *
+   * เก็บ module ไว้ทั้ง session เพื่อไม่ต้อง import ซ้ำ
    */
-  const LIB_URL =
-    'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm';
+  let libraryPromise =
+    null;
 
 
   let removeBackgroundFn =
     null;
 
 
-  let libPromise =
-    null;
-
-
   /*
-   * นับจำนวน job ที่กำลังใช้งาน library
-   * ป้องกัน release reference ระหว่าง inference
+   * จำนวน jobs ที่กำลังใช้ library
    */
   let activeLibraryUsers =
     0;
-
-
-  // ============================================================
-  // AI CONFIGURATION
-  // ============================================================
-
-  /*
-   * เน้นคุณภาพ
-   *
-   * isnet:
-   * - คุณภาพสูงกว่า quantized model
-   * - ใช้ทรัพยากรมากกว่า
-   *
-   * device:
-   * - gpu ช่วยให้ browser ที่รองรับ WebGPU ทำงานเร็วขึ้น
-   * - library สามารถใช้ execution device ตาม config
-   *
-   * proxyToWorker:
-   * - ช่วยไม่ให้ inference หนักบน main thread
-   */
-  const AI_CONFIG = {
-
-    debug:
-      false,
-
-    proxyToWorker:
-      true,
-
-    device:
-      'gpu',
-
-    model:
-      'isnet',
-
-    output: {
-
-      format:
-        'image/png',
-
-      type:
-        'foreground',
-
-      quality:
-        1
-
-    }
-
-  };
-
-
-  // ============================================================
-  // LOAD LIBRARY
-  // ============================================================
-
-  async function loadLibrary() {
-
-    if (
-      removeBackgroundFn
-    ) {
-
-      return removeBackgroundFn;
-
-    }
-
-
-    if (
-      !libPromise
-    ) {
-
-      libPromise =
-        import(
-          /* webpackIgnore: true */
-          LIB_URL
-        )
-          .then(
-            mod => {
-
-              if (
-                !mod ||
-                typeof mod.removeBackground !==
-                  'function'
-              ) {
-
-                throw new Error(
-                  'BACKGROUND_FUNCTION_NOT_FOUND'
-                );
-
-              }
-
-
-              removeBackgroundFn =
-                mod.removeBackground;
-
-
-              return removeBackgroundFn;
-
-            }
-          )
-          .catch(
-            error => {
-
-              removeBackgroundFn =
-                null;
-
-
-              libPromise =
-                null;
-
-
-              throw error;
-
-            }
-          );
-
-    }
-
-
-    return libPromise;
-
-  }
-
-
-  // ============================================================
-  // ACQUIRE LIBRARY
-  // ============================================================
-
-  async function acquireLibrary() {
-
-    const fn =
-      await loadLibrary();
-
-
-    activeLibraryUsers++;
-
-
-    return fn;
-
-  }
-
-
-  // ============================================================
-  // RELEASE ONE LIBRARY USER
-  // ============================================================
-
-  function releaseLibraryUser() {
-
-    activeLibraryUsers =
-      Math.max(
-        0,
-        activeLibraryUsers -
-          1
-      );
-
-
-    /*
-     * อย่า clear function ทันที
-     * เพราะ job อื่นอาจยังใช้งานอยู่
-     *
-     * การ cache function ไว้ยังมีประโยชน์มาก
-     * เพราะ model assets ถูก cache ใน browser
-     */
-  }
-
-
-  // ============================================================
-  // RELEASE LIBRARY
-  // ============================================================
-
-  function releaseLibraryReference(
-    force = false
-  ) {
-
-    if (
-      !force &&
-      activeLibraryUsers >
-        0
-    ) {
-
-      return;
-
-    }
-
-
-    removeBackgroundFn =
-      null;
-
-
-    libPromise =
-      null;
-
-  }
 
 
   // ============================================================
@@ -399,6 +261,249 @@
           job.file
         ) === key
     );
+
+  }
+
+
+  // ============================================================
+  // LIBRARY ERROR CODE
+  // ============================================================
+
+  const ERROR_CODES = {
+
+    FUNCTION_NOT_FOUND:
+      'BACKGROUND_FUNCTION_NOT_FOUND',
+
+    EMPTY_RESULT:
+      'BACKGROUND_EMPTY_RESULT',
+
+    LIBRARY_LOAD_FAILED:
+      'BACKGROUND_LIBRARY_LOAD_FAILED',
+
+    MODEL_LOAD_FAILED:
+      'BACKGROUND_MODEL_LOAD_FAILED',
+
+    PROCESSING_FAILED:
+      'BACKGROUND_PROCESSING_FAILED'
+
+  };
+
+
+  // ============================================================
+  // LOAD LIBRARY
+  // ============================================================
+
+  async function loadLibrary() {
+
+    if (
+      removeBackgroundFn
+    ) {
+
+      return removeBackgroundFn;
+
+    }
+
+
+    if (
+      libraryPromise
+    ) {
+
+      return libraryPromise;
+
+    }
+
+
+    libraryPromise =
+      import(
+        /* webpackIgnore: true */
+        LIB_URL
+      )
+        .then(
+          module => {
+
+            if (
+              !module ||
+              typeof module.removeBackground !==
+                'function'
+            ) {
+
+              throw new Error(
+                ERROR_CODES.FUNCTION_NOT_FOUND
+              );
+
+            }
+
+
+            removeBackgroundFn =
+              module.removeBackground;
+
+
+            return removeBackgroundFn;
+
+          }
+        )
+        .catch(
+          error => {
+
+            removeBackgroundFn =
+              null;
+
+
+            libraryPromise =
+              null;
+
+
+            console.error(
+              '[Image Background Removal] Library load failed:',
+              error
+            );
+
+
+            throw new Error(
+              ERROR_CODES.LIBRARY_LOAD_FAILED
+            );
+
+          }
+        );
+
+
+    return libraryPromise;
+
+  }
+
+
+  // ============================================================
+  // ACQUIRE LIBRARY
+  // ============================================================
+
+  async function acquireLibrary() {
+
+    const fn =
+      await loadLibrary();
+
+
+    activeLibraryUsers++;
+
+
+    return fn;
+
+  }
+
+
+  // ============================================================
+  // RELEASE LIBRARY USER
+  // ============================================================
+
+  function releaseLibraryUser() {
+
+    activeLibraryUsers =
+      Math.max(
+        0,
+        activeLibraryUsers -
+          1
+      );
+
+  }
+
+
+  // ============================================================
+  // RELEASE LIBRARY REFERENCE
+  // ============================================================
+
+  function releaseLibraryReference(
+    force = false
+  ) {
+
+    if (
+      !force &&
+      activeLibraryUsers >
+        0
+    ) {
+
+      return;
+
+    }
+
+
+    /*
+     * ไม่ต้องรีบ clear cache
+     *
+     * model / module cache ใน browser
+     * ช่วยให้ไฟล์ถัดไปทำงานเร็วขึ้น
+     */
+  }
+
+
+  // ============================================================
+  // SAFE UI YIELD
+  // ============================================================
+
+  async function yieldToUI() {
+
+    if (
+      U &&
+      typeof U.yieldToUI ===
+        'function'
+    ) {
+
+      await U.yieldToUI();
+
+      return;
+
+    }
+
+
+    await new Promise(
+      resolve =>
+        requestAnimationFrame(
+          resolve
+        )
+    );
+
+  }
+
+
+  // ============================================================
+  // ERROR → I18N KEY
+  // ============================================================
+
+  function getErrorKey(
+    error
+  ) {
+
+    const code =
+      error &&
+      typeof error.message ===
+        'string'
+        ? error.message
+        : '';
+
+
+    switch (
+      code
+    ) {
+
+      case ERROR_CODES.FUNCTION_NOT_FOUND:
+
+        return 'errors.backgroundFunctionNotFound';
+
+
+      case ERROR_CODES.LIBRARY_LOAD_FAILED:
+
+        return 'errors.backgroundLibraryLoadFailed';
+
+
+      case ERROR_CODES.EMPTY_RESULT:
+
+      case ERROR_CODES.MODEL_LOAD_FAILED:
+
+      case ERROR_CODES.PROCESSING_FAILED:
+
+      default:
+
+        return 'image.backgroundRemovalFailed';
+
+    }
 
   }
 
@@ -479,7 +584,7 @@
 
 
       // ------------------------------------------------------
-      // Source URL
+      // Object URL
       // ------------------------------------------------------
 
       this.objectUrl =
@@ -546,8 +651,14 @@
         );
 
 
+      const originalDimEl =
+        el.querySelector(
+          '.js-origdim'
+        );
+
+
       // ------------------------------------------------------
-      // Basic validation
+      // Validate required elements
       // ------------------------------------------------------
 
       if (
@@ -559,7 +670,7 @@
           true;
 
 
-        this.revokeSource();
+        this.revokeObjectUrl();
 
 
         return;
@@ -568,7 +679,7 @@
 
 
       // ------------------------------------------------------
-      // File info
+      // File information
       // ------------------------------------------------------
 
       if (
@@ -591,6 +702,18 @@
         sizeEl.textContent =
           U.formatBytes(
             this.file.size
+          );
+
+      }
+
+
+      if (
+        originalDimEl
+      ) {
+
+        originalDimEl.textContent =
+          t(
+            'image.reading'
           );
 
       }
@@ -624,12 +747,6 @@
           }
 
 
-          const originalDimEl =
-            el.querySelector(
-              '.js-origdim'
-            );
-
-
           if (
             originalDimEl
           ) {
@@ -658,11 +775,23 @@
             'image.openFailed'
           );
 
+
+          if (
+            originalDimEl
+          ) {
+
+            originalDimEl.textContent =
+              t(
+                'image.readFailed'
+              );
+
+          }
+
         };
 
 
       // ------------------------------------------------------
-      // Process
+      // Process button
       // ------------------------------------------------------
 
       this.processBtn.addEventListener(
@@ -727,7 +856,7 @@
 
 
       // ------------------------------------------------------
-      // Initial UI
+      // Initial language state
       // ------------------------------------------------------
 
       this.updateLanguageUI();
@@ -754,7 +883,7 @@
       /*
        * Processing
        *
-       * progress callback owns the dynamic message
+       * Progress callback controls text
        */
       if (
         this.isProcessing
@@ -766,7 +895,7 @@
 
 
       /*
-       * Success
+       * Result
        */
       if (
         this.resultBlob
@@ -853,7 +982,7 @@
 
 
     // ========================================================
-    // ERROR
+    // SET ERROR
     // ========================================================
 
     setError(
@@ -939,8 +1068,7 @@
 
 
       this.progressFill.style.width =
-        value +
-        '%';
+        `${value}%`;
 
     }
 
@@ -949,7 +1077,7 @@
     // PROGRESS TEXT
     // ========================================================
 
-    updateProgressText(
+    setProgressText(
       key,
       pct
     ) {
@@ -964,7 +1092,7 @@
       }
 
 
-      const keyText =
+      const raw =
         typeof key ===
           'string'
           ? key.toLowerCase()
@@ -972,21 +1100,23 @@
 
 
       /*
-       * library progress keys มักอยู่ในรูป
-       * fetch / load / compute / decode / inference / mask
+       * Handle common model/network loading phases
        */
-      const loadingModel =
-        keyText.includes(
+      const isLoading =
+        raw.includes(
           'fetch'
         ) ||
-        keyText.includes(
+        raw.includes(
           'load'
+        ) ||
+        raw.includes(
+          'download'
         );
 
 
       this.statusEl.textContent =
         t(
-          loadingModel
+          isLoading
             ? 'image.loadingModelProgress'
             : 'image.removingBackgroundProgress',
           {
@@ -1025,8 +1155,11 @@
 
 
       /*
-       * Reset old error
+       * ------------------------------------------------------
+       * Reset previous error
+       * ------------------------------------------------------
        */
+
       this.hasError =
         false;
 
@@ -1080,21 +1213,21 @@
       }
 
 
-      let libraryAcquired =
+      let acquired =
         false;
 
 
       try {
 
         // ----------------------------------------------------
-        // Acquire AI library
+        // Load function
         // ----------------------------------------------------
 
         const removeBackground =
           await acquireLibrary();
 
 
-        libraryAcquired =
+        acquired =
           true;
 
 
@@ -1107,117 +1240,148 @@
         }
 
 
-        this.setProgress(
-          4
-        );
+        // ----------------------------------------------------
+        // Configuration
+        // ----------------------------------------------------
+
+        const config = {
+
+          debug:
+            false,
+
+          /*
+           * For the CPU/WASM-safe path
+           * do not request WebGPU
+           */
+          model:
+            MODEL,
+
+          output: {
+
+            format:
+              OUTPUT_FORMAT,
+
+            quality:
+              1,
+
+            type:
+              'foreground'
+
+          },
+
+          /*
+           * 1.5.5 supports this option,
+           * but proxying is not useful for the CPU/WASM path.
+           */
+          proxyToWorker:
+            PROXY_TO_WORKER,
+
+          progress:
+            (
+              key,
+              current,
+              total
+            ) => {
+
+              if (
+                this.disposed ||
+                !this.isProcessing
+              ) {
+
+                return;
+
+              }
 
 
+              const currentNumber =
+                Number(
+                  current
+                );
+
+
+              const totalNumber =
+                Number(
+                  total
+                );
+
+
+              if (
+                !Number.isFinite(
+                  currentNumber
+                ) ||
+                !Number.isFinite(
+                  totalNumber
+                ) ||
+                totalNumber <=
+                  0
+              ) {
+
+                return;
+
+              }
+
+
+              const pct =
+                Math.max(
+                  0,
+                  Math.min(
+                    100,
+                    Math.round(
+                      (
+                        currentNumber /
+                        totalNumber
+                      ) *
+                      100
+                    )
+                  )
+                );
+
+
+              this.setProgress(
+                pct
+              );
+
+
+              this.setProgressText(
+                key,
+                pct
+              );
+
+            }
+
+        };
+
+
+        /*
+         * Do not send `device: 'gpu'`
+         *
+         * The library's config accepts cpu/gpu,
+         * but forcing GPU causes the exact WebGPU
+         * backend failure seen in the console.
+         */
         if (
-          this.statusEl
+          DEVICE
         ) {
 
-          this.statusEl.textContent =
-            t(
-              'image.loadingModelProgress',
-              {
-                percent:
-                  4
-              }
-            );
+          config.device =
+            DEVICE;
 
         }
 
 
         // ----------------------------------------------------
-        // Run background removal
+        // AI inference
         // ----------------------------------------------------
 
         const blob =
           await removeBackground(
             this.file,
-            {
-
-              ...AI_CONFIG,
-
-              progress:
-                (
-                  key,
-                  current,
-                  total
-                ) => {
-
-                  if (
-                    this.disposed ||
-                    !this.isProcessing
-                  ) {
-
-                    return;
-
-                  }
-
-
-                  const currentNumber =
-                    Number(
-                      current
-                    );
-
-
-                  const totalNumber =
-                    Number(
-                      total
-                    );
-
-
-                  if (
-                    !Number.isFinite(
-                      currentNumber
-                    ) ||
-                    !Number.isFinite(
-                      totalNumber
-                    ) ||
-                    totalNumber <=
-                      0
-                  ) {
-
-                    return;
-
-                  }
-
-
-                  const pct =
-                    Math.max(
-                      0,
-                      Math.min(
-                        100,
-                        Math.round(
-                          (
-                            currentNumber /
-                            totalNumber
-                          ) *
-                          100
-                        )
-                      )
-                    );
-
-
-                  this.setProgress(
-                    pct
-                  );
-
-
-                  this.updateProgressText(
-                    key,
-                    pct
-                  );
-
-                }
-
-            }
+            config
           );
 
 
         // ----------------------------------------------------
-        // Job may have been removed while inference ran
+        // Removed while processing
         // ----------------------------------------------------
 
         if (
@@ -1229,19 +1393,37 @@
         }
 
 
+        // ----------------------------------------------------
+        // Validate output
+        // ----------------------------------------------------
+
         if (
           !blob
         ) {
 
           throw new Error(
-            'BACKGROUND_EMPTY_RESULT'
+            ERROR_CODES.EMPTY_RESULT
+          );
+
+        }
+
+
+        if (
+          typeof blob.size ===
+            'number' &&
+          blob.size <=
+            0
+        ) {
+
+          throw new Error(
+            ERROR_CODES.EMPTY_RESULT
           );
 
         }
 
 
         // ----------------------------------------------------
-        // Previous result URL
+        // Previous result
         // ----------------------------------------------------
 
         if (
@@ -1313,7 +1495,7 @@
           this.downloadBtn.download =
             `${U.baseName(
               this.file.name
-            )}-nobg.png`;
+            )}-nobg.${OUTPUT_EXTENSION}`;
 
 
           this.downloadBtn.classList.remove(
@@ -1365,7 +1547,7 @@
       ) {
 
         console.error(
-          '[Image Background Removal]',
+          '[Image Background Removal] Error:',
           err
         );
 
@@ -1379,56 +1561,14 @@
         }
 
 
-        /*
-         * อย่าเก็บ err.message ที่อาจเป็นภาษา
-         * หรือข้อความจาก library โดยตรง
-         *
-         * เก็บ translation key แทน
-         */
-        let key =
-          'image.backgroundRemovalFailed';
-
-
-        const code =
-          err &&
-          typeof err.message ===
-            'string'
-            ? err.message
-            : '';
-
-
-        if (
-          code ===
-          'BACKGROUND_FUNCTION_NOT_FOUND'
-        ) {
-
-          key =
-            'errors.backgroundFunctionNotFound';
-
-        } else if (
-          code ===
-          'BACKGROUND_EMPTY_RESULT'
-        ) {
-
-          key =
-            'image.backgroundRemovalFailed';
-
-        } else if (
-          code
-            .toLowerCase()
-            .includes(
-              'out of memory'
-            )
-        ) {
-
-          key =
-            'image.backgroundRemovalFailed';
-
-        }
+        const errorKey =
+          getErrorKey(
+            err
+          );
 
 
         this.setError(
-          key
+          errorKey
         );
 
 
@@ -1436,15 +1576,56 @@
           0
         );
 
+
+        if (
+          this.resultUrl
+        ) {
+
+          revokeUrl(
+            this.resultUrl
+          );
+
+
+          this.resultUrl =
+            null;
+
+        }
+
+
+        this.resultBlob =
+          null;
+
+
+        if (
+          this.downloadBtn
+        ) {
+
+          this.downloadBtn.removeAttribute(
+            'href'
+          );
+
+
+          this.downloadBtn.removeAttribute(
+            'download'
+          );
+
+
+          this.downloadBtn.classList.add(
+            'hidden'
+          );
+
+        }
+
       } finally {
 
         if (
-          libraryAcquired
+          acquired
         ) {
 
           releaseLibraryUser();
 
-          libraryAcquired =
+
+          acquired =
             false;
 
         }
@@ -1469,24 +1650,7 @@
         }
 
 
-        if (
-          U &&
-          typeof U.yieldToUI ===
-            'function'
-        ) {
-
-          await U.yieldToUI();
-
-        } else {
-
-          await new Promise(
-            resolve =>
-              requestAnimationFrame(
-                resolve
-              )
-          );
-
-        }
+        await yieldToUI();
 
       }
 
@@ -1497,21 +1661,24 @@
     // REVOKE SOURCE
     // ========================================================
 
-    revokeSource() {
+    revokeObjectUrl() {
 
       if (
-        this.objectUrl
+        !this.objectUrl
       ) {
 
-        revokeUrl(
-          this.objectUrl
-        );
-
-
-        this.objectUrl =
-          null;
+        return;
 
       }
+
+
+      revokeUrl(
+        this.objectUrl
+      );
+
+
+      this.objectUrl =
+        null;
 
     }
 
@@ -1532,9 +1699,7 @@
 
 
       /*
-       * สำคัญที่สุด:
-       * ป้องกัน async inference ที่กลับมาเขียน
-       * result ลง job ที่ถูกลบไปแล้ว
+       * This flag invalidates every async continuation
        */
       this.disposed =
         true;
@@ -1548,8 +1713,16 @@
         'false';
 
 
-      this.revokeSource();
+      // ------------------------------------------------------
+      // Source URL
+      // ------------------------------------------------------
 
+      this.revokeObjectUrl();
+
+
+      // ------------------------------------------------------
+      // Result URL
+      // ------------------------------------------------------
 
       if (
         this.resultUrl
@@ -1578,6 +1751,34 @@
         null;
 
     }
+
+  }
+
+
+  // ============================================================
+  // REVOKE URL
+  // ============================================================
+
+  function revokeUrl(
+    url
+  ) {
+
+    if (
+      !url
+    ) {
+
+      return;
+
+    }
+
+
+    try {
+
+      URL.revokeObjectURL(
+        url
+      );
+
+    } catch (_) {}
 
   }
 
@@ -1623,9 +1824,7 @@
 
 
     /*
-     * ไม่เรียก updateLanguageUI
-     * ตอนมี processing
-     * เพื่อไม่ไปทับข้อความ progress
+     * ไม่ทับ progress message
      */
     activeJobs.forEach(
       job => {
@@ -1661,15 +1860,12 @@
           typeof file.type ===
             'string' &&
           file.type.startsWith(
-            'image/'
+            ALLOWED_IMAGE_PREFIX
           )
       )
       .forEach(
         file => {
 
-          /*
-           * กัน duplicate file
-           */
           if (
             hasDuplicateFile(
               file
@@ -1746,16 +1942,15 @@
 
 
       /*
-       * force release เฉพาะกรณีไม่มี jobs ใช้งานแล้ว
+       * Do not force-clear the module while
+       * an inference is still running.
        */
       if (
         activeLibraryUsers ===
           0
       ) {
 
-        releaseLibraryReference(
-          true
-        );
+        releaseLibraryReference();
 
       }
 
@@ -1814,10 +2009,13 @@
       try {
 
         /*
-         * Intentional sequential processing
+         * Sequential processing intentionally.
          *
-         * Background removal ใช้ model + memory สูง
-         * การทำทีละรูปช่วยลด peak memory
+         * ISNet uses considerably more resources
+         * than normal canvas-based image tools.
+         *
+         * This prevents multiple AI inference jobs
+         * from competing for RAM at once.
          */
         for (
           const job of
@@ -1838,39 +2036,15 @@
           await job.process();
 
 
-          if (
-            U &&
-            typeof U.yieldToUI ===
-              'function'
-          ) {
-
-            await U.yieldToUI();
-
-          } else {
-
-            await new Promise(
-              resolve =>
-                requestAnimationFrame(
-                  resolve
-                )
-            );
-
-          }
+          await yieldToUI();
 
         }
 
       } finally {
 
-        if (
-          activeLibraryUsers ===
-            0
-        ) {
-
-          releaseLibraryReference(
-            true
-          );
-
-        }
+        releaseLibraryReference(
+          false
+        );
 
 
         processAllBtn.disabled =
@@ -1940,7 +2114,7 @@
 
         if (
           typeof JSZip !==
-          'function'
+            'function'
         ) {
 
           throw new Error(
@@ -1977,33 +2151,33 @@
               );
 
 
-            let name =
+            let filename =
               `${base}-nobg.png`;
 
 
-            let n =
+            let counter =
               2;
 
 
             while (
               usedNames.has(
-                name
+                filename
               )
             ) {
 
-              name =
-                `${base}-nobg-${n++}.png`;
+              filename =
+                `${base}-nobg-${counter++}.png`;
 
             }
 
 
             usedNames.add(
-              name
+              filename
             );
 
 
             zip.file(
-              name,
+              filename,
               job.resultBlob
             );
 
@@ -2017,6 +2191,12 @@
               type:
                 'blob',
 
+              /*
+               * PNG files are already compressed.
+               *
+               * STORE avoids wasting CPU trying to
+               * compress PNG data again inside the ZIP.
+               */
               compression:
                 'STORE'
             }
@@ -2027,7 +2207,6 @@
           content,
           'no-background.zip'
         );
-
 
       } catch (
         err
@@ -2141,10 +2320,6 @@
     'languagechange',
     () => {
 
-      /*
-       * Bulk buttons
-       */
-
       if (
         !processAllBtn.disabled
       ) {
@@ -2169,9 +2344,6 @@
       }
 
 
-      /*
-       * Job statuses
-       */
       jobs.forEach(
         job => {
 
