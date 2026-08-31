@@ -317,7 +317,7 @@
               t(
                 'pdf.pageLabel',
                 {
-                  number:
+                  page:
                     page
                 }
               );
@@ -932,7 +932,7 @@
             t(
               'pdf.pageLabel',
               {
-                number:
+                page:
                   pageNum
               }
             );
@@ -954,7 +954,7 @@
             t(
               'pdf.pageLabel',
               {
-                number:
+                page:
                   pageNum
               }
             );
