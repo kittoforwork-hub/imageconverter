@@ -1,4 +1,4 @@
-/* global window, document, URL, JSZip, requestAnimationFrame */
+/* global window, document, URL, JSZip */
 
 (() => {
   'use strict';
@@ -122,8 +122,24 @@
   // CONSTANTS
   // ============================================================
 
-  const ALLOWED_IMAGE_PREFIX =
-    'image/';
+  /*
+   * Use a newer package version.
+   *
+   * 1.7.0 is the current npm latest.
+   */
+  const LIB_VERSION =
+    '1.7.0';
+
+
+  const LIB_URL =
+    `https://cdn.jsdelivr.net/npm/@imgly/background-removal@${LIB_VERSION}/+esm`;
+
+
+  /*
+   * Quality-first model.
+   */
+  const MODEL =
+    'isnet';
 
 
   const OUTPUT_FORMAT =
@@ -135,48 +151,36 @@
 
 
   /*
-   * ใช้รุ่นที่เน้นคุณภาพ
-   *
-   * isnet:
-   * - คุณภาพสูงกว่า quantized variants
-   * - ใช้ RAM / CPU มากกว่า
+   * WebGPU should be attempted first.
+   * We do NOT blindly trust navigator.gpu.
+   * The actual removal call is wrapped so that
+   * an incompatible WebGPU backend can fall back.
    */
-  const MODEL =
-    'isnet';
+  const PREFER_GPU =
+    true;
 
 
   /*
-   * IMPORTANT
+   * WebGPU calculations can be proxied to Worker.
    *
-   * ไม่กำหนด device: 'gpu'
-   *
-   * เพราะ WebGPU บาง environment มี backend incompatibility
-   * เช่น requestAdapterInfo is not a function
-   *
-   * เมื่อไม่กำหนด device library จะใช้ CPU/WASM path
-   */
-  const DEVICE =
-    null;
-
-
-  /*
-   * สำหรับ 1.5.5:
-   *
-   * proxyToWorker ไม่ได้ช่วย CPU/WASM ใน implementation
-   * ตาม source ของ package
-   *
-   * จึงไม่บังคับให้ true
+   * IMG.LY's current implementation uses
+   * worker proxy for WebGPU, while CPU/WASM
+   * does not use that path.
    */
   const PROXY_TO_WORKER =
-    false;
+    true;
 
 
-  const LIB_URL =
-    'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm';
-
-
+  /*
+   * Background removal is memory heavy.
+   * One inference at a time is the safest default.
+   */
   const CONCURRENCY =
     1;
+
+
+  const ALLOWED_IMAGE_PREFIX =
+    'image/';
 
 
   // ============================================================
@@ -191,11 +195,6 @@
     [];
 
 
-  /*
-   * Library promise
-   *
-   * เก็บ module ไว้ทั้ง session เพื่อไม่ต้อง import ซ้ำ
-   */
   let libraryPromise =
     null;
 
@@ -204,11 +203,16 @@
     null;
 
 
-  /*
-   * จำนวน jobs ที่กำลังใช้ library
-   */
-  let activeLibraryUsers =
+  let libraryUsers =
     0;
+
+
+  /*
+   * Once a WebGPU failure happens in this browser session,
+   * don't keep hammering the same backend.
+   */
+  let gpuKnownBad =
+    false;
 
 
   // ============================================================
@@ -266,27 +270,60 @@
 
 
   // ============================================================
-  // LIBRARY ERROR CODE
+  // SAFE YIELD
   // ============================================================
 
-  const ERROR_CODES = {
+  async function yieldToUI() {
 
-    FUNCTION_NOT_FOUND:
-      'BACKGROUND_FUNCTION_NOT_FOUND',
+    if (
+      U &&
+      typeof U.yieldToUI ===
+        'function'
+    ) {
 
-    EMPTY_RESULT:
-      'BACKGROUND_EMPTY_RESULT',
+      await U.yieldToUI();
 
-    LIBRARY_LOAD_FAILED:
-      'BACKGROUND_LIBRARY_LOAD_FAILED',
+      return;
 
-    MODEL_LOAD_FAILED:
-      'BACKGROUND_MODEL_LOAD_FAILED',
+    }
 
-    PROCESSING_FAILED:
-      'BACKGROUND_PROCESSING_FAILED'
 
-  };
+    await new Promise(
+      resolve =>
+        requestAnimationFrame(
+          resolve
+        )
+    );
+
+  }
+
+
+  // ============================================================
+  // URL HELPERS
+  // ============================================================
+
+  function revokeUrl(
+    url
+  ) {
+
+    if (
+      !url
+    ) {
+
+      return;
+
+    }
+
+
+    try {
+
+      URL.revokeObjectURL(
+        url
+      );
+
+    } catch (_) {}
+
+  }
 
 
   // ============================================================
@@ -321,29 +358,46 @@
         .then(
           module => {
 
+            const fn =
+              module &&
+              typeof module.removeBackground ===
+                'function'
+                ? module.removeBackground
+                : module &&
+                  typeof module.default ===
+                    'function'
+                  ? module.default
+                  : null;
+
+
             if (
-              !module ||
-              typeof module.removeBackground !==
+              typeof fn !==
                 'function'
             ) {
 
               throw new Error(
-                ERROR_CODES.FUNCTION_NOT_FOUND
+                'BACKGROUND_FUNCTION_NOT_FOUND'
               );
 
             }
 
 
             removeBackgroundFn =
-              module.removeBackground;
+              fn;
 
 
-            return removeBackgroundFn;
+            return fn;
 
           }
         )
         .catch(
           error => {
+
+            console.error(
+              '[Image Background Removal] Library load failed:',
+              error
+            );
+
 
             removeBackgroundFn =
               null;
@@ -353,14 +407,8 @@
               null;
 
 
-            console.error(
-              '[Image Background Removal] Library load failed:',
-              error
-            );
-
-
             throw new Error(
-              ERROR_CODES.LIBRARY_LOAD_FAILED
+              'BACKGROUND_LIBRARY_LOAD_FAILED'
             );
 
           }
@@ -382,7 +430,7 @@
       await loadLibrary();
 
 
-    activeLibraryUsers++;
+    libraryUsers++;
 
 
     return fn;
@@ -396,10 +444,10 @@
 
   function releaseLibraryUser() {
 
-    activeLibraryUsers =
+    libraryUsers =
       Math.max(
         0,
-        activeLibraryUsers -
+        libraryUsers -
           1
       );
 
@@ -407,57 +455,221 @@
 
 
   // ============================================================
-  // RELEASE LIBRARY REFERENCE
+  // DEVICE CAPABILITY
   // ============================================================
 
-  function releaseLibraryReference(
-    force = false
-  ) {
+  function canTryWebGPU() {
 
     if (
-      !force &&
-      activeLibraryUsers >
-        0
+      !PREFER_GPU ||
+      gpuKnownBad
     ) {
 
-      return;
+      return false;
+
+    }
+
+
+    if (
+      typeof navigator ===
+        'undefined'
+    ) {
+
+      return false;
+
+    }
+
+
+    if (
+      !navigator.gpu ||
+      typeof navigator.gpu.requestAdapter !==
+        'function'
+    ) {
+
+      return false;
+
+    }
+
+
+    return true;
+
+  }
+
+
+  // ============================================================
+  // WEBGPU PROBE
+  // ============================================================
+
+  async function probeWebGPU() {
+
+    if (
+      !canTryWebGPU()
+    ) {
+
+      return false;
+
+    }
+
+
+    try {
+
+      const adapter =
+        await navigator.gpu.requestAdapter();
+
+
+      if (
+        !adapter
+      ) {
+
+        return false;
+
+      }
+
+
+      /*
+       * Only test the basic adapter.
+       *
+       * Do NOT call requestAdapterInfo().
+       *
+       * Some browser/runtime combinations
+       * do not expose that function.
+       */
+      return true;
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        '[Image Background Removal] WebGPU probe failed:',
+        error
+      );
+
+
+      return false;
+
+    }
+
+  }
+
+
+  // ============================================================
+  // BUILD CONFIG
+  // ============================================================
+
+  async function buildConfig(
+    useGpu
+  ) {
+
+    const config = {
+
+      debug:
+        false,
+
+      model:
+        MODEL,
+
+      output: {
+
+        format:
+          OUTPUT_FORMAT,
+
+        type:
+          'foreground',
+
+        quality:
+          1
+
+      },
+
+      proxyToWorker:
+        useGpu
+          ? PROXY_TO_WORKER
+          : false
+
+    };
+
+
+    /*
+     * Explicitly select GPU only after capability probe.
+     */
+    if (
+      useGpu
+    ) {
+
+      config.device =
+        'gpu';
+
+    } else {
+
+      /*
+       * Explicit CPU path
+       *
+       * Keep CPU as fallback only.
+       */
+      config.device =
+        'cpu';
 
     }
 
 
     /*
-     * ไม่ต้องรีบ clear cache
-     *
-     * model / module cache ใน browser
-     * ช่วยให้ไฟล์ถัดไปทำงานเร็วขึ้น
+     * Dynamically generated progress callback
+     * is attached by BgJob.process().
      */
+
+    return config;
+
   }
 
 
   // ============================================================
-  // SAFE UI YIELD
+  // ERROR CLASSIFICATION
   // ============================================================
 
-  async function yieldToUI() {
+  function isLikelyWebGPUError(
+    error
+  ) {
 
     if (
-      U &&
-      typeof U.yieldToUI ===
-        'function'
+      !error
     ) {
 
-      await U.yieldToUI();
-
-      return;
+      return false;
 
     }
 
 
-    await new Promise(
-      resolve =>
-        requestAnimationFrame(
-          resolve
-        )
+    const text =
+      String(
+        error.message ||
+        error
+      )
+        .toLowerCase();
+
+
+    return (
+
+      text.includes(
+        'webgpu'
+      ) ||
+
+      text.includes(
+        'requestadapter'
+      ) ||
+
+      text.includes(
+        'requestadapterinfo'
+      ) ||
+
+      text.includes(
+        'no available backend'
+      ) ||
+
+      text.includes(
+        'failed to create session'
+      )
+
     );
 
   }
@@ -479,31 +691,37 @@
         : '';
 
 
-    switch (
-      code
+    if (
+      code ===
+      'BACKGROUND_FUNCTION_NOT_FOUND'
     ) {
 
-      case ERROR_CODES.FUNCTION_NOT_FOUND:
-
-        return 'errors.backgroundFunctionNotFound';
-
-
-      case ERROR_CODES.LIBRARY_LOAD_FAILED:
-
-        return 'errors.backgroundLibraryLoadFailed';
-
-
-      case ERROR_CODES.EMPTY_RESULT:
-
-      case ERROR_CODES.MODEL_LOAD_FAILED:
-
-      case ERROR_CODES.PROCESSING_FAILED:
-
-      default:
-
-        return 'image.backgroundRemovalFailed';
+      return 'errors.backgroundFunctionNotFound';
 
     }
+
+
+    if (
+      code ===
+      'BACKGROUND_LIBRARY_LOAD_FAILED'
+    ) {
+
+      return 'errors.backgroundLibraryLoadFailed';
+
+    }
+
+
+    if (
+      code ===
+      'BACKGROUND_EMPTY_RESULT'
+    ) {
+
+      return 'image.backgroundRemovalFailed';
+
+    }
+
+
+    return 'image.backgroundRemovalFailed';
 
   }
 
@@ -559,6 +777,10 @@
         null;
 
 
+      this.processingMode =
+        null;
+
+
       this.el =
         jobTemplate
           .content
@@ -583,19 +805,11 @@
         this.el;
 
 
-      // ------------------------------------------------------
-      // Object URL
-      // ------------------------------------------------------
-
       this.objectUrl =
         URL.createObjectURL(
           this.file
         );
 
-
-      // ------------------------------------------------------
-      // Elements
-      // ------------------------------------------------------
 
       this.beforeImg =
         el.querySelector(
@@ -651,14 +865,14 @@
         );
 
 
-      const originalDimEl =
+      const dimEl =
         el.querySelector(
           '.js-origdim'
         );
 
 
       // ------------------------------------------------------
-      // Validate required elements
+      // Validate
       // ------------------------------------------------------
 
       if (
@@ -679,7 +893,7 @@
 
 
       // ------------------------------------------------------
-      // File information
+      // File info
       // ------------------------------------------------------
 
       if (
@@ -708,10 +922,10 @@
 
 
       if (
-        originalDimEl
+        dimEl
       ) {
 
-        originalDimEl.textContent =
+        dimEl.textContent =
           t(
             'image.reading'
           );
@@ -723,7 +937,7 @@
       // Processing state
       // ------------------------------------------------------
 
-      el.dataset.processing =
+      this.el.dataset.processing =
         'false';
 
 
@@ -748,10 +962,10 @@
 
 
           if (
-            originalDimEl
+            dimEl
           ) {
 
-            originalDimEl.textContent =
+            dimEl.textContent =
               `${this.beforeImg.naturalWidth}×${this.beforeImg.naturalHeight}`;
 
           }
@@ -777,10 +991,10 @@
 
 
           if (
-            originalDimEl
+            dimEl
           ) {
 
-            originalDimEl.textContent =
+            dimEl.textContent =
               t(
                 'image.readFailed'
               );
@@ -791,7 +1005,7 @@
 
 
       // ------------------------------------------------------
-      // Process button
+      // Process
       // ------------------------------------------------------
 
       this.processBtn.addEventListener(
@@ -805,7 +1019,7 @@
 
 
       // ------------------------------------------------------
-      // Remove job
+      // Remove
       // ------------------------------------------------------
 
       const removeJobBtn =
@@ -856,7 +1070,7 @@
 
 
       // ------------------------------------------------------
-      // Initial language state
+      // Initial UI
       // ------------------------------------------------------
 
       this.updateLanguageUI();
@@ -881,9 +1095,8 @@
 
 
       /*
-       * Processing
-       *
-       * Progress callback controls text
+       * During processing, dynamic progress
+       * controls the status text.
        */
       if (
         this.isProcessing
@@ -895,7 +1108,7 @@
 
 
       /*
-       * Result
+       * Success
        */
       if (
         this.resultBlob
@@ -1099,9 +1312,6 @@
           : '';
 
 
-      /*
-       * Handle common model/network loading phases
-       */
       const isLoading =
         raw.includes(
           'fetch'
@@ -1124,6 +1334,180 @@
               pct
           }
         );
+
+    }
+
+
+    // ========================================================
+    // RESET RESULT
+    // ========================================================
+
+    clearResult() {
+
+      if (
+        this.resultUrl
+      ) {
+
+        revokeUrl(
+          this.resultUrl
+        );
+
+
+        this.resultUrl =
+          null;
+
+      }
+
+
+      this.resultBlob =
+        null;
+
+
+      if (
+        this.downloadBtn
+      ) {
+
+        this.downloadBtn.removeAttribute(
+          'href'
+        );
+
+
+        this.downloadBtn.removeAttribute(
+          'download'
+        );
+
+
+        this.downloadBtn.classList.add(
+          'hidden'
+        );
+
+      }
+
+    }
+
+
+    // ========================================================
+    // PROCESS GPU
+    // ========================================================
+
+    async processWithMode(
+      removeBackground,
+      mode
+    ) {
+
+      if (
+        this.disposed
+      ) {
+
+        return null;
+
+      }
+
+
+      const useGpu =
+        mode ===
+        'gpu';
+
+
+      const config =
+        await buildConfig(
+          useGpu
+        );
+
+
+      config.progress =
+        (
+          key,
+          current,
+          total
+        ) => {
+
+          if (
+            this.disposed ||
+            !this.isProcessing
+          ) {
+
+            return;
+
+          }
+
+
+          const currentNumber =
+            Number(
+              current
+            );
+
+
+          const totalNumber =
+            Number(
+              total
+            );
+
+
+          if (
+            !Number.isFinite(
+              currentNumber
+            ) ||
+            !Number.isFinite(
+              totalNumber
+            ) ||
+            totalNumber <=
+              0
+          ) {
+
+            return;
+
+          }
+
+
+          const pct =
+            Math.max(
+              0,
+              Math.min(
+                100,
+                Math.round(
+                  (
+                    currentNumber /
+                    totalNumber
+                  ) *
+                  100
+                )
+              )
+            );
+
+
+          this.setProgress(
+            pct
+          );
+
+
+          this.setProgressText(
+            key,
+            pct
+          );
+
+        };
+
+
+      /*
+       * Show mode to user in a useful way.
+       */
+      if (
+        this.statusEl
+      ) {
+
+        this.statusEl.textContent =
+          t(
+            'image.preparingModel'
+          );
+
+      }
+
+
+      return removeBackground(
+        this.file,
+        config
+      );
 
     }
 
@@ -1155,11 +1539,8 @@
 
 
       /*
-       * ------------------------------------------------------
-       * Reset previous error
-       * ------------------------------------------------------
+       * Reset error state
        */
-
       this.hasError =
         false;
 
@@ -1195,6 +1576,9 @@
       );
 
 
+      this.clearResult();
+
+
       if (
         this.statusEl
       ) {
@@ -1220,7 +1604,7 @@
       try {
 
         // ----------------------------------------------------
-        // Load function
+        // Acquire library
         // ----------------------------------------------------
 
         const removeBackground =
@@ -1240,148 +1624,102 @@
         }
 
 
+        await yieldToUI();
+
+
         // ----------------------------------------------------
-        // Configuration
+        // Try WebGPU first
         // ----------------------------------------------------
 
-        const config = {
-
-          debug:
-            false,
-
-          /*
-           * For the CPU/WASM-safe path
-           * do not request WebGPU
-           */
-          model:
-            MODEL,
-
-          output: {
-
-            format:
-              OUTPUT_FORMAT,
-
-            quality:
-              1,
-
-            type:
-              'foreground'
-
-          },
-
-          /*
-           * 1.5.5 supports this option,
-           * but proxying is not useful for the CPU/WASM path.
-           */
-          proxyToWorker:
-            PROXY_TO_WORKER,
-
-          progress:
-            (
-              key,
-              current,
-              total
-            ) => {
-
-              if (
-                this.disposed ||
-                !this.isProcessing
-              ) {
-
-                return;
-
-              }
+        let blob =
+          null;
 
 
-              const currentNumber =
-                Number(
-                  current
-                );
+        if (
+          await probeWebGPU()
+        ) {
+
+          this.processingMode =
+            'gpu';
 
 
-              const totalNumber =
-                Number(
-                  total
-                );
+          try {
 
-
-              if (
-                !Number.isFinite(
-                  currentNumber
-                ) ||
-                !Number.isFinite(
-                  totalNumber
-                ) ||
-                totalNumber <=
-                  0
-              ) {
-
-                return;
-
-              }
-
-
-              const pct =
-                Math.max(
-                  0,
-                  Math.min(
-                    100,
-                    Math.round(
-                      (
-                        currentNumber /
-                        totalNumber
-                      ) *
-                      100
-                    )
-                  )
-                );
-
-
-              this.setProgress(
-                pct
+            blob =
+              await this.processWithMode(
+                removeBackground,
+                'gpu'
               );
 
+          } catch (
+            gpuError
+          ) {
 
-              this.setProgressText(
-                key,
-                pct
-              );
+            console.warn(
+              '[Image Background Removal] WebGPU failed. Falling back to CPU/WASM.',
+              gpuError
+            );
+
+
+            /*
+             * Prevent repeated failures
+             * during the same page session.
+             */
+            if (
+              isLikelyWebGPUError(
+                gpuError
+              )
+            ) {
+
+              gpuKnownBad =
+                true;
 
             }
 
-        };
 
+            blob =
+              null;
 
-        /*
-         * Do not send `device: 'gpu'`
-         *
-         * The library's config accepts cpu/gpu,
-         * but forcing GPU causes the exact WebGPU
-         * backend failure seen in the console.
-         */
-        if (
-          DEVICE
-        ) {
-
-          config.device =
-            DEVICE;
+          }
 
         }
 
 
         // ----------------------------------------------------
-        // AI inference
+        // CPU/WASM fallback
         // ----------------------------------------------------
 
-        const blob =
-          await removeBackground(
-            this.file,
-            config
-          );
+        if (
+          !blob
+        ) {
+
+          if (
+            this.disposed
+          ) {
+
+            return;
+
+          }
+
+
+          this.processingMode =
+            'cpu';
+
+
+          await yieldToUI();
+
+
+          blob =
+            await this.processWithMode(
+              removeBackground,
+              'cpu'
+            );
+
+        }
 
 
         // ----------------------------------------------------
-        // Removed while processing
+        // Validate result
         // ----------------------------------------------------
 
         if (
@@ -1393,16 +1731,12 @@
         }
 
 
-        // ----------------------------------------------------
-        // Validate output
-        // ----------------------------------------------------
-
         if (
           !blob
         ) {
 
           throw new Error(
-            ERROR_CODES.EMPTY_RESULT
+            'BACKGROUND_EMPTY_RESULT'
           );
 
         }
@@ -1416,34 +1750,18 @@
         ) {
 
           throw new Error(
-            ERROR_CODES.EMPTY_RESULT
+            'BACKGROUND_EMPTY_RESULT'
           );
 
         }
 
 
         // ----------------------------------------------------
-        // Previous result
+        // Result URL
         // ----------------------------------------------------
 
-        if (
-          this.resultUrl
-        ) {
+        this.clearResult();
 
-          revokeUrl(
-            this.resultUrl
-          );
-
-
-          this.resultUrl =
-            null;
-
-        }
-
-
-        // ----------------------------------------------------
-        // Store result
-        // ----------------------------------------------------
 
         this.resultBlob =
           blob;
@@ -1543,12 +1861,12 @@
 
 
       } catch (
-        err
+        error
       ) {
 
         console.error(
           '[Image Background Removal] Error:',
-          err
+          error
         );
 
 
@@ -1561,14 +1879,18 @@
         }
 
 
-        const errorKey =
+        /*
+         * If both GPU and CPU paths fail,
+         * display a stable translated message.
+         */
+        const key =
           getErrorKey(
-            err
+            error
           );
 
 
         this.setError(
-          errorKey
+          key
         );
 
 
@@ -1577,44 +1899,7 @@
         );
 
 
-        if (
-          this.resultUrl
-        ) {
-
-          revokeUrl(
-            this.resultUrl
-          );
-
-
-          this.resultUrl =
-            null;
-
-        }
-
-
-        this.resultBlob =
-          null;
-
-
-        if (
-          this.downloadBtn
-        ) {
-
-          this.downloadBtn.removeAttribute(
-            'href'
-          );
-
-
-          this.downloadBtn.removeAttribute(
-            'download'
-          );
-
-
-          this.downloadBtn.classList.add(
-            'hidden'
-          );
-
-        }
+        this.clearResult();
 
       } finally {
 
@@ -1633,6 +1918,10 @@
 
         this.isProcessing =
           false;
+
+
+        this.processingMode =
+          null;
 
 
         this.el.dataset.processing =
@@ -1658,27 +1947,24 @@
 
 
     // ========================================================
-    // REVOKE SOURCE
+    // REVOKE OBJECT URL
     // ========================================================
 
     revokeObjectUrl() {
 
       if (
-        !this.objectUrl
+        this.objectUrl
       ) {
 
-        return;
+        revokeUrl(
+          this.objectUrl
+        );
+
+
+        this.objectUrl =
+          null;
 
       }
-
-
-      revokeUrl(
-        this.objectUrl
-      );
-
-
-      this.objectUrl =
-        null;
 
     }
 
@@ -1699,7 +1985,7 @@
 
 
       /*
-       * This flag invalidates every async continuation
+       * Invalidate all async continuations.
        */
       this.disposed =
         true;
@@ -1713,16 +1999,8 @@
         'false';
 
 
-      // ------------------------------------------------------
-      // Source URL
-      // ------------------------------------------------------
-
       this.revokeObjectUrl();
 
-
-      // ------------------------------------------------------
-      // Result URL
-      // ------------------------------------------------------
 
       if (
         this.resultUrl
@@ -1751,34 +2029,6 @@
         null;
 
     }
-
-  }
-
-
-  // ============================================================
-  // REVOKE URL
-  // ============================================================
-
-  function revokeUrl(
-    url
-  ) {
-
-    if (
-      !url
-    ) {
-
-      return;
-
-    }
-
-
-    try {
-
-      URL.revokeObjectURL(
-        url
-      );
-
-    } catch (_) {}
 
   }
 
@@ -1824,7 +2074,7 @@
 
 
     /*
-     * ไม่ทับ progress message
+     * Do not overwrite dynamic processing text.
      */
     activeJobs.forEach(
       job => {
@@ -1941,20 +2191,6 @@
         '';
 
 
-      /*
-       * Do not force-clear the module while
-       * an inference is still running.
-       */
-      if (
-        activeLibraryUsers ===
-          0
-      ) {
-
-        releaseLibraryReference();
-
-      }
-
-
       updateBulkUI();
 
     }
@@ -2009,13 +2245,10 @@
       try {
 
         /*
-         * Sequential processing intentionally.
+         * Sequential queue.
          *
-         * ISNet uses considerably more resources
-         * than normal canvas-based image tools.
-         *
-         * This prevents multiple AI inference jobs
-         * from competing for RAM at once.
+         * This is deliberate:
+         * ISNet can consume substantial memory.
          */
         for (
           const job of
@@ -2041,11 +2274,6 @@
         }
 
       } finally {
-
-        releaseLibraryReference(
-          false
-        );
-
 
         processAllBtn.disabled =
           false;
@@ -2191,12 +2419,6 @@
               type:
                 'blob',
 
-              /*
-               * PNG files are already compressed.
-               *
-               * STORE avoids wasting CPU trying to
-               * compress PNG data again inside the ZIP.
-               */
               compression:
                 'STORE'
             }
@@ -2208,13 +2430,14 @@
           'no-background.zip'
         );
 
+
       } catch (
-        err
+        error
       ) {
 
         console.error(
           '[Image Background Removal] ZIP failed:',
-          err
+          error
         );
 
       } finally {
@@ -2290,18 +2513,6 @@
 
         jobsEl.innerHTML =
           '';
-
-
-        if (
-          activeLibraryUsers ===
-            0
-        ) {
-
-          releaseLibraryReference(
-            true
-          );
-
-        }
 
 
         updateBulkUI();
