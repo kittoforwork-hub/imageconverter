@@ -33,11 +33,13 @@
         key,
         values
       );
+
     }
 
     return String(
       key
     );
+
   }
 
 
@@ -122,6 +124,7 @@
     );
 
     return;
+
   }
 
 
@@ -131,6 +134,7 @@
 
   let jobSeq =
     0;
+
 
   const jobs =
     [];
@@ -165,6 +169,10 @@
   ];
 
 
+  const DEFAULT_QUALITY =
+    0.85;
+
+
   const MAX_DIMENSION_LIMIT =
     20000;
 
@@ -178,7 +186,60 @@
 
 
   // ============================================================
-  // HELPERS
+  // FILE HELPERS
+  // ============================================================
+
+  function getFileKey(
+    file
+  ) {
+
+    if (
+      !file
+    ) {
+
+      return '';
+
+    }
+
+
+    return [
+
+      file.name,
+
+      file.size,
+
+      file.lastModified,
+
+      file.type
+
+    ].join('|');
+
+  }
+
+
+  function hasDuplicateFile(
+    file
+  ) {
+
+    const key =
+      getFileKey(
+        file
+      );
+
+
+    return jobs.some(
+      job =>
+        !job.disposed &&
+        getFileKey(
+          job.file
+        ) === key
+    );
+
+  }
+
+
+  // ============================================================
+  // OPTION HELPERS
   // ============================================================
 
   function getQuality() {
@@ -187,7 +248,7 @@
       !qualityEl
     ) {
 
-      return 0.85;
+      return DEFAULT_QUALITY;
 
     }
 
@@ -204,7 +265,7 @@
       )
     ) {
 
-      return 0.85;
+      return DEFAULT_QUALITY;
 
     }
 
@@ -216,6 +277,7 @@
         value
       )
     );
+
   }
 
 
@@ -253,6 +315,7 @@
       MAX_DIMENSION_LIMIT,
       value
     );
+
   }
 
 
@@ -276,8 +339,13 @@
 
 
     return value;
+
   }
 
+
+  // ============================================================
+  // DIMENSION HELPERS
+  // ============================================================
 
   function getOutputDimensions(
     naturalW,
@@ -285,9 +353,31 @@
     maxSize
   ) {
 
+    const sourceW =
+      Math.max(
+        1,
+        Math.round(
+          Number(
+            naturalW
+          ) || 0
+        )
+      );
+
+
+    const sourceH =
+      Math.max(
+        1,
+        Math.round(
+          Number(
+            naturalH
+          ) || 0
+        )
+      );
+
+
     if (
-      !naturalW ||
-      !naturalH
+      !sourceW ||
+      !sourceH
     ) {
 
       return {
@@ -299,74 +389,61 @@
           1
 
       };
+
     }
 
 
     if (
       !maxSize ||
       Math.max(
-        naturalW,
-        naturalH
+        sourceW,
+        sourceH
       ) <= maxSize
     ) {
 
       return {
 
         width:
-          Math.max(
-            1,
-            Math.round(
-              naturalW
-            )
-          ),
+          sourceW,
 
         height:
-          Math.max(
-            1,
-            Math.round(
-              naturalH
-            )
-          )
+          sourceH
 
       };
+
     }
 
 
     const scale =
       maxSize /
       Math.max(
-        naturalW,
-        naturalH
-      );
-
-
-    const width =
-      Math.max(
-        1,
-        Math.round(
-          naturalW *
-          scale
-        )
-      );
-
-
-    const height =
-      Math.max(
-        1,
-        Math.round(
-          naturalH *
-          scale
-        )
+        sourceW,
+        sourceH
       );
 
 
     return {
 
-      width,
+      width:
+        Math.max(
+          1,
+          Math.round(
+            sourceW *
+            scale
+          )
+        ),
 
-      height
+      height:
+        Math.max(
+          1,
+          Math.round(
+            sourceH *
+            scale
+          )
+        )
 
     };
+
   }
 
 
@@ -376,10 +453,25 @@
   ) {
 
     let outW =
-      width;
+      Math.max(
+        1,
+        Math.round(
+          Number(
+            width
+          ) || 1
+        )
+      );
+
 
     let outH =
-      height;
+      Math.max(
+        1,
+        Math.round(
+          Number(
+            height
+          ) || 1
+        )
+      );
 
 
     const pixels =
@@ -388,8 +480,11 @@
 
 
     if (
+      !Number.isFinite(
+        pixels
+      ) ||
       pixels <=
-      MAX_CANVAS_PIXELS
+        MAX_CANVAS_PIXELS
     ) {
 
       return {
@@ -401,6 +496,7 @@
           outH
 
       };
+
     }
 
 
@@ -440,8 +536,13 @@
         outH
 
     };
+
   }
 
+
+  // ============================================================
+  // SAVING HELPERS
+  // ============================================================
 
   function calculateSaving(
     originalSize,
@@ -471,6 +572,7 @@
           false
 
       };
+
     }
 
 
@@ -498,6 +600,7 @@
         originalSize
 
     };
+
   }
 
 
@@ -534,7 +637,9 @@
         {
 
           percent:
-            result.percent.toFixed(1),
+            result.percent.toFixed(
+              1
+            ),
 
           size:
             U.formatBytes(
@@ -568,7 +673,9 @@
         {
 
           percent:
-            increase.toFixed(1)
+            increase.toFixed(
+              1
+            )
 
         }
       );
@@ -579,8 +686,13 @@
     return t(
       'image.savingSame'
     );
+
   }
 
+
+  // ============================================================
+  // URL HELPERS
+  // ============================================================
 
   function revokeUrl(
     url
@@ -606,13 +718,19 @@
   }
 
 
+  // ============================================================
+  // PROGRESS
+  // ============================================================
+
   function setProgress(
     job,
     value
   ) {
 
     if (
-      !job.progressEl
+      !job ||
+      !job.progressEl ||
+      job.disposed
     ) {
 
       return;
@@ -634,6 +752,56 @@
 
     job.progressEl.style.width =
       `${percent}%`;
+
+  }
+
+
+  // ============================================================
+  // INTERNAL ERROR KEYS
+  // ============================================================
+
+  const ERROR_CODE_TO_KEY = {
+
+    IMAGE_LOAD_FAILED:
+      'image.readInfoFailed',
+
+    INVALID_IMAGE_DIMENSIONS:
+      'errors.invalidImageDimensions',
+
+    CANVAS_CONTEXT_FAILED:
+      'errors.canvasContext',
+
+    CREATE_FAILED:
+      'errors.createFailed',
+
+    JSZIP_NOT_AVAILABLE:
+      'errors.processingFailed',
+
+    PROCESSING_FAILED:
+      'image.compressionFailed'
+
+  };
+
+
+  function errorKeyFromError(
+    error
+  ) {
+
+    const code =
+      error &&
+      typeof error.message ===
+        'string'
+        ? error.message
+        : 'PROCESSING_FAILED';
+
+
+    return (
+      ERROR_CODE_TO_KEY[
+        code
+      ] ||
+      'image.compressionFailed'
+    );
+
   }
 
 
@@ -688,25 +856,24 @@
         null;
 
 
-      /*
-       * เก็บ key/params ของ error ล่าสุดไว้
-       * เพื่อให้แปลภาษาใหม่ได้ตอน languagechange
-       * แทนที่จะค้างข้อความ error ภาษาเดิม
-       */
-      this.errorKey =
-        null;
+      this.isProcessing =
+        false;
 
 
-      this.errorParams =
-        null;
+      this.disposed =
+        false;
 
 
       this.imageReadFailed =
         false;
 
 
-      this.isProcessing =
-        false;
+      this.errorKey =
+        null;
+
+
+      this.errorParams =
+        null;
 
 
       this.el =
@@ -719,6 +886,7 @@
 
 
       this.buildDom();
+
     }
 
 
@@ -804,6 +972,28 @@
         );
 
 
+      // ------------------------------------------------------
+      // Basic validation
+      // ------------------------------------------------------
+
+      if (
+        !this.previewImg ||
+        !this.compressBtn
+      ) {
+
+        this.disposed =
+          true;
+
+
+        return;
+
+      }
+
+
+      // ------------------------------------------------------
+      // File information
+      // ------------------------------------------------------
+
       if (
         this.filenameEl
       ) {
@@ -874,19 +1064,29 @@
       );
 
 
-      /*
-       * สำคัญสำหรับ app.js
-       */
+      // ------------------------------------------------------
+      // Processing state
+      // ------------------------------------------------------
+
       this.el.dataset.processing =
         'false';
 
 
-      this.previewImg.src =
-        this.sourceUrl;
-
+      // ------------------------------------------------------
+      // Image
+      // ------------------------------------------------------
 
       this.previewImg.onload =
         () => {
+
+          if (
+            this.disposed
+          ) {
+
+            return;
+
+          }
+
 
           this.naturalW =
             this.previewImg.naturalWidth;
@@ -896,17 +1096,87 @@
             this.previewImg.naturalHeight;
 
 
+          this.imageReadFailed =
+            !(
+              this.naturalW &&
+              this.naturalH
+            );
+
+
           if (
             this.origDimEl
           ) {
 
-            this.origDimEl.textContent =
-              `${this.naturalW}×${this.naturalH}`;
+            if (
+              this.naturalW &&
+              this.naturalH
+            ) {
+
+              this.origDimEl.textContent =
+                `${this.naturalW}×${this.naturalH}`;
+
+            } else {
+
+              this.origDimEl.textContent =
+                t(
+                  'image.readFailed'
+                );
+
+            }
 
           }
 
 
-          this.updatePreviewInfo();
+          if (
+            this.naturalW &&
+            this.naturalH
+          ) {
+
+            if (
+              this.errorKey ===
+              'image.readInfoFailed'
+            ) {
+
+              this.errorKey =
+                null;
+
+              this.errorParams =
+                null;
+
+            }
+
+
+            if (
+              this.statusEl &&
+              !this.isProcessing
+            ) {
+
+              this.statusEl.textContent =
+                t(
+                  'image.waitingCompress'
+                );
+
+
+              this.statusEl.classList.remove(
+                'is-error'
+              );
+
+            }
+
+
+            if (
+              this.compressBtn
+            ) {
+
+              this.compressBtn.disabled =
+                false;
+
+            }
+
+
+            this.updatePreviewInfo();
+
+          }
 
         };
 
@@ -914,8 +1184,30 @@
       this.previewImg.onerror =
         () => {
 
+          if (
+            this.disposed
+          ) {
+
+            return;
+
+          }
+
+
           this.imageReadFailed =
             true;
+
+
+          this.naturalW =
+            0;
+
+
+          this.naturalH =
+            0;
+
+
+          this.setError(
+            'image.openFailed'
+          );
 
 
           if (
@@ -926,35 +1218,6 @@
               t(
                 'image.readFailed'
               );
-
-          }
-
-
-          if (
-            this.statusEl
-          ) {
-
-            this.errorKey =
-              'image.openFailed';
-
-            this.errorParams =
-              null;
-
-
-            this.statusEl.textContent =
-              t(
-                this.errorKey
-              );
-
-
-            this.statusEl.classList.remove(
-              'is-ready'
-            );
-
-
-            this.statusEl.classList.add(
-              'is-error'
-            );
 
           }
 
@@ -971,21 +1234,27 @@
         };
 
 
-      if (
-        this.compressBtn
-      ) {
+      this.previewImg.src =
+        this.sourceUrl;
 
-        this.compressBtn.addEventListener(
-          'click',
-          () => {
 
-            this.compress();
+      // ------------------------------------------------------
+      // Compress
+      // ------------------------------------------------------
 
-          }
-        );
+      this.compressBtn.addEventListener(
+        'click',
+        () => {
 
-      }
+          this.compress();
 
+        }
+      );
+
+
+      // ------------------------------------------------------
+      // Remove
+      // ------------------------------------------------------
 
       const removeBtn =
         el.querySelector(
@@ -1014,7 +1283,8 @@
 
 
             if (
-              index >= 0
+              index >=
+              0
             ) {
 
               jobs.splice(
@@ -1033,7 +1303,12 @@
       }
 
 
+      // ------------------------------------------------------
+      // Initial language
+      // ------------------------------------------------------
+
       this.updateLanguageUI();
+
     }
 
 
@@ -1044,7 +1319,8 @@
     updateLanguageUI() {
 
       if (
-        this.isProcessing
+        this.disposed ||
+        !this.statusEl
       ) {
 
         return;
@@ -1052,9 +1328,21 @@
       }
 
 
-      /*
-       * Result exists
-       */
+      if (
+        this.isProcessing
+      ) {
+
+        this.statusEl.textContent =
+          t(
+            'image.compressing'
+          );
+
+
+        return;
+
+      }
+
+
       if (
         this.resultBlob
       ) {
@@ -1107,6 +1395,7 @@
 
               }
             );
+
         }
 
 
@@ -1121,16 +1410,11 @@
 
 
         return;
+
       }
 
 
-      /*
-       * ถ้ากำลังอยู่ในสถานะ error
-       * ให้แปล error เดิมใหม่ด้วย key/params ที่เก็บไว้
-       * แทนที่จะปล่อยข้อความค้างเป็นภาษาเดิม
-       */
       if (
-        this.statusEl &&
         this.statusEl.classList.contains(
           'is-error'
         )
@@ -1168,29 +1452,17 @@
       }
 
 
-      /*
-       * Waiting
-       */
-      if (
-        this.statusEl
-      ) {
-
-        this.statusEl.textContent =
-          t(
-            'image.waitingCompress'
-          );
-
-
-        this.statusEl.classList.remove(
-          'is-ready'
+      this.statusEl.textContent =
+        t(
+          'image.waitingCompress'
         );
 
-      }
+
+      this.statusEl.classList.remove(
+        'is-ready'
+      );
 
 
-      /*
-       * Original image metadata
-       */
       if (
         this.origDimEl &&
         !this.naturalW
@@ -1213,6 +1485,7 @@
     updatePreviewInfo() {
 
       if (
+        this.disposed ||
         !this.naturalW ||
         !this.naturalH
       ) {
@@ -1222,7 +1495,7 @@
       }
 
 
-      const dimensions =
+      let dimensions =
         getOutputDimensions(
           this.naturalW,
           this.naturalH,
@@ -1230,7 +1503,7 @@
         );
 
 
-      const safeDimensions =
+      dimensions =
         fitCanvasDimensions(
           dimensions.width,
           dimensions.height
@@ -1242,7 +1515,7 @@
       ) {
 
         this.newDimEl.textContent =
-          `${safeDimensions.width}×${safeDimensions.height}`;
+          `${dimensions.width}×${dimensions.height}`;
 
       }
 
@@ -1256,6 +1529,15 @@
     updateOptionsFromGlobal(
       invalidate = true
     ) {
+
+      if (
+        this.disposed
+      ) {
+
+        return false;
+
+      }
+
 
       const nextFormat =
         getFormat();
@@ -1302,12 +1584,16 @@
 
       if (
         invalidate &&
-        changed
+        changed &&
+        !this.isProcessing
       ) {
 
         this.markStale();
 
       }
+
+
+      return changed;
 
     }
 
@@ -1319,6 +1605,7 @@
     markStale() {
 
       if (
+        this.disposed ||
         this.isProcessing
       ) {
 
@@ -1393,14 +1680,17 @@
       }
 
 
+      /*
+       * อย่า reset imageReadFailed
+       * เพราะ state ของรูปต้องคงอยู่ตามความจริง
+       */
+
       this.errorKey =
         null;
 
+
       this.errorParams =
         null;
-
-      this.imageReadFailed =
-        false;
 
 
       if (
@@ -1424,12 +1714,207 @@
 
 
     // ========================================================
+    // WAIT FOR IMAGE
+    // ========================================================
+
+    async waitForImage() {
+
+      if (
+        this.disposed
+      ) {
+
+        return false;
+
+      }
+
+
+      if (
+        this.naturalW &&
+        this.naturalH
+      ) {
+
+        return true;
+
+      }
+
+
+      if (
+        this.imageReadFailed
+      ) {
+
+        return false;
+
+      }
+
+
+      /*
+       * Browser โหลดเสร็จแล้ว
+       */
+      if (
+        this.previewImg.complete
+      ) {
+
+        if (
+          this.previewImg.naturalWidth &&
+          this.previewImg.naturalHeight
+        ) {
+
+          this.naturalW =
+            this.previewImg.naturalWidth;
+
+
+          this.naturalH =
+            this.previewImg.naturalHeight;
+
+
+          this.imageReadFailed =
+            false;
+
+
+          return true;
+
+        }
+
+
+        this.imageReadFailed =
+          true;
+
+
+        return false;
+
+      }
+
+
+      return new Promise(
+        resolve => {
+
+          let settled =
+            false;
+
+
+          const cleanup =
+            () => {
+
+              this.previewImg.removeEventListener(
+                'load',
+                onLoad
+              );
+
+
+              this.previewImg.removeEventListener(
+                'error',
+                onError
+              );
+
+            };
+
+
+          const finish =
+            value => {
+
+              if (
+                settled
+              ) {
+
+                return;
+
+              }
+
+
+              settled =
+                true;
+
+
+              cleanup();
+
+
+              resolve(
+                value
+              );
+
+            };
+
+
+          const onLoad =
+            () => {
+
+              if (
+                this.disposed
+              ) {
+
+                finish(
+                  false
+                );
+
+                return;
+
+              }
+
+
+              this.naturalW =
+                this.previewImg.naturalWidth;
+
+
+              this.naturalH =
+                this.previewImg.naturalHeight;
+
+
+              this.imageReadFailed =
+                !(
+                  this.naturalW &&
+                  this.naturalH
+                );
+
+
+              finish(
+                !!(
+                  this.naturalW &&
+                  this.naturalH
+                )
+              );
+
+            };
+
+
+          const onError =
+            () => {
+
+              this.imageReadFailed =
+                true;
+
+
+              finish(
+                false
+              );
+
+            };
+
+
+          this.previewImg.addEventListener(
+            'load',
+            onLoad
+          );
+
+
+          this.previewImg.addEventListener(
+            'error',
+            onError
+          );
+
+        }
+      );
+
+    }
+
+
+    // ========================================================
     // COMPRESS
     // ========================================================
 
     async compress() {
 
       if (
+        this.disposed ||
         this.isProcessing
       ) {
 
@@ -1438,83 +1923,36 @@
       }
 
 
-      /*
-       * Wait for image
-       */
+      const loaded =
+        await this.waitForImage();
+
 
       if (
-        !this.naturalW ||
-        !this.naturalH
+        this.disposed
       ) {
 
-        await new Promise(
-          resolve => {
-
-            if (
-              this.naturalW &&
-              this.naturalH
-            ) {
-
-              resolve();
-
-              return;
-
-            }
-
-
-            const onLoad =
-              () => {
-
-                resolve();
-
-              };
-
-
-            this.previewImg.addEventListener(
-              'load',
-              onLoad,
-              {
-                once:
-                  true
-              }
-            );
-
-          }
-        );
+        return;
 
       }
 
 
       if (
+        !loaded ||
         !this.naturalW ||
         !this.naturalH
       ) {
 
+        this.setError(
+          'image.readInfoFailed'
+        );
+
+
         if (
-          this.statusEl
+          this.compressBtn
         ) {
 
-          this.errorKey =
-            'image.readInfoFailed';
-
-          this.errorParams =
-            null;
-
-
-          this.statusEl.textContent =
-            t(
-              this.errorKey
-            );
-
-
-          this.statusEl.classList.remove(
-            'is-ready'
-          );
-
-
-          this.statusEl.classList.add(
-            'is-error'
-          );
+          this.compressBtn.disabled =
+            true;
 
         }
 
@@ -1524,6 +1962,9 @@
       }
 
 
+      /*
+       * อ่านค่าปัจจุบันจาก global controls
+       */
       this.updateOptionsFromGlobal(
         false
       );
@@ -1537,20 +1978,32 @@
         'true';
 
 
-      this.compressBtn.disabled =
-        true;
+      if (
+        this.compressBtn
+      ) {
+
+        this.compressBtn.disabled =
+          true;
+
+      }
 
 
-      this.statusEl.classList.remove(
-        'is-ready',
-        'is-error'
-      );
+      if (
+        this.statusEl
+      ) {
 
-
-      this.statusEl.textContent =
-        t(
-          'image.compressing'
+        this.statusEl.classList.remove(
+          'is-ready',
+          'is-error'
         );
+
+
+        this.statusEl.textContent =
+          t(
+            'image.compressing'
+          );
+
+      }
 
 
       setProgress(
@@ -1567,6 +2020,17 @@
       );
 
 
+      if (
+        this.disposed
+      ) {
+
+        this.finishProcessing();
+
+        return;
+
+      }
+
+
       let canvas =
         null;
 
@@ -1574,7 +2038,7 @@
       try {
 
         // ----------------------------------------------------
-        // Calculate dimensions
+        // Dimensions
         // ----------------------------------------------------
 
         let dimensions =
@@ -1598,9 +2062,7 @@
         ) {
 
           throw new Error(
-            t(
-              'errors.invalidImageDimensions'
-            )
+            'INVALID_IMAGE_DIMENSIONS'
           );
 
         }
@@ -1621,6 +2083,10 @@
           25
         );
 
+
+        // ----------------------------------------------------
+        // Canvas
+        // ----------------------------------------------------
 
         canvas =
           document.createElement(
@@ -1651,16 +2117,22 @@
         ) {
 
           throw new Error(
-            t(
-              'errors.canvasContext'
-            )
+            'CANVAS_CONTEXT_FAILED'
           );
 
         }
 
 
+        ctx.imageSmoothingEnabled =
+          true;
+
+
+        ctx.imageSmoothingQuality =
+          'high';
+
+
         // ----------------------------------------------------
-        // JPG background
+        // JPEG background
         // ----------------------------------------------------
 
         if (
@@ -1682,19 +2154,15 @@
         }
 
 
-        ctx.imageSmoothingEnabled =
-          true;
-
-
-        ctx.imageSmoothingQuality =
-          'high';
-
-
         setProgress(
           this,
           42
         );
 
+
+        // ----------------------------------------------------
+        // Draw
+        // ----------------------------------------------------
 
         ctx.drawImage(
           this.previewImg,
@@ -1705,11 +2173,24 @@
         );
 
 
+        if (
+          this.disposed
+        ) {
+
+          return;
+
+        }
+
+
         setProgress(
           this,
           68
         );
 
+
+        // ----------------------------------------------------
+        // Encode
+        // ----------------------------------------------------
 
         const quality =
           this.format ===
@@ -1725,36 +2206,59 @@
               reject
             ) => {
 
-              canvas.toBlob(
-                result => {
+              try {
 
-                  if (
-                    result
-                  ) {
+                canvas.toBlob(
+                  result => {
 
-                    resolve(
+                    if (
                       result
-                    );
+                    ) {
 
-                  } else {
+                      resolve(
+                        result
+                      );
 
-                    reject(
-                      new Error(
-                        t(
-                          'errors.createFailed'
+                    } else {
+
+                      reject(
+                        new Error(
+                          'CREATE_FAILED'
                         )
-                      )
-                    );
+                      );
 
-                  }
+                    }
 
-                },
-                this.format,
-                quality
-              );
+                  },
+                  this.format,
+                  quality
+                );
+
+              } catch (
+                error
+              ) {
+
+                reject(
+                  error
+                );
+
+              }
 
             }
           );
+
+
+        /*
+         * สำคัญมาก:
+         * user อาจ remove job ระหว่าง toBlob
+         */
+        if (
+          this.disposed
+        ) {
+
+          return;
+
+        }
 
 
         if (
@@ -1762,9 +2266,7 @@
         ) {
 
           throw new Error(
-            t(
-              'errors.createFailed'
-            )
+            'CREATE_FAILED'
           );
 
         }
@@ -1776,6 +2278,10 @@
         );
 
 
+        // ----------------------------------------------------
+        // Previous result
+        // ----------------------------------------------------
+
         if (
           this.resultUrl
         ) {
@@ -1786,6 +2292,10 @@
 
         }
 
+
+        // ----------------------------------------------------
+        // Store result
+        // ----------------------------------------------------
 
         this.resultBlob =
           blob;
@@ -1872,55 +2382,64 @@
         // ----------------------------------------------------
 
         if (
-          saving.isSmaller
+          this.statusEl
         ) {
 
-          this.statusEl.textContent =
-            t(
-              'image.readySavedPercent',
-              {
-                percent:
-                  saving.percent.toFixed(
-                    1
-                  )
-              }
-            );
+          if (
+            saving.isSmaller
+          ) {
 
-        } else if (
-          blob.size >
-          this.file.size
-        ) {
+            this.statusEl.textContent =
+              t(
+                'image.readySavedPercent',
+                {
 
-          this.statusEl.textContent =
-            t(
-              'image.readyFileLarger'
-            );
+                  percent:
+                    saving.percent.toFixed(
+                      1
+                    )
 
-        } else {
+                }
+              );
 
-          this.statusEl.textContent =
-            t(
-              'image.readyDownload',
-              {
-                size:
-                  U.formatBytes(
-                    blob.size
-                  )
-              }
-            );
+          } else if (
+            blob.size >
+            this.file.size
+          ) {
+
+            this.statusEl.textContent =
+              t(
+                'image.readyFileLarger'
+              );
+
+          } else {
+
+            this.statusEl.textContent =
+              t(
+                'image.readyDownload',
+                {
+
+                  size:
+                    U.formatBytes(
+                      blob.size
+                    )
+
+                }
+              );
+
+          }
+
+
+          this.statusEl.classList.remove(
+            'is-error'
+          );
+
+
+          this.statusEl.classList.add(
+            'is-ready'
+          );
 
         }
-
-
-        this.statusEl.classList.remove(
-          'is-error'
-        );
-
-
-        this.statusEl.classList.add(
-          'is-ready'
-        );
-
 
       } catch (
         error
@@ -1932,6 +2451,15 @@
         );
 
 
+        if (
+          this.disposed
+        ) {
+
+          return;
+
+        }
+
+
         setProgress(
           this,
           0
@@ -1939,8 +2467,37 @@
 
 
         if (
+          this.resultUrl
+        ) {
+
+          revokeUrl(
+            this.resultUrl
+          );
+
+
+          this.resultUrl =
+            null;
+
+        }
+
+
+        this.resultBlob =
+          null;
+
+
+        if (
           this.downloadBtn
         ) {
+
+          this.downloadBtn.removeAttribute(
+            'href'
+          );
+
+
+          this.downloadBtn.removeAttribute(
+            'download'
+          );
+
 
           this.downloadBtn.classList.add(
             'hidden'
@@ -1949,25 +2506,123 @@
         }
 
 
-        this.errorKey =
-          'image.compressionFailed';
+        const key =
+          errorKeyFromError(
+            error
+          );
 
-        this.errorParams =
-          {
-            message:
-              error &&
-              error.message
-                ? error.message
-                : t(
-                    'errors.somethingWentWrong'
-                  )
-          };
 
+        this.setError(
+          key
+        );
+
+      } finally {
+
+        if (
+          canvas
+        ) {
+
+          try {
+
+            canvas.width =
+              1;
+
+            canvas.height =
+              1;
+
+          } catch (_) {}
+
+
+          canvas =
+            null;
+
+        }
+
+
+        this.finishProcessing();
+
+      }
+
+    }
+
+
+    // ========================================================
+    // FINISH PROCESSING
+    // ========================================================
+
+    finishProcessing() {
+
+      this.isProcessing =
+        false;
+
+
+      this.el.dataset.processing =
+        'false';
+
+
+      if (
+        this.disposed
+      ) {
+
+        return;
+
+      }
+
+
+      if (
+        this.compressBtn
+      ) {
+
+        this.compressBtn.disabled =
+          this.imageReadFailed;
+
+      }
+
+    }
+
+
+    // ========================================================
+    // SET ERROR
+    // ========================================================
+
+    setError(
+      key,
+      params = null
+    ) {
+
+      if (
+        this.disposed
+      ) {
+
+        return;
+
+      }
+
+
+      this.errorKey =
+        key;
+
+
+      this.errorParams =
+        params;
+
+
+      this.imageReadFailed =
+        key ===
+        'image.openFailed' ||
+        key ===
+        'image.readInfoFailed';
+
+
+      if (
+        this.statusEl
+      ) {
 
         this.statusEl.textContent =
           t(
-            this.errorKey,
-            this.errorParams
+            key,
+            params ||
+              undefined
           );
 
 
@@ -1979,37 +2634,6 @@
         this.statusEl.classList.add(
           'is-error'
         );
-
-      } finally {
-
-        if (
-          canvas
-        ) {
-
-          canvas.width =
-            1;
-
-
-          canvas.height =
-            1;
-
-
-          canvas =
-            null;
-
-        }
-
-
-        this.isProcessing =
-          false;
-
-
-        this.compressBtn.disabled =
-          false;
-
-
-        this.el.dataset.processing =
-          'false';
 
       }
 
@@ -2023,6 +2647,34 @@
     dispose() {
 
       if (
+        this.disposed
+      ) {
+
+        return;
+
+      }
+
+
+      /*
+       * ตัด async chain ทันที
+       */
+      this.disposed =
+        true;
+
+
+      this.isProcessing =
+        false;
+
+
+      this.el.dataset.processing =
+        'false';
+
+
+      // ------------------------------------------------------
+      // Source URL
+      // ------------------------------------------------------
+
+      if (
         this.sourceUrl
       ) {
 
@@ -2030,8 +2682,16 @@
           this.sourceUrl
         );
 
+
+        this.sourceUrl =
+          null;
+
       }
 
+
+      // ------------------------------------------------------
+      // Result URL
+      // ------------------------------------------------------
 
       if (
         this.resultUrl
@@ -2041,27 +2701,23 @@
           this.resultUrl
         );
 
+
+        this.resultUrl =
+          null;
+
       }
-
-
-      this.sourceUrl =
-        null;
-
-
-      this.resultUrl =
-        null;
 
 
       this.resultBlob =
         null;
 
 
-      this.isProcessing =
-        false;
+      this.errorKey =
+        null;
 
 
-      this.el.dataset.processing =
-        'false';
+      this.errorParams =
+        null;
 
     }
 
@@ -2074,13 +2730,21 @@
 
   function updateBulkUI() {
 
+    const activeJobs =
+      jobs.filter(
+        job =>
+          job &&
+          !job.disposed
+      );
+
+
     if (
       countEl
     ) {
 
       countEl.textContent =
         String(
-          jobs.length
+          activeJobs.length
         );
 
     }
@@ -2092,14 +2756,14 @@
 
       bulkbar.classList.toggle(
         'hidden',
-        jobs.length === 0
+        activeJobs.length === 0
       );
 
     }
 
 
     const hasReady =
-      jobs.some(
+      activeJobs.some(
         job =>
           !!job.resultBlob
       );
@@ -2127,13 +2791,9 @@
     fileList
   ) {
 
-    const files =
-      Array.from(
-        fileList || []
-      );
-
-
-    files
+    Array.from(
+      fileList || []
+    )
       .filter(
         file =>
           file &&
@@ -2144,10 +2804,33 @@
       .forEach(
         file => {
 
+          /*
+           * ไม่เพิ่มไฟล์เดิมซ้ำ
+           */
+          if (
+            hasDuplicateFile(
+              file
+            )
+          ) {
+
+            return;
+
+          }
+
+
           const job =
             new CompressJob(
               file
             );
+
+
+          if (
+            job.disposed
+          ) {
+
+            return;
+
+          }
 
 
           jobs.push(
@@ -2176,6 +2859,16 @@
 
     jobs.forEach(
       job => {
+
+        if (
+          !job ||
+          job.disposed
+        ) {
+
+          return;
+
+        }
+
 
         job.updateOptionsFromGlobal(
           true
@@ -2239,8 +2932,17 @@
       () => {
 
         jobs.forEach(
-          job =>
-            job.dispose()
+          job => {
+
+            if (
+              job
+            ) {
+
+              job.dispose();
+
+            }
+
+          }
         );
 
 
@@ -2273,7 +2975,7 @@
       async () => {
 
         if (
-          !jobs.length
+          compressAllBtn.disabled
         ) {
 
           return;
@@ -2281,7 +2983,35 @@
         }
 
 
-        refreshAllJobs();
+        const queue =
+          jobs.filter(
+            job =>
+              job &&
+              !job.disposed
+          );
+
+
+        if (
+          !queue.length
+        ) {
+
+          return;
+
+        }
+
+
+        /*
+         * อ่านค่าปัจจุบันก่อนเริ่ม
+         */
+        queue.forEach(
+          job => {
+
+            job.updateOptionsFromGlobal(
+              true
+            );
+
+          }
+        );
 
 
         compressAllBtn.disabled =
@@ -2303,16 +3033,32 @@
           async function worker() {
 
             while (
-              index <
-              jobs.length
+              true
             ) {
 
+              const currentIndex =
+                index++;
+
+
+              if (
+                currentIndex >=
+                queue.length
+              ) {
+
+                return;
+
+              }
+
+
               const job =
-                jobs[index++];
+                queue[
+                  currentIndex
+                ];
 
 
               if (
                 !job ||
+                job.disposed ||
                 job.isProcessing
               ) {
 
@@ -2331,7 +3077,7 @@
           const workerCount =
             Math.min(
               CONCURRENCY,
-              jobs.length
+              queue.length
             );
 
 
@@ -2381,9 +3127,20 @@
       'click',
       async () => {
 
+        if (
+          downloadZipBtn.disabled
+        ) {
+
+          return;
+
+        }
+
+
         const ready =
           jobs.filter(
             job =>
+              job &&
+              !job.disposed &&
               !!job.resultBlob
           );
 
@@ -2409,6 +3166,18 @@
 
         try {
 
+          if (
+            typeof JSZip !==
+            'function'
+          ) {
+
+            throw new Error(
+              'JSZIP_NOT_AVAILABLE'
+            );
+
+          }
+
+
           const zip =
             new JSZip();
 
@@ -2419,6 +3188,17 @@
 
           ready.forEach(
             job => {
+
+              if (
+                !job ||
+                job.disposed ||
+                !job.resultBlob
+              ) {
+
+                return;
+
+              }
+
 
               const ext =
                 EXT_BY_FORMAT[
@@ -2502,6 +3282,9 @@
               'image.downloadZip'
             );
 
+
+          updateBulkUI();
+
         }
 
       }
@@ -2543,8 +3326,17 @@
       () => {
 
         jobs.forEach(
-          job =>
-            job.dispose()
+          job => {
+
+            if (
+              job
+            ) {
+
+              job.dispose();
+
+            }
+
+          }
         );
 
 
@@ -2572,10 +3364,6 @@
     'languagechange',
     () => {
 
-      /*
-       * Bulk buttons
-       */
-
       if (
         compressAllBtn &&
         !compressAllBtn.disabled
@@ -2602,23 +3390,44 @@
       }
 
 
-      /*
-       * Labels inside current jobs
-       */
-
       jobs.forEach(
         job => {
 
+          if (
+            !job ||
+            job.disposed
+          ) {
+
+            return;
+
+          }
+
+
           job.updateLanguageUI();
+
 
           if (
             job.origDimEl &&
-            !job.naturalW
+            !job.naturalW &&
+            !job.imageReadFailed
           ) {
 
             job.origDimEl.textContent =
               t(
                 'image.reading'
+              );
+
+          }
+
+
+          if (
+            job.origDimEl &&
+            job.imageReadFailed
+          ) {
+
+            job.origDimEl.textContent =
+              t(
+                'image.readFailed'
               );
 
           }
