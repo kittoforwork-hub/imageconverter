@@ -1,6 +1,11 @@
 (() => {
   'use strict';
 
+
+  // ============================================================
+  // I18N
+  // ============================================================
+
   const I18n =
     window.I18n || null;
 
@@ -33,8 +38,7 @@
 
     if (
       I18n &&
-      typeof I18n.getLanguage ===
-        'function'
+      typeof I18n.getLanguage === 'function'
     ) {
 
       return I18n.getLanguage();
@@ -48,10 +52,28 @@
   // ELEMENTS
   // ============================================================
 
+  /*
+   * IMPORTANT
+   * ----------------------------------------------------------
+   * จับเฉพาะปุ่ม Category ที่มี data-cat
+   *
+   * Image:
+   *   <button class="cat-btn" data-cat="image">
+   *
+   * PDF:
+   *   <button class="cat-btn" data-cat="pdf">
+   *
+   * Notepad:
+   *   <button class="cat-btn" id="open-notepad">
+   *
+   * Notepad ไม่มี data-cat
+   * จึงจะไม่ถูกนำมาจัดการเป็น Category
+   */
+
   const catButtons =
     Array.from(
       document.querySelectorAll(
-        '.cat-btn'
+        '.cat-btn[data-cat]'
       )
     );
 
@@ -170,6 +192,20 @@
     cat
   ) {
 
+    /*
+     * ป้องกัน undefined / null
+     */
+
+    if (!cat) {
+      return;
+    }
+
+
+    /*
+     * ถ้าเปลี่ยน Category
+     * ให้ล้าง cache ของเครื่องมือเดิม
+     */
+
     if (
       currentCat &&
       currentCat !== cat
@@ -183,35 +219,49 @@
       cat;
 
 
+    /*
+     * Active เฉพาะ Category
+     *
+     * เนื่องจาก catButtons ถูกเลือกด้วย
+     * .cat-btn[data-cat]
+     *
+     * Notepad จะไม่ถูกแตะ
+     */
+
     catButtons.forEach(
       button => {
 
         button.classList.toggle(
           'is-active',
-          button.dataset.cat ===
-            cat
+          button.dataset.cat === cat
         );
       }
     );
 
+
+    /*
+     * แสดง Tool Chips ของ Category ปัจจุบัน
+     */
 
     chipGroups.forEach(
       group => {
 
         group.classList.toggle(
           'hidden',
-          group.dataset.catGroup !==
-            cat
+          group.dataset.catGroup !== cat
         );
       }
     );
 
 
+    /*
+     * หา Tool Chip ที่ Active
+     */
+
     const activeGroup =
       chipGroups.find(
         group =>
-          group.dataset.catGroup ===
-            cat
+          group.dataset.catGroup === cat
       );
 
 
@@ -227,6 +277,10 @@
           )
         : null;
 
+
+    /*
+     * เปิด Tool แรก/Tool ที่ Active
+     */
 
     if (
       activeChip
@@ -247,6 +301,15 @@
     tool
   ) {
 
+    if (!tool) {
+      return;
+    }
+
+
+    /*
+     * Active tool chip
+     */
+
     document
       .querySelectorAll(
         '.tool-chip'
@@ -256,12 +319,15 @@
 
           button.classList.toggle(
             'is-active',
-            button.dataset.tool ===
-              tool
+            button.dataset.tool === tool
           );
         }
       );
 
+
+    /*
+     * แสดงเฉพาะ panel ที่ตรงกับ tool
+     */
 
     panels.forEach(
       panel => {
@@ -281,7 +347,7 @@
 
 
   // ============================================================
-  // EVENTS
+  // CATEGORY EVENTS
   // ============================================================
 
   catButtons.forEach(
@@ -291,14 +357,27 @@
         'click',
         () => {
 
+          const cat =
+            button.dataset.cat;
+
+
+          if (!cat) {
+            return;
+          }
+
+
           showCategory(
-            button.dataset.cat
+            cat
           );
         }
       );
     }
   );
 
+
+  // ============================================================
+  // TOOL CHIP EVENTS
+  // ============================================================
 
   document
     .querySelectorAll(
@@ -311,8 +390,17 @@
           'click',
           () => {
 
+            const tool =
+              button.dataset.tool;
+
+
+            if (!tool) {
+              return;
+            }
+
+
             showTool(
-              button.dataset.tool
+              tool
             );
           }
         );
@@ -916,7 +1004,9 @@
       ).toLowerCase();
 
 
-    // Thai
+    // ----------------------------------------------------------
+    // THAI
+    // ----------------------------------------------------------
 
     if (
       /กำลัง|ประมวลผล|จัดทำ|กำลังทำงาน/.test(
@@ -928,7 +1018,9 @@
     }
 
 
-    // English
+    // ----------------------------------------------------------
+    // ENGLISH
+    // ----------------------------------------------------------
 
     if (
       /processing|converting|removing|loading|building|merging|exporting|saving|working|creating|compressing|cropping/.test(
@@ -940,7 +1032,9 @@
     }
 
 
-    // Japanese
+    // ----------------------------------------------------------
+    // JAPANESE
+    // ----------------------------------------------------------
 
     if (
       /処理中|変換中|読み込み中|作成中|保存中|圧縮中|切り抜き中/.test(
@@ -952,7 +1046,9 @@
     }
 
 
-    // Korean
+    // ----------------------------------------------------------
+    // KOREAN
+    // ----------------------------------------------------------
 
     if (
       /처리 중|변환 중|불러오는 중|생성 중|저장 중|압축 중|자르는 중/.test(
@@ -964,7 +1060,9 @@
     }
 
 
-    // Chinese
+    // ----------------------------------------------------------
+    // CHINESE
+    // ----------------------------------------------------------
 
     if (
       /处理中|转换中|加载中|创建中|保存中|压缩中|裁剪中/.test(
@@ -1241,12 +1339,9 @@
     () => {
 
       /*
-       * สำคัญ:
        * ไม่สร้าง element ใหม่
        * ไม่ลบ state
-       * ไม่แตะไฟล์ของผู้ใช้
-       *
-       * แค่เปลี่ยนข้อความ UI
+       * ไม่แตะไฟล์ผู้ใช้
        */
 
       refreshCuteLanguage();
@@ -1591,8 +1686,13 @@
   setupCuteToolUI();
 
 
+  /*
+   * เริ่มต้นหน้าเว็บที่ Image
+   */
+
   showCategory(
     'image'
   );
+
 
 })();
