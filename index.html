@@ -1,3 +1,6 @@
+<!DOCTYPE html>
+<html lang="th">
+
 <head>
 
   <meta charset="UTF-8">
@@ -6,6 +9,11 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0"
   >
+
+
+  <!-- ============================================================
+       FAVICON
+       ============================================================ -->
 
   <link
     rel="icon"
@@ -33,51 +41,68 @@
     href="./favicon.png"
   >
 
+
+  <!-- ============================================================
+       TITLE
+       ============================================================ -->
+
   <title data-i18n="page.title">
     Workshop Utility BY KITTO
   </title>
 
 
-<link
-  rel="preconnect"
-  href="https://fonts.googleapis.com"
->
+  <!-- ============================================================
+       PRECONNECT
+       ============================================================ -->
 
-<link
-  rel="preconnect"
-  href="https://fonts.gstatic.com"
-  crossorigin
->
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
 
-<link
-  rel="preconnect"
-  href="https://raw.githubusercontent.com"
-  crossorigin
->
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
 
-<link
-  rel="preconnect"
-  href="https://cdnjs.cloudflare.com"
-  crossorigin
->
+  <link
+    rel="preconnect"
+    href="https://raw.githubusercontent.com"
+    crossorigin
+  >
 
-<link
-  rel="preconnect"
-  href="https://cdn.jsdelivr.net"
-  crossorigin
->
+  <link
+    rel="preconnect"
+    href="https://cdnjs.cloudflare.com"
+    crossorigin
+  >
 
-
-<link
-  href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-  rel="stylesheet"
->
+  <link
+    rel="preconnect"
+    href="https://cdn.jsdelivr.net"
+    crossorigin
+  >
 
 
-<link
-  rel="stylesheet"
-  href="css/style.css"
->
+  <!-- ============================================================
+       FONTS
+       ============================================================ -->
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  >
+
+
+  <!-- ============================================================
+       MAIN CSS
+       ============================================================ -->
+
+  <link
+    rel="stylesheet"
+    href="css/style.css"
+  >
 
 </head>
 
@@ -87,9 +112,9 @@
 <div class="sheet">
 
 
-  <!-- ============================================================ -->
-  <!-- HEADER                                                        -->
-  <!-- ============================================================ -->
+  <!-- ============================================================
+       HEADER
+       ============================================================ -->
 
   <header class="topbar">
 
@@ -100,9 +125,9 @@
       </div>
 
 
-      <!-- ======================================================== -->
-      <!-- LANGUAGE SELECTOR                                         -->
-      <!-- ======================================================== -->
+      <!-- ========================================================
+           LANGUAGE SELECTOR
+           ======================================================== -->
 
       <div class="language-switcher">
 
@@ -191,9 +216,9 @@
   </header>
 
 
-  <!-- ============================================================ -->
-  <!-- CATEGORY SWITCHER                                             -->
-  <!-- ============================================================ -->
+  <!-- ============================================================
+       CATEGORY SWITCHER
+       ============================================================ -->
 
   <nav
     class="cat-bar"
@@ -201,9 +226,9 @@
   >
 
 
-    <!-- ========================================================== -->
-    <!-- IMAGE                                                       -->
-    <!-- ========================================================== -->
+    <!-- ==========================================================
+         IMAGE
+         ========================================================== -->
 
     <button
       class="cat-btn is-active"
@@ -248,9 +273,9 @@
     </button>
 
 
-    <!-- ========================================================== -->
-    <!-- PDF                                                         -->
-    <!-- ========================================================== -->
+    <!-- ==========================================================
+         PDF
+         ========================================================== -->
 
     <button
       class="cat-btn"
@@ -285,9 +310,9 @@
     </button>
 
 
-    <!-- ========================================================== -->
-    <!-- NOTEPAD                                                     -->
-    <!-- ========================================================== -->
+    <!-- ==========================================================
+         NOTEPAD
+         ========================================================== -->
 
     <button
       class="cat-btn"
@@ -335,12 +360,58 @@
 
     </button>
 
+
+    <!-- ==========================================================
+         FILE CONVERTER
+         ========================================================== -->
+
+    <button
+      class="cat-btn"
+      id="open-file-converter"
+      type="button"
+      title="เปิด File Converter"
+    >
+
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+        aria-hidden="true"
+      >
+
+        <path
+          d="M7 7h10"
+        />
+
+        <path
+          d="M14 4l3 3-3 3"
+        />
+
+        <path
+          d="M17 17H7"
+        />
+
+        <path
+          d="M10 14l-3 3 3 3"
+        />
+
+      </svg>
+
+      <span>
+        File Converter
+      </span>
+
+    </button>
+
   </nav>
 
 
-  <!-- ============================================================ -->
-  <!-- IMAGE TOOL CHIPS                                              -->
-  <!-- ============================================================ -->
+  <!-- ============================================================
+       IMAGE TOOL CHIPS
+       ============================================================ -->
 
   <nav
     class="tool-chips"
@@ -393,9 +464,9 @@
   </nav>
 
 
-  <!-- ============================================================ -->
-  <!-- PDF TOOL CHIPS                                                -->
-  <!-- ============================================================ -->
+  <!-- ============================================================
+       PDF TOOL CHIPS
+       ============================================================ -->
 
   <nav
     class="tool-chips hidden"
@@ -470,16 +541,16 @@
   </nav>
 
 
-  <!-- ============================================================ -->
-  <!-- MAIN PANELS                                                   -->
-  <!-- ============================================================ -->
+  <!-- ============================================================
+       MAIN PANELS
+       ============================================================ -->
 
   <main class="panels">
 
 
-    <!-- ========================================================== -->
-    <!-- IMAGE: CONVERT                                              -->
-    <!-- ========================================================== -->
+    <!-- ==========================================================
+         IMAGE: CONVERT
+         ========================================================== -->
 
     <section
       class="tool-panel"
@@ -1019,9 +1090,9 @@
     </section>
 
 
-    <!-- ========================================================== -->
-    <!-- IMAGE: CROP                                                 -->
-    <!-- ========================================================== -->
+    <!-- ==========================================================
+         IMAGE: CROP
+         ========================================================== -->
 
     <section
       class="tool-panel hidden"
@@ -1203,13 +1274,14 @@
 
               <div class="spec-row">
 
-                <span
-                  class="spec-label"
-                >
+                <span class="spec-label">
+
                   <span data-i18n="image.crop">
                     พื้นที่ตัด
                   </span>
+
                 </span>
+
 
                 <span
                   class="spec-value mono js-cropdim"
@@ -1367,9 +1439,9 @@
     </section>
 
 
-    <!-- ========================================================== -->
-    <!-- IMAGE: BACKGROUND REMOVAL                                   -->
-    <!-- ========================================================== -->
+    <!-- ==========================================================
+         IMAGE: BACKGROUND REMOVAL
+         ========================================================== -->
 
     <section
       class="tool-panel hidden"
@@ -1737,9 +1809,9 @@
     </section>
 
 
-    <!-- ========================================================== -->
-    <!-- IMAGE: COMPRESS                                             -->
-    <!-- ========================================================== -->
+    <!-- ==========================================================
+         IMAGE: COMPRESS
+         ========================================================== -->
 
     <section
       class="tool-panel hidden"
@@ -1871,8 +1943,6 @@
         <div class="bulk-right">
 
 
-          <!-- QUALITY -->
-
           <label class="field-inline">
 
             <span data-i18n="common.quality">
@@ -1916,8 +1986,6 @@
 
           </label>
 
-
-          <!-- MAX SIZE -->
 
           <label class="field-inline">
 
@@ -1966,8 +2034,6 @@
           </label>
 
 
-          <!-- FORMAT -->
-
           <label class="field-inline">
 
             <span data-i18n="common.format">
@@ -2002,8 +2068,6 @@
           </label>
 
 
-          <!-- CLEAR -->
-
           <button
             class="btn btn-ghost"
             id="clearAll-img-compress"
@@ -2015,8 +2079,6 @@
           </button>
 
 
-          <!-- COMPRESS -->
-
           <button
             class="btn btn-primary"
             id="compressAll-img-compress"
@@ -2027,8 +2089,6 @@
             </span>
           </button>
 
-
-          <!-- ZIP -->
 
           <button
             class="btn btn-accent hidden"
@@ -2061,8 +2121,6 @@
           <div class="ticket-body">
 
 
-            <!-- THUMB -->
-
             <div class="ticket-thumb">
 
               <img
@@ -2073,12 +2131,8 @@
             </div>
 
 
-            <!-- INFO -->
-
             <div class="ticket-spec">
 
-
-              <!-- FILE NAME -->
 
               <div class="spec-row spec-name">
 
@@ -2098,8 +2152,6 @@
 
               </div>
 
-
-              <!-- ORIGINAL -->
 
               <div class="spec-row">
 
@@ -2131,8 +2183,6 @@
               <div class="spec-divider"></div>
 
 
-              <!-- NEW SIZE -->
-
               <div class="spec-row">
 
                 <span
@@ -2160,8 +2210,6 @@
               </div>
 
 
-              <!-- SAVING -->
-
               <div class="control-row">
 
                 <span
@@ -2181,8 +2229,6 @@
               </div>
 
 
-              <!-- PROGRESS -->
-
               <div class="progress-track">
 
                 <div
@@ -2191,8 +2237,6 @@
 
               </div>
 
-
-              <!-- FOOTER -->
 
               <div class="ticket-footer">
 
@@ -2206,9 +2250,6 @@
 
                 <div class="ticket-actions">
 
-
-                  <!-- COMPRESS -->
-
                   <button
                     type="button"
                     class="btn btn-small btn-primary js-compress-btn"
@@ -2219,8 +2260,6 @@
                   </button>
 
 
-                  <!-- DOWNLOAD -->
-
                   <a
                     class="btn btn-small btn-accent js-download-btn hidden"
                     download
@@ -2230,8 +2269,6 @@
                     </span>
                   </a>
 
-
-                  <!-- REMOVE -->
 
                   <button
                     type="button"
@@ -2257,9 +2294,9 @@
     </section>
 
 
-    <!-- ========================================================== -->
-    <!-- PDF: IMAGES -> PDF                                          -->
-    <!-- ========================================================== -->
+    <!-- ==========================================================
+         PDF: IMAGES -> PDF
+         ========================================================== -->
 
     <section
       class="tool-panel hidden"
@@ -2490,7 +2527,9 @@
         <li class="file-row">
 
           <span class="file-thumb">
+
             <img alt="">
+
           </span>
 
 
@@ -2548,9 +2587,9 @@
     </section>
 
 
-    <!-- ========================================================== -->
-    <!-- PDF: PDF -> IMAGES                                          -->
-    <!-- ========================================================== -->
+    <!-- ==========================================================
+         PDF: PDF -> IMAGES
+         ========================================================== -->
 
     <section
       class="tool-panel hidden"
@@ -2810,9 +2849,9 @@
     </section>
 
 
-    <!-- ========================================================== -->
-    <!-- PDF: PAGE MANAGER                                           -->
-    <!-- ========================================================== -->
+    <!-- ==========================================================
+         PDF: PAGE MANAGER
+         ========================================================== -->
 
     <section
       class="tool-panel hidden"
@@ -3067,9 +3106,9 @@
     </section>
 
 
-    <!-- ========================================================== -->
-    <!-- PDF: MERGE                                                  -->
-    <!-- ========================================================== -->
+    <!-- ==========================================================
+         PDF: MERGE
+         ========================================================== -->
 
     <section
       class="tool-panel hidden"
@@ -3246,9 +3285,9 @@
     </section>
 
 
-    <!-- ========================================================== -->
-    <!-- PDF: WATERMARK                                               -->
-    <!-- ========================================================== -->
+    <!-- ==========================================================
+         PDF: WATERMARK
+         ========================================================== -->
 
     <section
       class="tool-panel hidden"
@@ -3538,9 +3577,9 @@
     </section>
 
 
-    <!-- ========================================================== -->
-    <!-- PDF: PAGE NUMBERS                                            -->
-    <!-- ========================================================== -->
+    <!-- ==========================================================
+         PDF: PAGE NUMBERS
+         ========================================================== -->
 
     <section
       class="tool-panel hidden"
@@ -3802,12 +3841,13 @@
 
     </section>
 
+
   </main>
 
 
-  <!-- ============================================================ -->
-  <!-- FOOTER                                                        -->
-  <!-- ============================================================ -->
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
 
   <footer class="foot">
 
@@ -3824,20 +3864,28 @@
 </div>
 
 
-<!-- ============================================================ -->
-<!-- LIBRARIES                                                       -->
-<!-- ============================================================ -->
+<!-- ============================================================
+     LIBRARIES
+     ============================================================ -->
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+></script>
 
 
-<!-- ============================================================ -->
-<!-- PDF.JS CONFIG                                                   -->
-<!-- ============================================================ -->
+<script
+  src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"
+></script>
+
+
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+></script>
+
+
+<!-- ============================================================
+     PDF.JS CONFIG
+     ============================================================ -->
 
 <script>
 
@@ -3845,23 +3893,26 @@
    * PDF.js worker
    */
 
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  if (
+    window.pdfjsLib
+  ) {
+
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+  }
 
 
   /*
    * Custom Canvas Factory
-   *
-   * ใช้สำหรับ PDF.js ตอนสร้าง canvas
-   * และตั้ง willReadFrequently=true
-   *
-   * ไม่ใช้ pdfjsLib.DOMCanvasFactory
-   * เพราะ build แบบ CDN นี้ไม่ได้ expose class นั้น
    */
 
   window.KittoCanvasFactory = {
 
-    create(width, height) {
+    create(
+      width,
+      height
+    ) {
 
       if (
         width <= 0 ||
@@ -3882,18 +3933,26 @@
 
 
       canvas.width =
-        Math.ceil(width);
+        Math.ceil(
+          width
+        );
+
 
       canvas.height =
-        Math.ceil(height);
+        Math.ceil(
+          height
+        );
 
 
       const context =
         canvas.getContext(
           "2d",
           {
-            alpha: true,
-            willReadFrequently: true
+            alpha:
+              true,
+
+            willReadFrequently:
+              true
           }
         );
 
@@ -3908,8 +3967,11 @@
 
 
       return {
+
         canvas,
+
         context
+
       };
 
     },
@@ -3938,18 +4000,26 @@
 
 
       canvas.width =
-        Math.ceil(width);
+        Math.ceil(
+          width
+        );
+
 
       canvas.height =
-        Math.ceil(height);
+        Math.ceil(
+          height
+        );
 
 
       const context =
         canvas.getContext(
           "2d",
           {
-            alpha: true,
-            willReadFrequently: true
+            alpha:
+              true,
+
+            willReadFrequently:
+              true
           }
         );
 
@@ -3986,11 +4056,14 @@
       canvasAndContext.canvas.width =
         1;
 
+
       canvasAndContext.canvas.height =
         1;
 
+
       canvasAndContext.canvas =
         null;
+
 
       canvasAndContext.context =
         null;
@@ -4002,45 +4075,83 @@
 </script>
 
 
-<!-- ============================================================ -->
-<!-- APPLICATION SCRIPTS                                            -->
-<!-- ============================================================ -->
+<!-- ============================================================
+     APPLICATION SCRIPTS
+     ============================================================ -->
 
-<!-- IMPORTANT:
-     i18n.js ต้องมาก่อน utils.js -->
-
-<script src="js/i18n.js"></script>
-
-<script src="js/utils.js"></script>
-
-<script src="js/pdf-worker-client.js"></script>
-
-<script src="js/app.js"></script>
-
-<script src="js/tool-image-convert.js"></script>
-
-<script src="js/tool-image-crop.js"></script>
-
-<script src="js/tool-image-bgremove.js"></script>
-
-<script src="js/tool-image-compress.js"></script>
-
-<script src="js/tool-images-to-pdf.js"></script>
-
-<script src="js/tool-pdf-to-images.js"></script>
-
-<script src="js/tool-pdf-pages.js"></script>
-
-<script src="js/tool-pdf-merge.js"></script>
-
-<script src="js/tool-pdf-watermark.js"></script>
-
-<script src="js/tool-pdf-pagenumbers.js"></script>
+<script
+  src="js/i18n.js"
+></script>
 
 
-<!-- ============================================================ -->
-<!-- LANGUAGE SELECTOR                                             -->
-<!-- ============================================================ -->
+<script
+  src="js/utils.js"
+></script>
+
+
+<script
+  src="js/pdf-worker-client.js"
+></script>
+
+
+<script
+  src="js/app.js"
+></script>
+
+
+<script
+  src="js/tool-image-convert.js"
+></script>
+
+
+<script
+  src="js/tool-image-crop.js"
+></script>
+
+
+<script
+  src="js/tool-image-bgremove.js"
+></script>
+
+
+<script
+  src="js/tool-image-compress.js"
+></script>
+
+
+<script
+  src="js/tool-images-to-pdf.js"
+></script>
+
+
+<script
+  src="js/tool-pdf-to-images.js"
+></script>
+
+
+<script
+  src="js/tool-pdf-pages.js"
+></script>
+
+
+<script
+  src="js/tool-pdf-merge.js"
+></script>
+
+
+<script
+  src="js/tool-pdf-watermark.js"
+></script>
+
+
+<script
+  src="js/tool-pdf-pagenumbers.js"
+></script>
+
+
+<!-- ============================================================
+     LANGUAGE SELECTOR
+     ============================================================ -->
 
 <script>
 
@@ -4056,7 +4167,9 @@
 
 
     if (!select) {
+
       return;
+
     }
 
 
@@ -4070,8 +4183,18 @@
         'function'
     ) {
 
-      select.value =
+      const language =
         window.I18n.getLanguage();
+
+
+      if (
+        language
+      ) {
+
+        select.value =
+          language;
+
+      }
 
     }
 
@@ -4118,8 +4241,12 @@
           event.detail.language;
 
 
-        if (!language) {
+        if (
+          !language
+        ) {
+
           return;
+
         }
 
 
@@ -4141,9 +4268,9 @@
 </script>
 
 
-<!-- ============================================================ -->
-<!-- NOTEPAD NAVIGATION                                             -->
-<!-- ============================================================ -->
+<!-- ============================================================
+     NOTEPAD NAVIGATION
+     ============================================================ -->
 
 <script>
 
@@ -4159,7 +4286,9 @@
 
 
     if (!openNotepad) {
+
       return;
+
     }
 
 
@@ -4169,6 +4298,45 @@
 
         window.location.href =
           'notepad.html';
+
+      }
+    );
+
+  })();
+
+</script>
+
+
+<!-- ============================================================
+     FILE CONVERTER NAVIGATION
+     ============================================================ -->
+
+<script>
+
+  (() => {
+
+    'use strict';
+
+
+    const openFileConverter =
+      document.getElementById(
+        'open-file-converter'
+      );
+
+
+    if (!openFileConverter) {
+
+      return;
+
+    }
+
+
+    openFileConverter.addEventListener(
+      'click',
+      () => {
+
+        window.location.href =
+          'file-converter.html';
 
       }
     );
