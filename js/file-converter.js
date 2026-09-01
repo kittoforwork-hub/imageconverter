@@ -2,19 +2,8 @@
    FILE CONVERTER
    /js/file-converter.js
 
-   Browser-side file converter engine
+   Client-side file conversion controller
 
-   Features:
-   - Search
-   - Category filter
-   - Converter modal
-   - Drag & Drop
-   - Multi-file selection
-   - Progress
-   - Download results
-   - Dynamic CDN library loading
-
-   Supported:
    IMAGE
    - JPG  -> PNG
    - PNG  -> JPG
@@ -54,19 +43,12 @@
    - XLSX -> CSV
    - JSON -> XLSX
    - XLSX -> PDF
-   - CSV  -> XLSX
 
    DOCUMENT
    - DOCX -> PDF
    - PPTX -> PDF
-   - XLSX -> PDF
-   - HTML -> PDF
 
-   Notes:
-   - Everything runs client-side.
-   - Files are not uploaded to a server by this controller.
-   - DOCX/PPTX/XLSX -> PDF uses extracted content,
-     not Microsoft Office pixel-perfect rendering.
+   Everything is processed locally in the browser.
    ============================================================ */
 
 (() => {
@@ -79,127 +61,229 @@
      ============================================================ */
 
   const searchInput =
-    document.getElementById("converter-search");
+    document.getElementById(
+      "converter-search"
+    );
+
 
   const clearSearchButton =
-    document.getElementById("clear-search");
+    document.getElementById(
+      "clear-search"
+    );
+
 
   const searchResultInfo =
-    document.getElementById("search-result-info");
+    document.getElementById(
+      "search-result-info"
+    );
+
 
   const filterButtons =
     Array.from(
-      document.querySelectorAll(".filter-button")
+      document.querySelectorAll(
+        ".filter-button"
+      )
     );
+
 
   const converterCards =
     Array.from(
-      document.querySelectorAll(".converter-card")
+      document.querySelectorAll(
+        ".converter-card"
+      )
     );
+
 
   const categorySections =
     Array.from(
-      document.querySelectorAll(".converter-category")
+      document.querySelectorAll(
+        ".converter-category"
+      )
     );
 
+
   const emptyState =
-    document.getElementById("empty-state");
+    document.getElementById(
+      "empty-state"
+    );
+
 
   const resetSearchButton =
-    document.getElementById("reset-search");
+    document.getElementById(
+      "reset-search"
+    );
 
 
-  /* Modal */
+  /* ------------------------------------------------------------
+     MODAL
+     ------------------------------------------------------------ */
 
   const modal =
-    document.getElementById("converter-modal");
+    document.getElementById(
+      "converter-modal"
+    );
+
 
   const modalTitle =
-    document.getElementById("modal-title");
+    document.getElementById(
+      "modal-title"
+    );
+
 
   const modalDescription =
-    document.getElementById("modal-description");
+    document.getElementById(
+      "modal-description"
+    );
+
 
   const modalCategory =
-    document.getElementById("modal-category");
+    document.getElementById(
+      "modal-category"
+    );
+
 
   const modalClose =
-    document.getElementById("modal-close");
+    document.getElementById(
+      "modal-close"
+    );
+
 
   const modalCancel =
-    document.getElementById("modal-cancel");
+    document.getElementById(
+      "modal-cancel"
+    );
 
 
-  /* Drop */
+  /* ------------------------------------------------------------
+     DROP ZONE
+     ------------------------------------------------------------ */
 
   const dropZone =
-    document.getElementById("drop-zone");
+    document.getElementById(
+      "drop-zone"
+    );
+
 
   const browseFilesButton =
-    document.getElementById("browse-files");
+    document.getElementById(
+      "browse-files"
+    );
+
 
   const fileInput =
-    document.getElementById("file-input");
+    document.getElementById(
+      "file-input"
+    );
+
 
   const supportedFormats =
-    document.getElementById("supported-formats");
+    document.getElementById(
+      "supported-formats"
+    );
 
 
-  /* Files */
+  /* ------------------------------------------------------------
+     FILE LIST
+     ------------------------------------------------------------ */
 
   const fileListSection =
-    document.getElementById("file-list-section");
+    document.getElementById(
+      "file-list-section"
+    );
+
 
   const fileList =
-    document.getElementById("file-list");
+    document.getElementById(
+      "file-list"
+    );
+
 
   const fileCount =
-    document.getElementById("file-count");
+    document.getElementById(
+      "file-count"
+    );
+
 
   const clearFilesButton =
-    document.getElementById("clear-files");
+    document.getElementById(
+      "clear-files"
+    );
 
 
-  /* Progress */
+  /* ------------------------------------------------------------
+     PROGRESS
+     ------------------------------------------------------------ */
 
   const progressSection =
-    document.getElementById("progress-section");
+    document.getElementById(
+      "progress-section"
+    );
+
 
   const progressBar =
-    document.getElementById("progress-bar");
+    document.getElementById(
+      "progress-bar"
+    );
+
 
   const progressPercent =
-    document.getElementById("progress-percent");
+    document.getElementById(
+      "progress-percent"
+    );
+
 
   const progressStatus =
-    document.getElementById("progress-status");
+    document.getElementById(
+      "progress-status"
+    );
 
 
-  /* Results */
+  /* ------------------------------------------------------------
+     RESULT
+     ------------------------------------------------------------ */
 
   const resultSection =
-    document.getElementById("result-section");
+    document.getElementById(
+      "result-section"
+    );
+
 
   const resultSummary =
-    document.getElementById("result-summary");
+    document.getElementById(
+      "result-summary"
+    );
+
 
   const resultList =
-    document.getElementById("result-list");
+    document.getElementById(
+      "result-list"
+    );
 
 
-  /* Error */
+  /* ------------------------------------------------------------
+     ERROR
+     ------------------------------------------------------------ */
 
   const errorMessage =
-    document.getElementById("error-message");
+    document.getElementById(
+      "error-message"
+    );
+
 
   const errorText =
-    document.getElementById("error-text");
+    document.getElementById(
+      "error-text"
+    );
 
 
-  /* Convert */
+  /* ------------------------------------------------------------
+     CONVERT BUTTON
+     ------------------------------------------------------------ */
 
   const convertButton =
-    document.getElementById("convert-button");
+    document.getElementById(
+      "convert-button"
+    );
 
 
   /* ============================================================
@@ -249,7 +333,6 @@
     );
 
     return;
-
   }
 
 
@@ -301,11 +384,11 @@
     100 * 1024 * 1024;
 
 
-  const DEFAULT_JPEG_QUALITY =
+  const JPEG_QUALITY =
     0.92;
 
 
-  const DEFAULT_WEBP_QUALITY =
+  const WEBP_QUALITY =
     0.90;
 
 
@@ -328,12 +411,11 @@
 
     mammoth:
       "https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"
-
   };
 
 
   /* ============================================================
-     LIBRARY PROMISES
+     LIBRARY PROMISE CACHE
      ============================================================ */
 
   let pdfJsPromise =
@@ -360,7 +442,9 @@
      BASIC HELPERS
      ============================================================ */
 
-  function safeString(value) {
+  function safeString(
+    value
+  ) {
 
     return String(
       value ?? ""
@@ -369,7 +453,9 @@
   }
 
 
-  function normalize(value) {
+  function normalize(
+    value
+  ) {
 
     return safeString(
       value
@@ -378,7 +464,9 @@
   }
 
 
-  function escapeHtml(value) {
+  function escapeHtml(
+    value
+  ) {
 
     return safeString(
       value
@@ -428,7 +516,6 @@
     ) {
 
       return "";
-
     }
 
 
@@ -462,7 +549,6 @@
     ) {
 
       return name;
-
     }
 
 
@@ -489,7 +575,6 @@
     ) {
 
       return `${value} B`;
-
     }
 
 
@@ -500,7 +585,6 @@
       return `${(
         value / 1024
       ).toFixed(1)} KB`;
-
     }
 
 
@@ -513,7 +597,6 @@
         value /
         (1024 * 1024)
       ).toFixed(1)} MB`;
-
     }
 
 
@@ -525,7 +608,7 @@
   }
 
 
-  function sleep(
+  function wait(
     ms
   ) {
 
@@ -552,34 +635,26 @@
   }
 
 
-  function readAsArrayBuffer(
-    file
+  function getErrorMessage(
+    error
   ) {
 
-    return file.arrayBuffer();
+    if (
+      error instanceof Error
+    ) {
 
-  }
-
-
-  function readAsText(
-    file
-  ) {
-
-    return file.text();
-
-  }
+      return (
+        error.message ||
+        "ไม่สามารถแปลงไฟล์ได้"
+      );
+    }
 
 
-  function blobFrom(
-    data,
-    type
-  ) {
-
-    return new Blob(
-      [data],
-      {
-        type
-      }
+    return (
+      safeString(
+        error
+      ) ||
+      "ไม่สามารถแปลงไฟล์ได้"
     );
 
   }
@@ -600,25 +675,39 @@
     ) {
 
       return Promise.resolve();
-
     }
 
 
-    return new Promise(
-      (
-        resolve,
-        reject
-      ) => {
+    const existing =
+      Array.from(
+        document.scripts
+      ).find(
+        script =>
+          script.dataset &&
+          script.dataset.kitScript ===
+            src
+      );
 
-        const existing =
-          document.querySelector(
-            `script[data-kit-script="${CSS.escape(src)}"]`
-          );
 
+    if (
+      existing
+    ) {
 
-        if (
-          existing
-        ) {
+      return new Promise(
+        (
+          resolve,
+          reject
+        ) => {
+
+          if (
+            typeof test === "function" &&
+            test()
+          ) {
+
+            resolve();
+            return;
+          }
+
 
           existing.addEventListener(
             "load",
@@ -631,21 +720,27 @@
 
           existing.addEventListener(
             "error",
-            () => reject(
-              new Error(
-                `โหลด library ไม่สำเร็จ: ${src}`
-              )
-            ),
+            () =>
+              reject(
+                new Error(
+                  `โหลด library ไม่สำเร็จ: ${src}`
+                )
+              ),
             {
               once: true
             }
           );
 
-
-          return;
-
         }
+      );
+    }
 
+
+    return new Promise(
+      (
+        resolve,
+        reject
+      ) => {
 
         const script =
           document.createElement(
@@ -666,15 +761,17 @@
 
 
         script.onload =
-          () => resolve();
+          () =>
+            resolve();
 
 
         script.onerror =
-          () => reject(
-            new Error(
-              `โหลด library ไม่สำเร็จ: ${src}`
-            )
-          );
+          () =>
+            reject(
+              new Error(
+                `โหลด library ไม่สำเร็จ: ${src}`
+              )
+            );
 
 
         document.head.appendChild(
@@ -688,7 +785,7 @@
 
 
   /* ============================================================
-     LOAD PDF.JS
+     ENSURE PDF.JS
      ============================================================ */
 
   function ensurePdfJs() {
@@ -699,7 +796,9 @@
 
       try {
 
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        window.pdfjsLib
+          .GlobalWorkerOptions
+          .workerSrc =
           CDN.pdfWorker;
 
       } catch {
@@ -710,7 +809,6 @@
       return Promise.resolve(
         window.pdfjsLib
       );
-
     }
 
 
@@ -719,7 +817,6 @@
     ) {
 
       return pdfJsPromise;
-
     }
 
 
@@ -739,16 +836,15 @@
           ) {
 
             throw new Error(
-              "PDF.js โหลดแล้วแต่ไม่พบ pdfjsLib"
+              "ไม่พบ PDF.js"
             );
-
           }
 
 
           window.pdfjsLib
             .GlobalWorkerOptions
             .workerSrc =
-              CDN.pdfWorker;
+            CDN.pdfWorker;
 
 
           return window.pdfjsLib;
@@ -763,7 +859,7 @@
 
 
   /* ============================================================
-     LOAD PDF-LIB
+     ENSURE PDF-LIB
      ============================================================ */
 
   function ensurePdfLib() {
@@ -775,7 +871,6 @@
       return Promise.resolve(
         window.PDFLib
       );
-
     }
 
 
@@ -784,7 +879,6 @@
     ) {
 
       return pdfLibPromise;
-
     }
 
 
@@ -804,9 +898,8 @@
           ) {
 
             throw new Error(
-              "pdf-lib โหลดแล้วแต่ไม่พบ PDFLib"
+              "ไม่พบ pdf-lib"
             );
-
           }
 
 
@@ -822,7 +915,7 @@
 
 
   /* ============================================================
-     LOAD JSZIP
+     ENSURE JSZIP
      ============================================================ */
 
   function ensureJsZip() {
@@ -834,7 +927,6 @@
       return Promise.resolve(
         window.JSZip
       );
-
     }
 
 
@@ -843,7 +935,6 @@
     ) {
 
       return jsZipPromise;
-
     }
 
 
@@ -863,9 +954,8 @@
           ) {
 
             throw new Error(
-              "JSZip โหลดแล้วแต่ไม่พบ JSZip"
+              "ไม่พบ JSZip"
             );
-
           }
 
 
@@ -881,7 +971,7 @@
 
 
   /* ============================================================
-     LOAD XLSX
+     ENSURE XLSX
      ============================================================ */
 
   function ensureXlsx() {
@@ -893,7 +983,6 @@
       return Promise.resolve(
         window.XLSX
       );
-
     }
 
 
@@ -902,7 +991,6 @@
     ) {
 
       return xlsxPromise;
-
     }
 
 
@@ -922,9 +1010,8 @@
           ) {
 
             throw new Error(
-              "SheetJS โหลดแล้วแต่ไม่พบ XLSX"
+              "ไม่พบ SheetJS XLSX"
             );
-
           }
 
 
@@ -940,7 +1027,7 @@
 
 
   /* ============================================================
-     LOAD MAMMOTH
+     ENSURE MAMMOTH
      ============================================================ */
 
   function ensureMammoth() {
@@ -952,7 +1039,6 @@
       return Promise.resolve(
         window.mammoth
       );
-
     }
 
 
@@ -961,7 +1047,6 @@
     ) {
 
       return mammothPromise;
-
     }
 
 
@@ -981,9 +1066,8 @@
           ) {
 
             throw new Error(
-              "Mammoth โหลดแล้วแต่ไม่พบ mammoth"
+              "ไม่พบ Mammoth"
             );
-
           }
 
 
@@ -999,2742 +1083,7 @@
 
 
   /* ============================================================
-     CONVERTER REGISTRY
-     ============================================================ */
-
-  const CONVERTERS = {
-
-    /* ----------------------------------------------------------
-       IMAGE
-       ---------------------------------------------------------- */
-
-    "jpg-png": {
-
-      id:
-        "jpg-png",
-
-      title:
-        "JPG → PNG",
-
-      description:
-        "แปลงไฟล์ JPG / JPEG เป็น PNG",
-
-      category:
-        "image",
-
-      categoryLabel:
-        "IMAGE CONVERTER",
-
-      inputExtensions:
-        ["jpg", "jpeg"],
-
-      inputMimeTypes:
-        ["image/jpeg"],
-
-      outputExtension:
-        "png",
-
-      outputMime:
-        "image/png",
-
-      supported:
-        true,
-
-      convert:
-        convertImage
-
-    },
-
-
-    "png-jpg": {
-
-      id:
-        "png-jpg",
-
-      title:
-        "PNG → JPG",
-
-      description:
-        "แปลงไฟล์ PNG เป็น JPG",
-
-      category:
-        "image",
-
-      categoryLabel:
-        "IMAGE CONVERTER",
-
-      inputExtensions:
-        ["png"],
-
-      inputMimeTypes:
-        ["image/png"],
-
-      outputExtension:
-        "jpg",
-
-      outputMime:
-        "image/jpeg",
-
-      supported:
-        true,
-
-      convert:
-        convertImage
-
-    },
-
-
-    "jpg-webp": {
-
-      id:
-        "jpg-webp",
-
-      title:
-        "JPG → WebP",
-
-      description:
-        "แปลงไฟล์ JPG / JPEG เป็น WebP",
-
-      category:
-        "image",
-
-      categoryLabel:
-        "IMAGE CONVERTER",
-
-      inputExtensions:
-        ["jpg", "jpeg"],
-
-      inputMimeTypes:
-        ["image/jpeg"],
-
-      outputExtension:
-        "webp",
-
-      outputMime:
-        "image/webp",
-
-      supported:
-        true,
-
-      convert:
-        convertImage
-
-    },
-
-
-    "png-webp": {
-
-      id:
-        "png-webp",
-
-      title:
-        "PNG → WebP",
-
-      description:
-        "แปลงไฟล์ PNG เป็น WebP",
-
-      category:
-        "image",
-
-      categoryLabel:
-        "IMAGE CONVERTER",
-
-      inputExtensions:
-        ["png"],
-
-      inputMimeTypes:
-        ["image/png"],
-
-      outputExtension:
-        "webp",
-
-      outputMime:
-        "image/webp",
-
-      supported:
-        true,
-
-      convert:
-        convertImage
-
-    },
-
-
-    "webp-jpg": {
-
-      id:
-        "webp-jpg",
-
-      title:
-        "WebP → JPG",
-
-      description:
-        "แปลงไฟล์ WebP เป็น JPG",
-
-      category:
-        "image",
-
-      categoryLabel:
-        "IMAGE CONVERTER",
-
-      inputExtensions:
-        ["webp"],
-
-      inputMimeTypes:
-        ["image/webp"],
-
-      outputExtension:
-        "jpg",
-
-      outputMime:
-        "image/jpeg",
-
-      supported:
-        true,
-
-      convert:
-        convertImage
-
-    },
-
-
-    "webp-png": {
-
-      id:
-        "webp-png",
-
-      title:
-        "WebP → PNG",
-
-      description:
-        "แปลงไฟล์ WebP เป็น PNG",
-
-      category:
-        "image",
-
-      categoryLabel:
-        "IMAGE CONVERTER",
-
-      inputExtensions:
-        ["webp"],
-
-      inputMimeTypes:
-        ["image/webp"],
-
-      outputExtension:
-        "png",
-
-      outputMime:
-        "image/png",
-
-      supported:
-        true,
-
-      convert:
-        convertImage
-
-    },
-
-
-    "svg-png": {
-
-      id:
-        "svg-png",
-
-      title:
-        "SVG → PNG",
-
-      description:
-        "แปลง SVG เป็น PNG",
-
-      category:
-        "image",
-
-      categoryLabel:
-        "IMAGE CONVERTER",
-
-      inputExtensions:
-        ["svg"],
-
-      inputMimeTypes:
-        ["image/svg+xml"],
-
-      outputExtension:
-        "png",
-
-      outputMime:
-        "image/png",
-
-      supported:
-        true,
-
-      convert:
-        convertSvgToPng
-
-    },
-
-
-    "bmp-png": {
-
-      id:
-        "bmp-png",
-
-      title:
-        "BMP → PNG",
-
-      description:
-        "แปลง BMP เป็น PNG",
-
-      category:
-        "image",
-
-      categoryLabel:
-        "IMAGE CONVERTER",
-
-      inputExtensions:
-        ["bmp"],
-
-      inputMimeTypes:
-        [
-          "image/bmp",
-          "image/x-ms-bmp"
-        ],
-
-      outputExtension:
-        "png",
-
-      outputMime:
-        "image/png",
-
-      supported:
-        true,
-
-      convert:
-        convertImage
-
-    },
-
-
-    "gif-png": {
-
-      id:
-        "gif-png",
-
-      title:
-        "GIF → PNG",
-
-      description:
-        "แปลง GIF เป็น PNG",
-
-      category:
-        "image",
-
-      categoryLabel:
-        "IMAGE CONVERTER",
-
-      inputExtensions:
-        ["gif"],
-
-      inputMimeTypes:
-        ["image/gif"],
-
-      outputExtension:
-        "png",
-
-      outputMime:
-        "image/png",
-
-      supported:
-        true,
-
-      convert:
-        convertImage
-
-    },
-
-
-    "image-ico": {
-
-      id:
-        "image-ico",
-
-      title:
-        "Image → ICO",
-
-      description:
-        "สร้างไฟล์ ICO / Favicon",
-
-      category:
-        "image",
-
-      categoryLabel:
-        "IMAGE CONVERTER",
-
-      inputExtensions:
-        [
-          "jpg",
-          "jpeg",
-          "png",
-          "webp",
-          "bmp"
-        ],
-
-      inputMimeTypes:
-        [
-          "image/jpeg",
-          "image/png",
-          "image/webp",
-          "image/bmp",
-          "image/x-ms-bmp"
-        ],
-
-      outputExtension:
-        "ico",
-
-      outputMime:
-        "image/x-icon",
-
-      supported:
-        true,
-
-      convert:
-        convertImageToIco
-
-    },
-
-
-    /* ----------------------------------------------------------
-       PDF
-       ---------------------------------------------------------- */
-
-    "jpg-pdf": {
-
-      id:
-        "jpg-pdf",
-
-      title:
-        "JPG → PDF",
-
-      description:
-        "แปลง JPG / JPEG เป็น PDF",
-
-      category:
-        "pdf",
-
-      categoryLabel:
-        "PDF CONVERTER",
-
-      inputExtensions:
-        [
-          "jpg",
-          "jpeg"
-        ],
-
-      inputMimeTypes:
-        ["image/jpeg"],
-
-      outputExtension:
-        "pdf",
-
-      outputMime:
-        "application/pdf",
-
-      supported:
-        true,
-
-      convert:
-        convertImageToPdf
-
-    },
-
-
-    "png-pdf": {
-
-      id:
-        "png-pdf",
-
-      title:
-        "PNG → PDF",
-
-      description:
-        "แปลง PNG เป็น PDF",
-
-      category:
-        "pdf",
-
-      categoryLabel:
-        "PDF CONVERTER",
-
-      inputExtensions:
-        ["png"],
-
-      inputMimeTypes:
-        ["image/png"],
-
-      outputExtension:
-        "pdf",
-
-      outputMime:
-        "application/pdf",
-
-      supported:
-        true,
-
-      convert:
-        convertImageToPdf
-
-    },
-
-
-    "image-pdf": {
-
-      id:
-        "image-pdf",
-
-      title:
-        "Image → PDF",
-
-      description:
-        "รวมรูปภาพเป็น PDF",
-
-      category:
-        "pdf",
-
-      categoryLabel:
-        "PDF CONVERTER",
-
-      inputExtensions:
-        [
-          "jpg",
-          "jpeg",
-          "png",
-          "webp",
-          "bmp"
-        ],
-
-      inputMimeTypes:
-        [
-          "image/jpeg",
-          "image/png",
-          "image/webp",
-          "image/bmp",
-          "image/x-ms-bmp"
-        ],
-
-      outputExtension:
-        "pdf",
-
-      outputMime:
-        "application/pdf",
-
-      supported:
-        true,
-
-      convert:
-        convertImageToPdf
-
-    },
-
-
-    "pdf-jpg": {
-
-      id:
-        "pdf-jpg",
-
-      title:
-        "PDF → JPG",
-
-      description:
-        "แปลงทุกหน้าของ PDF เป็น JPG แล้วรวมเป็น ZIP",
-
-      category:
-        "pdf",
-
-      categoryLabel:
-        "PDF CONVERTER",
-
-      inputExtensions:
-        ["pdf"],
-
-      inputMimeTypes:
-        ["application/pdf"],
-
-      outputExtension:
-        "zip",
-
-      outputMime:
-        "application/zip",
-
-      supported:
-        true,
-
-      convert:
-        convertPdfToJpgZip
-
-    },
-
-
-    "pdf-png": {
-
-      id:
-        "pdf-png",
-
-      title:
-        "PDF → PNG",
-
-      description:
-        "แปลงทุกหน้าของ PDF เป็น PNG แล้วรวมเป็น ZIP",
-
-      category:
-        "pdf",
-
-      categoryLabel:
-        "PDF CONVERTER",
-
-      inputExtensions:
-        ["pdf"],
-
-      inputMimeTypes:
-        ["application/pdf"],
-
-      outputExtension:
-        "zip",
-
-      outputMime:
-        "application/zip",
-
-      supported:
-        true,
-
-      convert:
-        convertPdfToPngZip
-
-    },
-
-
-    "pdf-txt": {
-
-      id:
-        "pdf-txt",
-
-      title:
-        "PDF → TXT",
-
-      description:
-        "ดึงข้อความจาก PDF",
-
-      category:
-        "pdf",
-
-      categoryLabel:
-        "PDF CONVERTER",
-
-      inputExtensions:
-        ["pdf"],
-
-      inputMimeTypes:
-        ["application/pdf"],
-
-      outputExtension:
-        "txt",
-
-      outputMime:
-        "text/plain",
-
-      supported:
-        true,
-
-      convert:
-        convertPdfToText
-
-    },
-
-
-    "pdf-text": {
-
-      id:
-        "pdf-text",
-
-      title:
-        "PDF → Text",
-
-      description:
-        "Extract ข้อความจาก PDF",
-
-      category:
-        "pdf",
-
-      categoryLabel:
-        "PDF CONVERTER",
-
-      inputExtensions:
-        ["pdf"],
-
-      inputMimeTypes:
-        ["application/pdf"],
-
-      outputExtension:
-        "txt",
-
-      outputMime:
-        "text/plain",
-
-      supported:
-        true,
-
-      convert:
-        convertPdfToText
-
-    },
-
-
-    "pdf-images": {
-
-      id:
-        "pdf-images",
-
-      title:
-        "PDF → Images",
-
-      description:
-        "แยกทุกหน้า PDF เป็น JPG แล้วรวมเป็น ZIP",
-
-      category:
-        "pdf",
-
-      categoryLabel:
-        "PDF CONVERTER",
-
-      inputExtensions:
-        ["pdf"],
-
-      inputMimeTypes:
-        ["application/pdf"],
-
-      outputExtension:
-        "zip",
-
-      outputMime:
-        "application/zip",
-
-      supported:
-        true,
-
-      convert:
-        convertPdfToJpgZip
-
-    },
-
-
-    /* ----------------------------------------------------------
-       DATA
-       ---------------------------------------------------------- */
-
-    "csv-json": {
-
-      id:
-        "csv-json",
-
-      title:
-        "CSV → JSON",
-
-      description:
-        "แปลง CSV เป็น JSON",
-
-      category:
-        "data",
-
-      categoryLabel:
-        "DATA CONVERTER",
-
-      inputExtensions:
-        ["csv"],
-
-      inputMimeTypes:
-        [
-          "text/csv",
-          "text/plain"
-        ],
-
-      outputExtension:
-        "json",
-
-      outputMime:
-        "application/json",
-
-      supported:
-        true,
-
-      convert:
-        convertCsvToJson
-
-    },
-
-
-    "json-csv": {
-
-      id:
-        "json-csv",
-
-      title:
-        "JSON → CSV",
-
-      description:
-        "แปลง JSON เป็น CSV",
-
-      category:
-        "data",
-
-      categoryLabel:
-        "DATA CONVERTER",
-
-      inputExtensions:
-        ["json"],
-
-      inputMimeTypes:
-        [
-          "application/json",
-          "text/json"
-        ],
-
-      outputExtension:
-        "csv",
-
-      outputMime:
-        "text/csv;charset=utf-8",
-
-      supported:
-        true,
-
-      convert:
-        convertJsonToCsv
-
-    },
-
-
-    "json-xml": {
-
-      id:
-        "json-xml",
-
-      title:
-        "JSON → XML",
-
-      description:
-        "แปลง JSON เป็น XML",
-
-      category:
-        "data",
-
-      categoryLabel:
-        "DATA CONVERTER",
-
-      inputExtensions:
-        ["json"],
-
-      inputMimeTypes:
-        [
-          "application/json",
-          "text/json"
-        ],
-
-      outputExtension:
-        "xml",
-
-      outputMime:
-        "application/xml;charset=utf-8",
-
-      supported:
-        true,
-
-      convert:
-        convertJsonToXml
-
-    },
-
-
-    "xml-json": {
-
-      id:
-        "xml-json",
-
-      title:
-        "XML → JSON",
-
-      description:
-        "แปลง XML เป็น JSON",
-
-      category:
-        "data",
-
-      categoryLabel:
-        "DATA CONVERTER",
-
-      inputExtensions:
-        ["xml"],
-
-      inputMimeTypes:
-        [
-          "application/xml",
-          "text/xml"
-        ],
-
-      outputExtension:
-        "json",
-
-      outputMime:
-        "application/json",
-
-      supported:
-        true,
-
-      convert:
-        convertXmlToJson
-
-    },
-
-
-    "yaml-json": {
-
-      id:
-        "yaml-json",
-
-      title:
-        "YAML → JSON",
-
-      description:
-        "แปลง YAML เป็น JSON สำหรับโครงสร้างพื้นฐานทั่วไป",
-
-      category:
-        "data",
-
-      categoryLabel:
-        "DATA CONVERTER",
-
-      inputExtensions:
-        [
-          "yaml",
-          "yml"
-        ],
-
-      inputMimeTypes:
-        [
-          "text/yaml",
-          "application/yaml",
-          "text/plain"
-        ],
-
-      outputExtension:
-        "json",
-
-      outputMime:
-        "application/json",
-
-      supported:
-        true,
-
-      convert:
-        convertYamlToJson
-
-    },
-
-
-    "json-yaml": {
-
-      id:
-        "json-yaml",
-
-      title:
-        "JSON → YAML",
-
-      description:
-        "แปลง JSON เป็น YAML",
-
-      category:
-        "data",
-
-      categoryLabel:
-        "DATA CONVERTER",
-
-      inputExtensions:
-        ["json"],
-
-      inputMimeTypes:
-        [
-          "application/json",
-          "text/json"
-        ],
-
-      outputExtension:
-        "yaml",
-
-      outputMime:
-        "text/yaml;charset=utf-8",
-
-      supported:
-        true,
-
-      convert:
-        convertJsonToYaml
-
-    },
-
-
-    /* ----------------------------------------------------------
-       TEXT
-       ---------------------------------------------------------- */
-
-    "txt-html": {
-
-      id:
-        "txt-html",
-
-      title:
-        "TXT → HTML",
-
-      description:
-        "แปลง Text เป็น HTML",
-
-      category:
-        "text",
-
-      categoryLabel:
-        "TEXT CONVERTER",
-
-      inputExtensions:
-        ["txt"],
-
-      inputMimeTypes:
-        ["text/plain"],
-
-      outputExtension:
-        "html",
-
-      outputMime:
-        "text/html;charset=utf-8",
-
-      supported:
-        true,
-
-      convert:
-        convertTxtToHtml
-
-    },
-
-
-    "html-txt": {
-
-      id:
-        "html-txt",
-
-      title:
-        "HTML → TXT",
-
-      description:
-        "ดึงข้อความจาก HTML",
-
-      category:
-        "text",
-
-      categoryLabel:
-        "TEXT CONVERTER",
-
-      inputExtensions:
-        [
-          "html",
-          "htm"
-        ],
-
-      inputMimeTypes:
-        ["text/html"],
-
-      outputExtension:
-        "txt",
-
-      outputMime:
-        "text/plain;charset=utf-8",
-
-      supported:
-        true,
-
-      convert:
-        convertHtmlToTxt
-
-    },
-
-
-    "txt-pdf": {
-
-      id:
-        "txt-pdf",
-
-      title:
-        "TXT → PDF",
-
-      description:
-        "แปลง Text เป็น PDF",
-
-      category:
-        "text",
-
-      categoryLabel:
-        "TEXT CONVERTER",
-
-      inputExtensions:
-        ["txt"],
-
-      inputMimeTypes:
-        ["text/plain"],
-
-      outputExtension:
-        "pdf",
-
-      outputMime:
-        "application/pdf",
-
-      supported:
-        true,
-
-      convert:
-        convertTextToPdf
-
-    },
-
-
-    "html-pdf": {
-
-      id:
-        "html-pdf",
-
-      title:
-        "HTML → PDF",
-
-      description:
-        "ดึงข้อความจาก HTML แล้วสร้าง PDF",
-
-      category:
-        "document",
-
-      categoryLabel:
-        "DOCUMENT CONVERTER",
-
-      inputExtensions:
-        [
-          "html",
-          "htm"
-        ],
-
-      inputMimeTypes:
-        ["text/html"],
-
-      outputExtension:
-        "pdf",
-
-      outputMime:
-        "application/pdf",
-
-      supported:
-        true,
-
-      convert:
-        convertHtmlToPdf
-
-    },
-
-
-    "md-html": {
-
-      id:
-        "md-html",
-
-      title:
-        "Markdown → HTML",
-
-      description:
-        "แปลง Markdown เป็น HTML",
-
-      category:
-        "text",
-
-      categoryLabel:
-        "TEXT CONVERTER",
-
-      inputExtensions:
-        ["md"],
-
-      inputMimeTypes:
-        [
-          "text/markdown",
-          "text/plain"
-        ],
-
-      outputExtension:
-        "html",
-
-      outputMime:
-        "text/html;charset=utf-8",
-
-      supported:
-        true,
-
-      convert:
-        convertMarkdownToHtml
-
-    },
-
-
-    /* ----------------------------------------------------------
-       SPREADSHEET
-       ---------------------------------------------------------- */
-
-    "csv-xlsx": {
-
-      id:
-        "csv-xlsx",
-
-      title:
-        "CSV → XLSX",
-
-      description:
-        "แปลง CSV เป็น Excel",
-
-      category:
-        "spreadsheet",
-
-      categoryLabel:
-        "SPREADSHEET CONVERTER",
-
-      inputExtensions:
-        ["csv"],
-
-      inputMimeTypes:
-        [
-          "text/csv",
-          "text/plain"
-        ],
-
-      outputExtension:
-        "xlsx",
-
-      outputMime:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-
-      supported:
-        true,
-
-      convert:
-        convertCsvToXlsx
-
-    },
-
-
-    "xlsx-csv": {
-
-      id:
-        "xlsx-csv",
-
-      title:
-        "XLSX → CSV",
-
-      description:
-        "แปลง Excel เป็น CSV",
-
-      category:
-        "spreadsheet",
-
-      categoryLabel:
-        "SPREADSHEET CONVERTER",
-
-      inputExtensions:
-        [
-          "xlsx",
-          "xls"
-        ],
-
-      inputMimeTypes:
-        [
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "application/vnd.ms-excel"
-        ],
-
-      outputExtension:
-        "csv",
-
-      outputMime:
-        "text/csv;charset=utf-8",
-
-      supported:
-        true,
-
-      convert:
-        convertXlsxToCsv
-
-    },
-
-
-    "json-xlsx": {
-
-      id:
-        "json-xlsx",
-
-      title:
-        "JSON → XLSX",
-
-      description:
-        "แปลง JSON เป็น Excel",
-
-      category:
-        "spreadsheet",
-
-      categoryLabel:
-        "SPREADSHEET CONVERTER",
-
-      inputExtensions:
-        ["json"],
-
-      inputMimeTypes:
-        [
-          "application/json",
-          "text/json"
-        ],
-
-      outputExtension:
-        "xlsx",
-
-      outputMime:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-
-      supported:
-        true,
-
-      convert:
-        convertJsonToXlsx
-
-    },
-
-
-    "xlsx-pdf": {
-
-      id:
-        "xlsx-pdf",
-
-      title:
-        "XLSX → PDF",
-
-      description:
-        "อ่านตาราง Excel แล้วสร้าง PDF ใหม่",
-
-      category:
-        "document",
-
-      categoryLabel:
-        "DOCUMENT CONVERTER",
-
-      inputExtensions:
-        [
-          "xlsx",
-          "xls"
-        ],
-
-      inputMimeTypes:
-        [
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "application/vnd.ms-excel"
-        ],
-
-      outputExtension:
-        "pdf",
-
-      outputMime:
-        "application/pdf",
-
-      supported:
-        true,
-
-      convert:
-        convertXlsxToPdf
-
-    },
-
-
-    /* ----------------------------------------------------------
-       DOCUMENT
-       ---------------------------------------------------------- */
-
-    "docx-pdf": {
-
-      id:
-        "docx-pdf",
-
-      title:
-        "DOCX → PDF",
-
-      description:
-        "ดึงข้อความจาก Word แล้วสร้าง PDF",
-
-      category:
-        "document",
-
-      categoryLabel:
-        "DOCUMENT CONVERTER",
-
-      inputExtensions:
-        ["docx"],
-
-      inputMimeTypes:
-        [
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        ],
-
-      outputExtension:
-        "pdf",
-
-      outputMime:
-        "application/pdf",
-
-      supported:
-        true,
-
-      convert:
-        convertDocxToPdf
-
-    },
-
-
-    "pptx-pdf": {
-
-      id:
-        "pptx-pdf",
-
-      title:
-        "PPTX → PDF",
-
-      description:
-        "ดึงข้อความจาก PowerPoint แล้วสร้าง PDF",
-
-      category:
-        "document",
-
-      categoryLabel:
-        "DOCUMENT CONVERTER",
-
-      inputExtensions:
-        ["pptx"],
-
-      inputMimeTypes:
-        [
-          "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-        ],
-
-      outputExtension:
-        "pdf",
-
-      outputMime:
-        "application/pdf",
-
-      supported:
-        true,
-
-      convert:
-        convertPptxToPdf
-
-    }
-
-  };
-
-
-  /* ============================================================
-     ACCEPT
-     ============================================================ */
-
-  function buildAcceptAttribute(
-    converter
-  ) {
-
-    const extensions =
-      converter.inputExtensions
-        .map(
-          ext =>
-            `.${ext}`
-        );
-
-
-    const mimes =
-      Array.isArray(
-        converter.inputMimeTypes
-      )
-        ? converter.inputMimeTypes
-        : [];
-
-
-    return [
-      ...extensions,
-      ...mimes
-    ]
-      .filter(Boolean)
-      .join(",");
-
-  }
-
-
-  /* ============================================================
-     OPEN MODAL
-     ============================================================ */
-
-  function openConverter(
-    converterId
-  ) {
-
-    const converter =
-      CONVERTERS[
-        converterId
-      ];
-
-
-    if (
-      !converter
-    ) {
-
-      showError(
-        "ไม่พบ Converter ที่เลือก"
-      );
-
-      return;
-
-    }
-
-
-    activeConverterId =
-      converterId;
-
-
-    activeConverter =
-      converter;
-
-
-    previousActiveElement =
-      document.activeElement;
-
-
-    resetConverterState(
-      true
-    );
-
-
-    modalTitle.textContent =
-      converter.title;
-
-
-    modalDescription.textContent =
-      converter.description;
-
-
-    modalCategory.textContent =
-      converter.categoryLabel;
-
-
-    supportedFormats.textContent =
-      `รองรับ: ${converter.inputExtensions
-        .map(
-          ext =>
-            ext.toUpperCase()
-        )
-        .join(", ")}`;
-
-
-    fileInput.accept =
-      buildAcceptAttribute(
-        converter
-      );
-
-
-    modal.hidden =
-      false;
-
-
-    previousBodyOverflow =
-      document.body.style.overflow;
-
-
-    document.body.style.overflow =
-      "hidden";
-
-
-    setTimeout(
-      () => {
-
-        modalClose.focus();
-
-      },
-      0
-    );
-
-  }
-
-
-  /* ============================================================
-     CLOSE MODAL
-     ============================================================ */
-
-  function closeConverter() {
-
-    if (
-      isConverting
-    ) {
-
-      return;
-
-    }
-
-
-    cleanupResults();
-
-
-    modal.hidden =
-      true;
-
-
-    document.body.style.overflow =
-      previousBodyOverflow;
-
-
-    activeConverterId =
-      null;
-
-
-    activeConverter =
-      null;
-
-
-    resetConverterState(
-      true
-    );
-
-
-    if (
-      previousActiveElement &&
-      typeof previousActiveElement.focus === "function"
-    ) {
-
-      try {
-
-        previousActiveElement.focus();
-
-      } catch {
-        /* ignore */
-      }
-
-    }
-
-
-    previousActiveElement =
-      null;
-
-  }
-
-
-  /* ============================================================
-     RESET STATE
-     ============================================================ */
-
-  function resetConverterState(
-    clearSelected
-  ) {
-
-    isConverting =
-      false;
-
-
-    hideError();
-
-
-    resetProgress();
-
-
-    cleanupResults();
-
-
-    if (
-      clearSelected
-    ) {
-
-      selectedFiles =
-        [];
-
-    }
-
-
-    updateFileList();
-
-
-    resultSection.hidden =
-      true;
-
-
-    resultList.innerHTML =
-      "";
-
-
-    convertButton.disabled =
-      selectedFiles.length === 0;
-
-
-    convertButton.classList.remove(
-      "is-loading"
-    );
-
-
-    convertButton.textContent =
-      "Convert →";
-
-
-    browseFilesButton.disabled =
-      false;
-
-
-    clearFilesButton.disabled =
-      false;
-
-  }
-
-
-  /* ============================================================
-     CLEANUP RESULTS
-     ============================================================ */
-
-  function cleanupResults() {
-
-    convertedResults.forEach(
-      result => {
-
-        if (
-          result &&
-          result.url
-        ) {
-
-          try {
-
-            URL.revokeObjectURL(
-              result.url
-            );
-
-          } catch {
-            /* ignore */
-          }
-
-        }
-
-      }
-    );
-
-
-    convertedResults =
-      [];
-
-  }
-
-
-  /* ============================================================
-     FILE INPUT
-     ============================================================ */
-
-  browseFilesButton.addEventListener(
-    "click",
-    event => {
-
-      event.stopPropagation();
-
-
-      if (
-        isConverting
-      ) {
-
-        return;
-
-      }
-
-
-      fileInput.click();
-
-    }
-  );
-
-
-  dropZone.addEventListener(
-    "click",
-    event => {
-
-      if (
-        event.target.closest(
-          "button"
-        )
-      ) {
-
-        return;
-
-      }
-
-
-      if (
-        isConverting
-      ) {
-
-        return;
-
-      }
-
-
-      fileInput.click();
-
-    }
-  );
-
-
-  dropZone.addEventListener(
-    "keydown",
-    event => {
-
-      if (
-        event.key === "Enter" ||
-        event.key === " "
-      ) {
-
-        event.preventDefault();
-
-
-        if (
-          !isConverting
-        ) {
-
-          fileInput.click();
-
-        }
-
-      }
-
-    }
-  );
-
-
-  fileInput.addEventListener(
-    "change",
-    event => {
-
-      addFiles(
-        Array.from(
-          event.target.files ||
-          []
-        )
-      );
-
-
-      fileInput.value =
-        "";
-
-    }
-  );
-
-
-  /* ============================================================
-     DRAG & DROP
-     ============================================================ */
-
-  [
-    "dragenter",
-    "dragover"
-  ].forEach(
-    eventName => {
-
-      dropZone.addEventListener(
-        eventName,
-        event => {
-
-          event.preventDefault();
-          event.stopPropagation();
-
-
-          if (
-            !isConverting
-          ) {
-
-            dropZone.classList.add(
-              "drag-over"
-            );
-
-          }
-
-        }
-      );
-
-    }
-  );
-
-
-  [
-    "dragleave",
-    "drop"
-  ].forEach(
-    eventName => {
-
-      dropZone.addEventListener(
-        eventName,
-        event => {
-
-          event.preventDefault();
-          event.stopPropagation();
-
-
-          dropZone.classList.remove(
-            "drag-over"
-          );
-
-        }
-      );
-
-    }
-  );
-
-
-  dropZone.addEventListener(
-    "drop",
-    event => {
-
-      if (
-        isConverting
-      ) {
-
-        return;
-
-      }
-
-
-      const files =
-        Array.from(
-          event.dataTransfer?.files ||
-          []
-        );
-
-
-      addFiles(
-        files
-      );
-
-    }
-  );
-
-
-  /* ============================================================
-     ADD FILES
-     ============================================================ */
-
-  function addFiles(
-    files
-  ) {
-
-    if (
-      !activeConverter ||
-      isConverting
-    ) {
-
-      return;
-
-    }
-
-
-    if (
-      !Array.isArray(files) ||
-      !files.length
-    ) {
-
-      return;
-
-    }
-
-
-    hideError();
-
-
-    const valid =
-      [];
-
-
-    const rejected =
-      [];
-
-
-    for (
-      const file of files
-    ) {
-
-      if (
-        selectedFiles.length +
-        valid.length >=
-        MAX_FILES
-      ) {
-
-        rejected.push(
-          `เกินจำนวนสูงสุด ${MAX_FILES} ไฟล์`
-        );
-
-        break;
-
-      }
-
-
-      if (
-        file.size >
-        MAX_FILE_SIZE
-      ) {
-
-        rejected.push(
-          `${file.name}: ใหญ่เกิน ${formatBytes(MAX_FILE_SIZE)}`
-        );
-
-        continue;
-
-      }
-
-
-      if (
-        !isFileSupported(
-          file,
-          activeConverter
-        )
-      ) {
-
-        rejected.push(
-          `${file.name}: รูปแบบไฟล์ไม่รองรับ`
-        );
-
-        continue;
-
-      }
-
-
-      const duplicate =
-        selectedFiles.some(
-          existing =>
-            existing.name ===
-              file.name &&
-            existing.size ===
-              file.size &&
-            existing.lastModified ===
-              file.lastModified
-        );
-
-
-      if (
-        duplicate
-      ) {
-
-        continue;
-
-      }
-
-
-      valid.push(
-        file
-      );
-
-    }
-
-
-    selectedFiles.push(
-      ...valid
-    );
-
-
-    updateFileList();
-
-
-    convertButton.disabled =
-      selectedFiles.length === 0;
-
-
-    if (
-      rejected.length
-    ) {
-
-      showError(
-        rejected.join("\n")
-      );
-
-    }
-
-  }
-
-
-  /* ============================================================
-     FILE VALIDATION
-     ============================================================ */
-
-  function isFileSupported(
-    file,
-    converter
-  ) {
-
-    const extension =
-      getExtension(
-        file.name
-      );
-
-
-    if (
-      converter.inputExtensions.includes(
-        extension
-      )
-    ) {
-
-      return true;
-
-    }
-
-
-    const mime =
-      normalize(
-        file.type
-      );
-
-
-    if (
-      mime &&
-      converter.inputMimeTypes.includes(
-        mime
-      )
-    ) {
-
-      return true;
-
-    }
-
-
-    return false;
-
-  }
-
-
-  /* ============================================================
-     FILE LIST
-     ============================================================ */
-
-  function updateFileList() {
-
-    fileList.innerHTML =
-      "";
-
-
-    fileCount.textContent =
-      `${selectedFiles.length} file${
-        selectedFiles.length === 1
-          ? ""
-          : "s"
-      }`;
-
-
-    fileListSection.hidden =
-      selectedFiles.length === 0;
-
-
-    if (
-      selectedFiles.length === 0
-    ) {
-
-      return;
-
-    }
-
-
-    const fragment =
-      document.createDocumentFragment();
-
-
-    selectedFiles.forEach(
-      (
-        file,
-        index
-      ) => {
-
-        const row =
-          document.createElement(
-            "div"
-          );
-
-
-        row.className =
-          "file-item";
-
-
-        const extension =
-          getExtension(
-            file.name
-          );
-
-
-        row.innerHTML =
-          `
-            <div class="file-item-icon">
-              ${escapeHtml(
-                extension ||
-                "FILE"
-              )}
-            </div>
-
-            <div class="file-item-info">
-
-              <div class="file-item-name">
-                ${escapeHtml(
-                  file.name
-                )}
-              </div>
-
-              <div class="file-item-size">
-                ${formatBytes(
-                  file.size
-                )}
-              </div>
-
-            </div>
-
-            <button
-              type="button"
-              class="file-item-remove"
-              data-remove-index="${index}"
-              aria-label="ลบไฟล์"
-            >
-              ×
-            </button>
-          `;
-
-
-        fragment.appendChild(
-          row
-        );
-
-      }
-    );
-
-
-    fileList.appendChild(
-      fragment
-    );
-
-  }
-
-
-  fileList.addEventListener(
-    "click",
-    event => {
-
-      const button =
-        event.target.closest(
-          "[data-remove-index]"
-        );
-
-
-      if (
-        !button ||
-        isConverting
-      ) {
-
-        return;
-
-      }
-
-
-      const index =
-        Number(
-          button.dataset.removeIndex
-        );
-
-
-      if (
-        !Number.isInteger(index)
-      ) {
-
-        return;
-
-      }
-
-
-      selectedFiles.splice(
-        index,
-        1
-      );
-
-
-      updateFileList();
-
-
-      convertButton.disabled =
-        selectedFiles.length === 0;
-
-  );
-
-
-  /* ============================================================
-     CLEAR FILES
-     ============================================================ */
-
-  clearFilesButton.addEventListener(
-    "click",
-    () => {
-
-      if (
-        isConverting
-      ) {
-
-        return;
-
-      }
-
-
-      selectedFiles =
-        [];
-
-
-      updateFileList();
-
-
-      convertButton.disabled =
-        true;
-
-
-      cleanupResults();
-
-
-      resultSection.hidden =
-        true;
-
-
-      resultList.innerHTML =
-        "";
-
-
-      hideError();
-
-
-      resetProgress();
-
-    }
-  );
-
-
-  /* ============================================================
-     CONVERT BUTTON
-     ============================================================ */
-
-  convertButton.addEventListener(
-    "click",
-    async () => {
-
-      if (
-        isConverting ||
-        !activeConverter ||
-        selectedFiles.length === 0
-      ) {
-
-        return;
-
-      }
-
-
-      await runConversion();
-
-    }
-  );
-
-
-  /* ============================================================
-     RUN CONVERSION
-     ============================================================ */
-
-  async function runConversion() {
-
-    isConverting =
-      true;
-
-
-    hideError();
-
-
-    cleanupResults();
-
-
-    resultSection.hidden =
-      true;
-
-
-    resultList.innerHTML =
-      "";
-
-
-    progressSection.hidden =
-      false;
-
-
-    browseFilesButton.disabled =
-      true;
-
-
-    clearFilesButton.disabled =
-      true;
-
-
-    convertButton.disabled =
-      true;
-
-
-    convertButton.classList.add(
-      "is-loading"
-    );
-
-
-    convertButton.textContent =
-      "กำลังแปลง...";
-
-
-    try {
-
-      const total =
-        selectedFiles.length;
-
-
-      for (
-        let index = 0;
-        index < total;
-        index++
-      ) {
-
-        const file =
-          selectedFiles[index];
-
-
-        setProgress(
-          Math.round(
-            (
-              index /
-              total
-            ) * 100
-          ),
-          `กำลังแปลง ${index + 1}/${total}: ${file.name}`
-        );
-
-
-        await nextFrame();
-
-
-        let result;
-
-
-        try {
-
-          result =
-            await activeConverter.convert(
-              file,
-              activeConverter
-            );
-
-        } catch (
-          error
-        ) {
-
-          throw new Error(
-            `${file.name}: ${getErrorMessage(
-              error
-            )}`
-          );
-
-        }
-
-
-        convertedResults.push(
-          result
-        );
-
-
-        setProgress(
-          Math.round(
-            (
-              (index + 1) /
-              total
-            ) * 100
-          ),
-          `แปลง ${file.name} สำเร็จ`
-        );
-
-
-        await sleep(
-          30
-        );
-
-      }
-
-
-      renderResults();
-
-
-      resultSection.hidden =
-        false;
-
-
-      progressStatus.textContent =
-        "แปลงไฟล์เสร็จเรียบร้อย";
-
-
-    } catch (
-      error
-    ) {
-
-      console.error(
-        "[File Converter]",
-        error
-      );
-
-
-      showError(
-        getErrorMessage(
-          error
-        )
-      );
-
-
-    } finally {
-
-      isConverting =
-        false;
-
-
-      convertButton.classList.remove(
-        "is-loading"
-      );
-
-
-      convertButton.textContent =
-        "Convert →";
-
-
-      browseFilesButton.disabled =
-        false;
-
-
-      clearFilesButton.disabled =
-        false;
-
-
-      convertButton.disabled =
-        selectedFiles.length === 0;
-
-    }
-
-  }
-
-
-  /* ============================================================
-     PROGRESS
-     ============================================================ */
-
-  function setProgress(
-    percent,
-    status
-  ) {
-
-    const safePercent =
-      Math.max(
-        0,
-        Math.min(
-          100,
-          Number(percent) || 0
-        )
-      );
-
-
-    progressBar.style.width =
-      `${safePercent}%`;
-
-
-    progressPercent.textContent =
-      `${safePercent}%`;
-
-
-    progressStatus.textContent =
-      safeString(
-        status
-      ) ||
-      "กำลังดำเนินการ...";
-
-  }
-
-
-  function resetProgress() {
-
-    progressSection.hidden =
-      true;
-
-
-    progressBar.style.width =
-      "0%";
-
-
-    progressPercent.textContent =
-      "0%";
-
-
-    progressStatus.textContent =
-      "กำลังเตรียมไฟล์";
-
-  }
-
-
-  /* ============================================================
-     RESULTS
-     ============================================================ */
-
-  function renderResults() {
-
-    resultList.innerHTML =
-      "";
-
-
-    resultSummary.textContent =
-      `${convertedResults.length} file${
-        convertedResults.length === 1
-          ? ""
-          : "s"
-      } converted`;
-
-
-    const fragment =
-      document.createDocumentFragment();
-
-
-    convertedResults.forEach(
-      result => {
-
-        const row =
-          document.createElement(
-            "div"
-          );
-
-
-        row.className =
-          "result-item";
-
-
-        row.innerHTML =
-          `
-            <div class="file-item-icon">
-              ${escapeHtml(
-                (
-                  result.extension ||
-                  activeConverter.outputExtension ||
-                  "FILE"
-                ).toUpperCase()
-              )}
-            </div>
-
-            <div class="result-item-info">
-
-              <div class="result-item-name">
-                ${escapeHtml(
-                  result.name
-                )}
-              </div>
-
-              <div class="result-item-size">
-                ${formatBytes(
-                  result.blob.size
-                )}
-              </div>
-
-            </div>
-
-            <a
-              class="result-download"
-              href="${result.url}"
-              download="${escapeHtml(
-                result.name
-              )}"
-            >
-              Download
-            </a>
-          `;
-
-
-        fragment.appendChild(
-          row
-        );
-
-      }
-    );
-
-
-    resultList.appendChild(
-      fragment
-    );
-
-  }
-
-
-  /* ============================================================
-     ERROR
-     ============================================================ */
-
-  function showError(
-    message
-  ) {
-
-    errorText.textContent =
-      safeString(
-        message
-      );
-
-
-    errorMessage.hidden =
-      false;
-
-  }
-
-
-  function hideError() {
-
-    errorMessage.hidden =
-      true;
-
-
-    errorText.textContent =
-      "";
-
-  }
-
-
-  function getErrorMessage(
-    error
-  ) {
-
-    if (
-      error instanceof Error
-    ) {
-
-      return (
-        error.message ||
-        "ไม่สามารถแปลงไฟล์ได้"
-      );
-
-    }
-
-
-    return (
-      safeString(
-        error
-      ) ||
-      "ไม่สามารถแปลงไฟล์ได้"
-    );
-
-  }
-
-
-  /* ============================================================
-     RESULT FACTORY
+     RESULT
      ============================================================ */
 
   function createResult(
@@ -3750,22 +1099,22 @@
       throw new Error(
         "Converter ไม่ได้คืน Blob"
       );
-
     }
-
-
-    const baseName =
-      removeExtension(
-        originalFile.name
-      );
 
 
     const cleanExtension =
       safeString(
         extension
-      ).replace(
+      )
+      .replace(
         /^\./,
         ""
+      );
+
+
+    const baseName =
+      removeExtension(
+        originalFile.name
       );
 
 
@@ -3790,14 +1139,13 @@
 
       extension:
         cleanExtension
-
     };
 
   }
 
 
   /* ============================================================
-     IMAGE HELPERS
+     IMAGE
      ============================================================ */
 
   function loadImage(
@@ -3882,12 +1230,11 @@
 
               reject(
                 new Error(
-                  "ไม่สามารถสร้างไฟล์รูปผลลัพธ์ได้"
+                  "ไม่สามารถสร้างรูปผลลัพธ์ได้"
                 )
               );
 
               return;
-
             }
 
 
@@ -3905,10 +1252,6 @@
 
   }
 
-
-  /* ============================================================
-     IMAGE CONVERTER
-     ============================================================ */
 
   async function convertImage(
     file,
@@ -3945,24 +1288,19 @@
       height;
 
 
-    const context =
+    const ctx =
       canvas.getContext(
-        "2d",
-        {
-          alpha:
-            true
-        }
+        "2d"
       );
 
 
     if (
-      !context
+      !ctx
     ) {
 
       throw new Error(
         "Canvas ไม่พร้อมใช้งาน"
       );
-
     }
 
 
@@ -3971,11 +1309,11 @@
       "image/jpeg"
     ) {
 
-      context.fillStyle =
+      ctx.fillStyle =
         "#ffffff";
 
 
-      context.fillRect(
+      ctx.fillRect(
         0,
         0,
         width,
@@ -3985,7 +1323,7 @@
     }
 
 
-    context.drawImage(
+    ctx.drawImage(
       image,
       0,
       0
@@ -3994,11 +1332,11 @@
 
     const quality =
       converter.outputMime ===
-        "image/jpeg"
-        ? DEFAULT_JPEG_QUALITY
+      "image/jpeg"
+        ? JPEG_QUALITY
         : converter.outputMime ===
           "image/webp"
-          ? DEFAULT_WEBP_QUALITY
+          ? WEBP_QUALITY
           : undefined;
 
 
@@ -4037,51 +1375,33 @@
     ) {
 
       throw new Error(
-        "ไฟล์ SVG ว่างเปล่า"
+        "SVG ว่างเปล่า"
       );
-
     }
-
-
-    const svgBlob =
-      new Blob(
-        [source],
-        {
-          type:
-            "image/svg+xml"
-        }
-      );
 
 
     const image =
       await loadImage(
-        svgBlob
+        new Blob(
+          [source],
+          {
+            type:
+              "image/svg+xml"
+          }
+        )
       );
 
 
-    let width =
+    const width =
       image.naturalWidth ||
-      image.width;
+      image.width ||
+      1024;
 
 
-    let height =
+    const height =
       image.naturalHeight ||
-      image.height;
-
-
-    if (
-      !width ||
-      !height
-    ) {
-
-      width =
-        1024;
-
-
-      height =
-        1024;
-
-    }
+      image.height ||
+      1024;
 
 
     const canvas =
@@ -4102,24 +1422,23 @@
       );
 
 
-    const context =
+    const ctx =
       canvas.getContext(
         "2d"
       );
 
 
     if (
-      !context
+      !ctx
     ) {
 
       throw new Error(
         "Canvas ไม่พร้อมใช้งาน"
       );
-
     }
 
 
-    context.clearRect(
+    ctx.clearRect(
       0,
       0,
       canvas.width,
@@ -4127,7 +1446,7 @@
     );
 
 
-    context.drawImage(
+    ctx.drawImage(
       image,
       0,
       0,
@@ -4167,7 +1486,7 @@
       );
 
 
-    const targetSize =
+    const size =
       256;
 
 
@@ -4183,8 +1502,8 @@
 
     const scale =
       Math.min(
-        targetSize / sourceWidth,
-        targetSize / sourceHeight
+        size / sourceWidth,
+        size / sourceHeight
       );
 
 
@@ -4213,54 +1532,45 @@
 
 
     canvas.width =
-      targetSize;
+      size;
 
 
     canvas.height =
-      targetSize;
+      size;
 
 
-    const context =
+    const ctx =
       canvas.getContext(
         "2d"
       );
 
 
     if (
-      !context
+      !ctx
     ) {
 
       throw new Error(
         "Canvas ไม่พร้อมใช้งาน"
       );
-
     }
 
 
-    context.clearRect(
+    ctx.clearRect(
       0,
       0,
-      targetSize,
-      targetSize
+      size,
+      size
     );
 
 
-    const x =
-      Math.floor(
-        (targetSize - drawWidth) / 2
-      );
-
-
-    const y =
-      Math.floor(
-        (targetSize - drawHeight) / 2
-      );
-
-
-    context.drawImage(
+    ctx.drawImage(
       image,
-      x,
-      y,
+      Math.round(
+        (size - drawWidth) / 2
+      ),
+      Math.round(
+        (size - drawHeight) / 2
+      ),
       drawWidth,
       drawHeight
     );
@@ -4279,13 +1589,13 @@
       );
 
 
-    const imageOffset =
+    const offset =
       6 + 16;
 
 
     const buffer =
       new ArrayBuffer(
-        imageOffset +
+        offset +
         pngBytes.length
       );
 
@@ -4368,7 +1678,7 @@
 
     view.setUint32(
       18,
-      imageOffset,
+      offset,
       true
     );
 
@@ -4377,7 +1687,7 @@
       buffer
     ).set(
       pngBytes,
-      imageOffset
+      offset
     );
 
 
@@ -4413,40 +1723,45 @@
       await ensurePdfLib();
 
 
-    const image =
-      await loadImage(
-        file
-      );
-
-
-    const width =
-      image.naturalWidth ||
-      image.width;
-
-
-    const height =
-      image.naturalHeight ||
-      image.height;
-
-
     const pdfDoc =
       await PDFLib.PDFDocument.create();
 
 
-    let embedded;
+    const extension =
+      getExtension(
+        file.name
+      );
+
+
+    let image;
 
 
     if (
-      file.type === "image/png" ||
-      getExtension(file.name) === "png"
+      extension === "png"
     ) {
 
-      embedded =
+      image =
         await pdfDoc.embedPng(
           await file.arrayBuffer()
         );
 
     } else {
+
+      const source =
+        await loadImage(
+          file
+        );
+
+
+      const width =
+        source.naturalWidth ||
+        source.width;
+
+
+      const height =
+        source.naturalHeight ||
+        source.height;
+
 
       const canvas =
         document.createElement(
@@ -4462,28 +1777,27 @@
         height;
 
 
-      const context =
+      const ctx =
         canvas.getContext(
           "2d"
         );
 
 
       if (
-        !context
+        !ctx
       ) {
 
         throw new Error(
           "Canvas ไม่พร้อมใช้งาน"
         );
-
       }
 
 
-      context.fillStyle =
+      ctx.fillStyle =
         "#ffffff";
 
 
-      context.fillRect(
+      ctx.fillRect(
         0,
         0,
         width,
@@ -4491,14 +1805,14 @@
       );
 
 
-      context.drawImage(
-        image,
+      ctx.drawImage(
+        source,
         0,
         0
       );
 
 
-      const jpeg =
+      const jpg =
         await canvasToBlob(
           canvas,
           "image/jpeg",
@@ -4506,19 +1820,19 @@
         );
 
 
-      embedded =
+      image =
         await pdfDoc.embedJpg(
-          await jpeg.arrayBuffer()
+          await jpg.arrayBuffer()
         );
 
     }
 
 
-    const maxPageWidth =
+    const pageWidth =
       595.28;
 
 
-    const maxPageHeight =
+    const pageHeight =
       841.89;
 
 
@@ -4526,114 +1840,86 @@
       28.35;
 
 
+    const imgWidth =
+      image.width;
+
+
+    const imgHeight =
+      image.height;
+
+
     const scale =
       Math.min(
         (
-          maxPageWidth -
+          pageWidth -
           margin * 2
-        ) / width,
+        ) / imgWidth,
         (
-          maxPageHeight -
+          pageHeight -
           margin * 2
-        ) / height
-      );
-
-
-    const pageWidth =
-      Math.max(
-        72,
-        width * scale
-      );
-
-
-    const pageHeight =
-      Math.max(
-        72,
-        height * scale
-      );
-
-
-    const page =
-      pdfDoc.addPage(
-        [
-          maxPageWidth,
-          maxPageHeight
-        ]
+        ) / imgHeight
       );
 
 
     const drawWidth =
-      width * Math.min(
-        (
-          maxPageWidth -
-          margin * 2
-        ) / width,
-        (
-          maxPageHeight -
-          margin * 2
-        ) / height
-      );
+      imgWidth *
+      scale;
 
 
     const drawHeight =
-      height * Math.min(
-        (
-          maxPageWidth -
-          margin * 2
-        ) / width,
-        (
-          maxPageHeight -
-          margin * 2
-        ) / height
-      );
+      imgHeight *
+      scale;
 
 
     const x =
       (
-        maxPageWidth -
+        pageWidth -
         drawWidth
       ) / 2;
 
 
     const y =
       (
-        maxPageHeight -
+        pageHeight -
         drawHeight
       ) / 2;
 
 
+    const page =
+      pdfDoc.addPage(
+        [
+          pageWidth,
+          pageHeight
+        ]
+      );
+
+
     page.drawImage(
-      embedded,
+      image,
       {
         x,
         y,
-        width: drawWidth,
-        height: drawHeight
+        width:
+          drawWidth,
+        height:
+          drawHeight
       }
     );
-
-
-    void pageWidth;
-    void pageHeight;
 
 
     const bytes =
       await pdfDoc.save();
 
 
-    const blob =
+    return createResult(
+      file,
       new Blob(
         [bytes],
         {
           type:
-            converter.outputMime
+            "application/pdf"
         }
-      );
-
-
-    return createResult(
-      file,
-      blob,
+      ),
       converter.outputExtension
     );
 
@@ -4641,12 +1927,12 @@
 
 
   /* ============================================================
-     PDF -> RENDER PAGES
+     PDF RENDER
      ============================================================ */
 
   async function renderPdfPages(
     file,
-    options = {}
+    scale = 1.5
   ) {
 
     const pdfjsLib =
@@ -4657,36 +1943,24 @@
       await file.arrayBuffer();
 
 
-    const loadingTask =
-      pdfjsLib.getDocument(
-        {
-          data:
-            buffer
-        }
-      );
-
-
     const pdf =
-      await loadingTask.promise;
-
-
-    const total =
-      pdf.numPages;
+      await pdfjsLib
+        .getDocument(
+          {
+            data:
+              buffer
+          }
+        )
+        .promise;
 
 
     const pages =
       [];
 
 
-    const scale =
-      Number(
-        options.scale
-      ) || 1.5;
-
-
     for (
       let pageNumber = 1;
-      pageNumber <= total;
+      pageNumber <= pdf.numPages;
       pageNumber++
     ) {
 
@@ -4722,7 +1996,7 @@
         );
 
 
-      const context =
+      const ctx =
         canvas.getContext(
           "2d",
           {
@@ -4733,24 +2007,36 @@
 
 
       if (
-        !context
+        !ctx
       ) {
 
         throw new Error(
           "ไม่สามารถสร้าง Canvas สำหรับ PDF ได้"
         );
-
       }
 
 
-      await page.render(
-        {
-          canvasContext:
-            context,
+      ctx.fillStyle =
+        "#ffffff";
 
-          viewport
-        }
-      ).promise;
+
+      ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+
+      await page
+        .render(
+          {
+            canvasContext:
+              ctx,
+            viewport
+          }
+        )
+        .promise;
 
 
       pages.push(
@@ -4784,10 +2070,7 @@
     const pages =
       await renderPdfPages(
         file,
-        {
-          scale:
-            1.5
-        }
+        1.5
       );
 
 
@@ -4863,10 +2146,7 @@
     const pages =
       await renderPdfPages(
         file,
-        {
-          scale:
-            1.5
-        }
+        1.5
       );
 
 
@@ -4938,22 +2218,18 @@
       await ensurePdfJs();
 
 
-    const buffer =
-      await file.arrayBuffer();
-
-
     const pdf =
       await pdfjsLib
         .getDocument(
           {
             data:
-              buffer
+              await file.arrayBuffer()
           }
         )
         .promise;
 
 
-    const pageTexts =
+    const pages =
       [];
 
 
@@ -4973,11 +2249,19 @@
         await page.getTextContent();
 
 
+      const items =
+        Array.isArray(
+          content.items
+        )
+          ? content.items
+          : [];
+
+
       const lines =
         [];
 
 
-      let current =
+      let currentLine =
         "";
 
 
@@ -4986,12 +2270,12 @@
 
 
       for (
-        const item of content.items
+        const item of items
       ) {
 
         const text =
           safeString(
-            item.str
+            item?.str
           );
 
 
@@ -5000,7 +2284,6 @@
         ) {
 
           continue;
-
         }
 
 
@@ -5008,7 +2291,9 @@
           Array.isArray(
             item.transform
           )
-            ? item.transform[5]
+            ? Number(
+                item.transform[5]
+              )
             : null;
 
 
@@ -5021,14 +2306,15 @@
         ) {
 
           if (
-            current
+            currentLine
           ) {
 
             lines.push(
-              current
+              currentLine
             );
 
-            current =
+
+            currentLine =
               "";
 
           }
@@ -5036,12 +2322,16 @@
         }
 
 
-        current +=
-          (
-            current
-              ? " "
-              : ""
-          ) +
+        if (
+          currentLine
+        ) {
+
+          currentLine +=
+            " ";
+        }
+
+
+        currentLine +=
           text;
 
 
@@ -5052,19 +2342,21 @@
 
 
       if (
-        current
+        currentLine
       ) {
 
         lines.push(
-          current
+          currentLine
         );
 
       }
 
 
-      pageTexts.push(
+      pages.push(
         `===== PAGE ${pageNumber} =====\n${
-          lines.join("\n")
+          lines.join(
+            "\n"
+          )
         }`
       );
 
@@ -5072,21 +2364,20 @@
 
 
     const output =
-      pageTexts.join(
+      pages.join(
         "\n\n"
-      );
-
-
-    const blob =
-      blobFrom(
-        output,
-        converter.outputMime
       );
 
 
     return createResult(
       file,
-      blob,
+      new Blob(
+        [output],
+        {
+          type:
+            converter.outputMime
+        }
+      ),
       converter.outputExtension
     );
 
@@ -5094,7 +2385,7 @@
 
 
   /* ============================================================
-     CSV PARSER
+     CSV
      ============================================================ */
 
   function parseCsv(
@@ -5142,6 +2433,7 @@
 
           cell +=
             '"';
+
 
           i++;
 
@@ -5225,8 +2517,8 @@
 
 
     if (
-      cell.length ||
-      row.length
+      cell.length > 0 ||
+      row.length > 0
     ) {
 
       row.push(
@@ -5255,26 +2547,19 @@
     converter
   ) {
 
-    const text =
-      await readAsText(
-        file
-      );
-
-
     const rows =
       parseCsv(
-        text
+        await file.text()
       );
 
 
     if (
-      !rows.length
+      rows.length === 0
     ) {
 
       throw new Error(
         "CSV ไม่มีข้อมูล"
       );
-
     }
 
 
@@ -5293,9 +2578,7 @@
 
     const data =
       rows
-        .slice(
-          1
-        )
+        .slice(1)
         .filter(
           row =>
             row.some(
@@ -5318,7 +2601,9 @@
                 index
               ) => {
 
-                object[header] =
+                object[
+                  header
+                ] =
                   row[index] ??
                   "";
 
@@ -5342,9 +2627,12 @@
 
     return createResult(
       file,
-      blobFrom(
-        output,
-        converter.outputMime
+      new Blob(
+        [output],
+        {
+          type:
+            converter.outputMime
+        }
       ),
       converter.outputExtension
     );
@@ -5382,7 +2670,6 @@
       throw new Error(
         "JSON ไม่มีข้อมูล"
       );
-
     }
 
 
@@ -5391,8 +2678,10 @@
         new Set(
           rows.flatMap(
             item =>
-              item &&
-              typeof item === "object"
+              (
+                item &&
+                typeof item === "object"
+              )
                 ? Object.keys(
                     item
                   )
@@ -5409,71 +2698,75 @@
       throw new Error(
         "JSON ไม่มีข้อมูลแบบ Object"
       );
+    }
+
+
+    function escapeCsv(
+      value
+    ) {
+
+      let text;
+
+
+      if (
+        value === null ||
+        value === undefined
+      ) {
+
+        text =
+          "";
+
+      } else if (
+        typeof value === "object"
+      ) {
+
+        text =
+          JSON.stringify(
+            value
+          );
+
+      } else {
+
+        text =
+          String(
+            value
+          );
+
+      }
+
+
+      if (
+        /[",\n\r]/.test(
+          text
+        )
+      ) {
+
+        return `"${text.replaceAll(
+          '"',
+          '""'
+        )}"`;
+
+      }
+
+
+      return text;
 
     }
 
 
-    const escapeCsv =
-      value => {
-
-        let text;
-
-
-        if (
-          value === null ||
-          value === undefined
-        ) {
-
-          text =
-            "";
-
-        } else if (
-          typeof value === "object"
-        ) {
-
-          text =
-            JSON.stringify(
-              value
-            );
-
-        } else {
-
-          text =
-            String(
-              value
-            );
-
-        }
-
-
-        if (
-          /[",\n\r]/.test(
-            text
-          )
-        ) {
-
-          text =
-            `"${text.replaceAll(
-              '"',
-              '""'
-            )}"`;
-
-        }
-
-
-        return text;
-
-      };
-
-
     const lines =
-      [
-        headers
-          .map(
-            escapeCsv
-          )
-          .join(",")
-      ];
+      [];
+
+
+    lines.push(
+      headers
+        .map(
+          escapeCsv
+        )
+        .join(
+          ","
+        )
+    );
 
 
     rows.forEach(
@@ -5490,7 +2783,9 @@
                     : ""
                 )
             )
-            .join(",")
+            .join(
+              ","
+            )
         );
 
       }
@@ -5506,19 +2801,18 @@
 
     return createResult(
       file,
-      blobFrom(
-        output,
-        converter.outputMime
+      new Blob(
+        [output],
+        {
+          type:
+            converter.outputMime
+        }
       ),
       converter.outputExtension
     );
 
   }
 
-
-  /* ============================================================
-     JSON PARSE
-     ============================================================ */
 
   function parseJson(
     text
@@ -5542,8 +2836,45 @@
 
 
   /* ============================================================
-     XML ESCAPE
+     JSON -> XML
      ============================================================ */
+
+  async function convertJsonToXml(
+    file,
+    converter
+  ) {
+
+    const data =
+      parseJson(
+        await file.text()
+      );
+
+
+    const xml =
+      jsonValueToXml(
+        data,
+        "root"
+      );
+
+
+    const output =
+      `<?xml version="1.0" encoding="UTF-8"?>\n${xml}`;
+
+
+    return createResult(
+      file,
+      new Blob(
+        [output],
+        {
+          type:
+            converter.outputMime
+        }
+      ),
+      converter.outputExtension
+    );
+
+  }
+
 
   function escapeXml(
     value
@@ -5596,7 +2927,6 @@
 
       name =
         "item";
-
     }
 
 
@@ -5613,44 +2943,6 @@
 
 
     return name;
-
-  }
-
-
-  /* ============================================================
-     JSON -> XML
-     ============================================================ */
-
-  async function convertJsonToXml(
-    file,
-    converter
-  ) {
-
-    const data =
-      parseJson(
-        await file.text()
-      );
-
-
-    const xmlBody =
-      jsonValueToXml(
-        data,
-        "root"
-      );
-
-
-    const output =
-      `<?xml version="1.0" encoding="UTF-8"?>\n${xmlBody}`;
-
-
-    return createResult(
-      file,
-      blobFrom(
-        output,
-        converter.outputMime
-      ),
-      converter.outputExtension
-    );
 
   }
 
@@ -5749,8 +3041,18 @@
     converter
   ) {
 
-    const text =
+    const source =
       await file.text();
+
+
+    if (
+      !source.trim()
+    ) {
+
+      throw new Error(
+        "XML ไม่มีข้อมูล"
+      );
+    }
 
 
     const parser =
@@ -5759,7 +3061,7 @@
 
     const xml =
       parser.parseFromString(
-        text,
+        source,
         "application/xml"
       );
 
@@ -5773,7 +3075,6 @@
       throw new Error(
         "รูปแบบ XML ไม่ถูกต้อง"
       );
-
     }
 
 
@@ -5786,13 +3087,12 @@
     ) {
 
       throw new Error(
-        "ไม่พบ root ของ XML"
+        "ไม่พบ XML root element"
       );
-
     }
 
 
-    const data =
+    const value =
       xmlElementToJson(
         root
       );
@@ -5802,7 +3102,7 @@
       JSON.stringify(
         {
           [root.nodeName]:
-            data
+            value
         },
         null,
         2
@@ -5811,9 +3111,12 @@
 
     return createResult(
       file,
-      blobFrom(
-        output,
-        converter.outputMime
+      new Blob(
+        [output],
+        {
+          type:
+            converter.outputMime
+        }
       ),
       converter.outputExtension
     );
@@ -5922,58 +3225,67 @@
     );
 
 
-    const directText =
-      Array.from(
-        element.childNodes
-      )
-      .filter(
-        node =>
-          node.nodeType ===
-          Node.TEXT_NODE
-      )
-      .map(
-        node =>
-          safeString(
-            node.nodeValue
-          )
-      )
-      .filter(Boolean)
-      .join(" ");
-
-
-    if (
-      directText
-    ) {
-
-      output._text =
-        directText;
-
-    }
-
-
     return output;
 
   }
 
 
   /* ============================================================
-     YAML
-     Simple safe subset parser
+     YAML -> JSON
      ============================================================ */
+
+  async function convertYamlToJson(
+    file,
+    converter
+  ) {
+
+    const source =
+      await file.text();
+
+
+    const data =
+      parseSimpleYaml(
+        source
+      );
+
+
+    const output =
+      JSON.stringify(
+        data,
+        null,
+        2
+      );
+
+
+    return createResult(
+      file,
+      new Blob(
+        [output],
+        {
+          type:
+            converter.outputMime
+        }
+      ),
+      converter.outputExtension
+    );
+
+  }
+
 
   function parseSimpleYaml(
     text
   ) {
 
+    /*
+       This is intentionally a lightweight YAML parser
+       for common key/value, array, boolean, number and
+       inline JSON-like structures.
+    */
+
     const lines =
-      text
-        .replace(
-          /\t/g,
-          "  "
-        )
-        .split(
-          /\r?\n/
-        );
+      text.split(
+        /\r?\n/
+      );
 
 
     const root =
@@ -5993,11 +3305,17 @@
 
 
     for (
-      const rawLine of lines
+      let index = 0;
+      index < lines.length;
+      index++
     ) {
 
+      const raw =
+        lines[index];
+
+
       if (
-        !rawLine.trim()
+        !raw.trim()
       ) {
 
         continue;
@@ -6007,7 +3325,7 @@
 
       if (
         /^\s*#/.test(
-          rawLine
+          raw
         )
       ) {
 
@@ -6017,13 +3335,13 @@
 
 
       const indent =
-        rawLine.match(
+        raw.match(
           /^\s*/
         )[0].length;
 
 
       const line =
-        rawLine.trim();
+        raw.trim();
 
 
       while (
@@ -6046,25 +3364,26 @@
 
 
       if (
-        line.startsWith("- ")
+        line.startsWith(
+          "- "
+        )
       ) {
 
         if (
-          !Array.isArray(
+          Array.isArray(
             parent
           )
         ) {
 
-          continue;
+          parent.push(
+            parseYamlScalar(
+              line.slice(
+                2
+              )
+            )
+          );
 
         }
-
-
-        parent.push(
-          parseYamlScalar(
-            line.slice(2)
-          )
-        );
 
 
         continue;
@@ -6079,7 +3398,7 @@
 
 
       if (
-        colon === -1
+        colon < 0
       ) {
 
         continue;
@@ -6096,38 +3415,38 @@
         );
 
 
-      const rawValue =
+      const valueText =
         line.slice(
           colon + 1
         ).trim();
 
 
       if (
-        rawValue === ""
+        valueText === ""
       ) {
 
-        const nextNonEmpty =
-          findNextYamlContent(
+        let child =
+          {};
+
+
+        const next =
+          findNextYamlLine(
             lines,
-            lines.indexOf(
-              rawLine
-            ) + 1
+            index + 1
           );
 
 
-        const nextIsArray =
-          nextNonEmpty &&
-          nextNonEmpty.text
-            .trim()
-            .startsWith(
-              "- "
-            );
+        if (
+          next &&
+          next.text.trim().startsWith(
+            "- "
+          )
+        ) {
 
+          child =
+            [];
 
-        const child =
-          nextIsArray
-            ? []
-            : {};
+        }
 
 
         parent[key] =
@@ -6146,7 +3465,7 @@
 
         parent[key] =
           parseYamlScalar(
-            rawValue
+            valueText
           );
 
       }
@@ -6168,13 +3487,13 @@
 
 
     for (
-      let i = 0;
-      i < line.length;
-      i++
+      let index = 0;
+      index < line.length;
+      index++
     ) {
 
       const char =
-        line[i];
+        line[index];
 
 
       if (
@@ -6190,7 +3509,7 @@
             null;
 
         } else if (
-          !quote
+          quote === null
         ) {
 
           quote =
@@ -6203,10 +3522,10 @@
 
       if (
         char === ":" &&
-        !quote
+        quote === null
       ) {
 
-        return i;
+        return index;
 
       }
 
@@ -6214,6 +3533,36 @@
 
 
     return -1;
+
+  }
+
+
+  function findNextYamlLine(
+    lines,
+    start
+  ) {
+
+    for (
+      let index = start;
+      index < lines.length;
+      index++
+    ) {
+
+      if (
+        lines[index].trim()
+      ) {
+
+        return {
+          text:
+            lines[index]
+        };
+
+      }
+
+    }
+
+
+    return null;
 
   }
 
@@ -6277,7 +3626,6 @@
     ) {
 
       return null;
-
     }
 
 
@@ -6286,7 +3634,6 @@
     ) {
 
       return true;
-
     }
 
 
@@ -6295,7 +3642,6 @@
     ) {
 
       return false;
-
     }
 
 
@@ -6330,7 +3676,7 @@
         );
 
       } catch {
-        /* ignore */
+        /* keep string */
       }
 
     }
@@ -6338,71 +3684,6 @@
 
     return stripYamlQuotes(
       text
-    );
-
-  }
-
-
-  function findNextYamlContent(
-    lines,
-    startIndex
-  ) {
-
-    for (
-      let i = startIndex;
-      i < lines.length;
-      i++
-    ) {
-
-      if (
-        lines[i].trim()
-      ) {
-
-        return {
-          text:
-            lines[i]
-        };
-
-      }
-
-    }
-
-
-    return null;
-
-  }
-
-
-  /* ============================================================
-     YAML -> JSON
-     ============================================================ */
-
-  async function convertYamlToJson(
-    file,
-    converter
-  ) {
-
-    const data =
-      parseSimpleYaml(
-        await file.text()
-      );
-
-
-    const output =
-      JSON.stringify(
-        data,
-        null,
-        2
-      );
-
-
-    return createResult(
-      file,
-      blobFrom(
-        output,
-        converter.outputMime
-      ),
-      converter.outputExtension
     );
 
   }
@@ -6432,11 +3713,77 @@
 
     return createResult(
       file,
-      blobFrom(
-        output,
-        converter.outputMime
+      new Blob(
+        [output],
+        {
+          type:
+            converter.outputMime
+        }
       ),
       converter.outputExtension
+    );
+
+  }
+
+
+  function yamlScalar(
+    value
+  ) {
+
+    if (
+      value === null
+    ) {
+
+      return "null";
+    }
+
+
+    if (
+      typeof value === "boolean"
+    ) {
+
+      return value
+        ? "true"
+        : "false";
+    }
+
+
+    if (
+      typeof value === "number"
+    ) {
+
+      return String(
+        value
+      );
+    }
+
+
+    const text =
+      String(
+        value ?? ""
+      );
+
+
+    if (
+      text === ""
+    ) {
+
+      return '""';
+    }
+
+
+    if (
+      /^[A-Za-z0-9_.\/-]+$/.test(
+        text
+      )
+    ) {
+
+      return text;
+    }
+
+
+    return JSON.stringify(
+      text
     );
 
   }
@@ -6454,42 +3801,11 @@
 
 
     if (
-      value === null
+      value === null ||
+      typeof value !== "object"
     ) {
 
-      return "null";
-
-    }
-
-
-    if (
-      typeof value === "string"
-    ) {
-
-      if (
-        /[:#,\[\]{}&*!|>'"%@`\n]/.test(
-          value
-        )
-      ) {
-
-        return JSON.stringify(
-          value
-        );
-
-      }
-
-
-      return value;
-
-    }
-
-
-    if (
-      typeof value === "number" ||
-      typeof value === "boolean"
-    ) {
-
-      return String(
+      return yamlScalar(
         value
       );
 
@@ -6507,7 +3823,6 @@
       ) {
 
         return "[]";
-
       }
 
 
@@ -6534,25 +3849,28 @@
 
 
               return `${indent}- ${
-                lines.shift()
-              }\n${
-                lines
-                  .map(
-                    line =>
-                      `${indent}  ${line}`
-                  )
-                  .join(
-                    "\n"
-                  )
+                lines[0]
+              }${
+                lines.length > 1
+                  ? "\n" +
+                    lines
+                      .slice(1)
+                      .map(
+                        line =>
+                          `${indent}  ${line}`
+                      )
+                      .join(
+                        "\n"
+                      )
+                  : ""
               }`;
 
             }
 
 
             return `${indent}- ${
-              jsonToYaml(
-                item,
-                depth + 1
+              yamlScalar(
+                item
               )
             }`;
 
@@ -6565,60 +3883,45 @@
     }
 
 
+    const entries =
+      Object.entries(
+        value
+      );
+
+
     if (
-      typeof value === "object"
+      !entries.length
     ) {
 
-      const entries =
-        Object.entries(
-          value
-        );
+      return "{}";
+    }
 
 
-      if (
-        !entries.length
-      ) {
+    return entries
+      .map(
+        (
+          [
+            key,
+            child
+          ]
+        ) => {
 
-        return "{}";
-
-      }
-
-
-      return entries
-        .map(
-          (
-            [
-              key,
-              child
-            ]
-          ) => {
-
-            const safeKey =
-              /^[A-Za-z0-9_-]+$/.test(
-                key
-              )
-                ? key
-                : JSON.stringify(
-                    key
-                  );
+          const safeKey =
+            /^[A-Za-z0-9_-]+$/.test(
+              key
+            )
+              ? key
+              : JSON.stringify(
+                  key
+                );
 
 
-            if (
-              child !== null &&
-              typeof child === "object"
-            ) {
+          if (
+            child !== null &&
+            typeof child === "object"
+          ) {
 
-              return `${indent}${safeKey}:\n${
-                jsonToYaml(
-                  child,
-                  depth + 1
-                )
-              }`;
-
-            }
-
-
-            return `${indent}${safeKey}: ${
+            return `${indent}${safeKey}:\n${
               jsonToYaml(
                 child,
                 depth + 1
@@ -6626,21 +3929,25 @@
             }`;
 
           }
-        )
-        .join(
-          "\n"
-        );
-
-    }
 
 
-    return "";
+          return `${indent}${safeKey}: ${
+            yamlScalar(
+              child
+            )
+          }`;
+
+        }
+      )
+      .join(
+        "\n"
+      );
 
   }
 
 
   /* ============================================================
-     TXT -> HTML
+     TEXT
      ============================================================ */
 
   async function convertTxtToHtml(
@@ -6648,7 +3955,7 @@
     converter
   ) {
 
-    const text =
+    const source =
       await file.text();
 
 
@@ -6661,33 +3968,25 @@
 
 
     const body =
-      text
+      source
         .split(
           /\r?\n\r?\n/
         )
         .map(
-          paragraph => {
-
-            const html =
-              escapeHtml(
-                paragraph
-              )
-              .replace(
-                /\r?\n/g,
-                "<br>"
-              );
-
-
-            return `<p>${html}</p>`;
-
-          }
+          paragraph =>
+            `<p>${escapeHtml(
+              paragraph
+            ).replace(
+              /\r?\n/g,
+              "<br>"
+            )}</p>`
         )
         .join(
           "\n"
         );
 
 
-    const output =
+    const html =
       `<!DOCTYPE html>
 <html lang="th">
 <head>
@@ -6703,7 +4002,7 @@ body{
   padding:0 20px;
 }
 p{
-  margin:0 0 16px;
+  margin-bottom:16px;
 }
 </style>
 </head>
@@ -6715,19 +4014,18 @@ ${body}
 
     return createResult(
       file,
-      blobFrom(
-        output,
-        converter.outputMime
+      new Blob(
+        [html],
+        {
+          type:
+            converter.outputMime
+        }
       ),
       converter.outputExtension
     );
 
   }
 
-
-  /* ============================================================
-     HTML -> TXT
-     ============================================================ */
 
   async function convertHtmlToTxt(
     file,
@@ -6749,35 +4047,32 @@ ${body}
       );
 
 
-    const output =
+    const text =
       doc.body
         ? (
             doc.body.innerText ||
             doc.body.textContent ||
             ""
           )
-        : (
-            doc.documentElement.innerText ||
-            doc.documentElement.textContent ||
-            ""
-          );
+        : "";
 
 
     return createResult(
       file,
-      blobFrom(
-        output.trim(),
-        converter.outputMime
+      new Blob(
+        [
+          text.trim()
+        ],
+        {
+          type:
+            converter.outputMime
+        }
       ),
       converter.outputExtension
     );
 
   }
 
-
-  /* ============================================================
-     MARKDOWN -> HTML
-     ============================================================ */
 
   async function convertMarkdownToHtml(
     file,
@@ -6788,7 +4083,7 @@ ${body}
       await file.text();
 
 
-    const output =
+    const body =
       markdownToHtml(
         source
       );
@@ -6807,16 +4102,19 @@ ${body}
 )}</title>
 </head>
 <body>
-${output}
+${body}
 </body>
 </html>`;
 
 
     return createResult(
       file,
-      blobFrom(
-        html,
-        converter.outputMime
+      new Blob(
+        [html],
+        {
+          type:
+            converter.outputMime
+        }
       ),
       converter.outputExtension
     );
@@ -6825,12 +4123,12 @@ ${output}
 
 
   function markdownToHtml(
-    markdown
+    source
   ) {
 
     let html =
       escapeHtml(
-        markdown
+        source
       );
 
 
@@ -6878,20 +4176,6 @@ ${output}
 
     html =
       html.replace(
-        /^\- (.+)$/gm,
-        "<li>$1</li>"
-      );
-
-
-    html =
-      html.replace(
-        /(<li>.*<\/li>)/gs,
-        "<ul>$1</ul>"
-      );
-
-
-    html =
-      html.replace(
         /\*\*(.+?)\*\*/g,
         "<strong>$1</strong>"
       );
@@ -6911,46 +4195,103 @@ ${output}
       );
 
 
-    html =
-      html
-        .split(
-          /\n{2,}/
+    const lines =
+      html.split(
+        "\n"
+      );
+
+
+    const output =
+      [];
+
+
+    let inList =
+      false;
+
+
+    for (
+      const line of lines
+    ) {
+
+      if (
+        /^\- /.test(
+          line
         )
-        .map(
-          block => {
+      ) {
 
-            const trimmed =
-              block.trim();
+        if (
+          !inList
+        ) {
 
-
-            if (
-              !trimmed ||
-              /^<h[1-6]>/.test(
-                trimmed
-              ) ||
-              /^<ul>/.test(
-                trimmed
-              )
-            ) {
-
-              return trimmed;
-
-            }
+          output.push(
+            "<ul>"
+          );
 
 
-            return `<p>${trimmed.replace(
-              /\n/g,
-              "<br>"
-            )}</p>`;
+          inList =
+            true;
 
-          }
-        )
-        .join(
-          "\n"
+        }
+
+
+        output.push(
+          `<li>${line.slice(
+            2
+          )}</li>`
         );
 
 
-    return html;
+      } else {
+
+        if (
+          inList
+        ) {
+
+          output.push(
+            "</ul>"
+          );
+
+
+          inList =
+            false;
+
+        }
+
+
+        if (
+          line.trim()
+        ) {
+
+          output.push(
+            line
+          );
+
+        }
+
+      }
+
+    }
+
+
+    if (
+      inList
+    ) {
+
+      output.push(
+        "</ul>"
+      );
+
+    }
+
+
+    return output
+      .join(
+        "\n"
+      )
+      .replace(
+        /\n{2,}/g,
+        "\n"
+      );
 
   }
 
@@ -6968,12 +4309,80 @@ ${output}
       await file.text();
 
 
+    return buildTextPdf(
+      file,
+      text,
+      converter
+    );
+
+  }
+
+
+  /* ============================================================
+     HTML -> PDF
+     ============================================================ */
+
+  async function convertHtmlToPdf(
+    file,
+    converter
+  ) {
+
+    const source =
+      await file.text();
+
+
+    const parser =
+      new DOMParser();
+
+
+    const doc =
+      parser.parseFromString(
+        source,
+        "text/html"
+      );
+
+
+    const text =
+      doc.body
+        ? (
+            doc.body.innerText ||
+            doc.body.textContent ||
+            ""
+          )
+        : "";
+
+
+    return buildTextPdf(
+      file,
+      text,
+      converter
+    );
+
+  }
+
+
+  /* ============================================================
+     TEXT PDF BUILDER
+     ============================================================ */
+
+  async function buildTextPdf(
+    file,
+    text,
+    converter
+  ) {
+
     const PDFLib =
       await ensurePdfLib();
 
 
     const pdfDoc =
       await PDFLib.PDFDocument.create();
+
+
+    const font =
+      await pdfDoc.embedFont(
+        PDFLib.StandardFonts.Helvetica
+      );
 
 
     const pageWidth =
@@ -6988,28 +4397,18 @@ ${output}
       36;
 
 
-    const font =
-      await pdfDoc.embedFont(
-        PDFLib.StandardFonts.Helvetica
-      );
-
-
     const fontSize =
-      11;
+      10;
 
 
     const lineHeight =
-      16;
-
-
-    const maxChars =
-      92;
+      15;
 
 
     const lines =
-      wrapTextSimple(
+      wrapText(
         text,
-        maxChars
+        92
       );
 
 
@@ -7082,9 +4481,12 @@ ${output}
 
     return createResult(
       file,
-      blobFrom(
-        bytes,
-        converter.outputMime
+      new Blob(
+        [bytes],
+        {
+          type:
+            converter.outputMime
+        }
       ),
       converter.outputExtension
     );
@@ -7092,46 +4494,122 @@ ${output}
   }
 
 
-  /* ============================================================
-     HTML -> PDF
-     ============================================================ */
-
-  async function convertHtmlToPdf(
-    file,
-    converter
+  function normalizePdfText(
+    value
   ) {
 
-    const source =
-      await file.text();
+    /*
+       Standard Helvetica only supports basic Latin.
+       Unsupported characters are replaced to avoid
+       producing a broken PDF.
+    */
+
+    return String(
+      value ?? ""
+    )
+      .replace(
+        /[^\x09\x0A\x0D\x20-\x7E]/g,
+        "?"
+      );
+
+  }
 
 
-    const parser =
-      new DOMParser();
+  function wrapText(
+    text,
+    maxChars
+  ) {
+
+    const lines =
+      [];
 
 
-    const doc =
-      parser.parseFromString(
-        source,
-        "text/html"
+    const paragraphs =
+      String(
+        text ?? ""
+      )
+      .replace(
+        /\r\n/g,
+        "\n"
+      )
+      .replace(
+        /\r/g,
+        "\n"
+      )
+      .split(
+        "\n"
       );
 
 
-    const text =
-      doc.body
-        ? (
-            doc.body.innerText ||
-            doc.body.textContent ||
+    paragraphs.forEach(
+      paragraph => {
+
+        if (
+          paragraph === ""
+        ) {
+
+          lines.push(
             ""
-          )
-        : "";
+          );
 
 
-    return buildTextPdf(
-      file,
-      text,
-      converter.outputExtension,
-      converter.outputMime
+          return;
+        }
+
+
+        let remaining =
+          paragraph;
+
+
+        while (
+          remaining.length >
+          maxChars
+        ) {
+
+          let cut =
+            remaining.lastIndexOf(
+              " ",
+              maxChars
+            );
+
+
+          if (
+            cut <= 0
+          ) {
+
+            cut =
+              maxChars;
+
+          }
+
+
+          lines.push(
+            remaining.slice(
+              0,
+              cut
+            )
+          );
+
+
+          remaining =
+            remaining
+              .slice(
+                cut
+              )
+              .trimStart();
+
+        }
+
+
+        lines.push(
+          remaining
+        );
+
+      }
     );
+
+
+    return lines;
 
   }
 
@@ -7149,14 +4627,11 @@ ${output}
       await ensureMammoth();
 
 
-    const arrayBuffer =
-      await file.arrayBuffer();
-
-
     const result =
       await mammoth.extractRawText(
         {
-          arrayBuffer
+          arrayBuffer:
+            await file.arrayBuffer()
         }
       );
 
@@ -7174,15 +4649,13 @@ ${output}
       throw new Error(
         "ไม่พบข้อความใน DOCX"
       );
-
     }
 
 
     return buildTextPdf(
       file,
       text,
-      converter.outputExtension,
-      converter.outputMime
+      converter
     );
 
   }
@@ -7207,7 +4680,7 @@ ${output}
       );
 
 
-    const slideNames =
+    const slideFiles =
       Object.keys(
         zip.files
       )
@@ -7223,13 +4696,12 @@ ${output}
 
 
     if (
-      !slideNames.length
+      !slideFiles.length
     ) {
 
       throw new Error(
         "ไม่พบ slide ใน PPTX"
       );
-
     }
 
 
@@ -7238,17 +4710,15 @@ ${output}
 
 
     for (
-      const slideName of slideNames
+      const fileName of slideFiles
     ) {
 
       const xml =
-        await zip
-          .files[
-            slideName
-          ]
-          .async(
-            "text"
-          );
+        await zip.files[
+          fileName
+        ].async(
+          "text"
+        );
 
 
       const parser =
@@ -7265,12 +4735,12 @@ ${output}
       const textNodes =
         Array.from(
           doc.querySelectorAll(
-            "a\\:t, t"
+            "t"
           )
         );
 
 
-      const text =
+      const slideText =
         textNodes
           .map(
             node =>
@@ -7286,24 +4756,120 @@ ${output}
 
       sections.push(
         `SLIDE ${extractNumber(
-          slideName
-        )}\n${text}`
+          fileName
+        )}\n${slideText}`
       );
 
     }
 
 
-    const output =
+    return buildTextPdf(
+      file,
       sections.join(
         "\n\n"
+      ),
+      converter
+    );
+
+  }
+
+
+  function naturalSort(
+    a,
+    b
+  ) {
+
+    return a.localeCompare(
+      b,
+      undefined,
+      {
+        numeric:
+          true,
+        sensitivity:
+          "base"
+      }
+    );
+
+  }
+
+
+  function extractNumber(
+    value
+  ) {
+
+    const match =
+      String(
+        value
+      ).match(
+        /(\d+)/
       );
 
 
-    return buildTextPdf(
+    return match
+      ? match[1]
+      : "1";
+
+  }
+
+
+  /* ============================================================
+     CSV -> XLSX
+     ============================================================ */
+
+  async function convertCsvToXlsx(
+    file,
+    converter
+  ) {
+
+    const XLSX =
+      await ensureXlsx();
+
+
+    const rows =
+      parseCsv(
+        await file.text()
+      );
+
+
+    const sheet =
+      XLSX.utils.aoa_to_sheet(
+        rows
+      );
+
+
+    const workbook =
+      XLSX.utils.book_new();
+
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      sheet,
+      "Sheet1"
+    );
+
+
+    const bytes =
+      XLSX.write(
+        workbook,
+        {
+          bookType:
+            "xlsx",
+          type:
+            "array"
+        }
+      );
+
+
+    return createResult(
       file,
-      output,
-      converter.outputExtension,
-      converter.outputMime
+      new Blob(
+        [bytes],
+        {
+          type:
+            converter.outputMime
+        }
+      ),
+      converter.outputExtension
     );
 
   }
@@ -7332,14 +4898,14 @@ ${output}
       );
 
 
-    const parts =
+    const chunks =
       [];
 
 
     workbook.SheetNames.forEach(
       sheetName => {
 
-        const sheet =
+        const worksheet =
           workbook.Sheets[
             sheetName
           ];
@@ -7347,11 +4913,11 @@ ${output}
 
         const csv =
           XLSX.utils.sheet_to_csv(
-            sheet
+            worksheet
           );
 
 
-        parts.push(
+        chunks.push(
           `# SHEET: ${sheetName}\n${csv}`
         );
 
@@ -7361,77 +4927,19 @@ ${output}
 
     const output =
       "\uFEFF" +
-      parts.join(
+      chunks.join(
         "\r\n\r\n"
       );
 
 
     return createResult(
       file,
-      blobFrom(
-        output,
-        converter.outputMime
-      ),
-      converter.outputExtension
-    );
-
-  }
-
-
-  /* ============================================================
-     CSV -> XLSX
-     ============================================================ */
-
-  async function convertCsvToXlsx(
-    file,
-    converter
-  ) {
-
-    const XLSX =
-      await ensureXlsx();
-
-
-    const rows =
-      parseCsv(
-        await file.text()
-      );
-
-
-    const worksheet =
-      XLSX.utils.aoa_to_sheet(
-        rows
-      );
-
-
-    const workbook =
-      XLSX.utils.book_new();
-
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      "Sheet1"
-    );
-
-
-    const bytes =
-      XLSX.write(
-        workbook,
+      new Blob(
+        [output],
         {
-          bookType:
-            "xlsx",
-
           type:
-            "array"
+            converter.outputMime
         }
-      );
-
-
-    return createResult(
-      file,
-      blobFrom(
-        bytes,
-        converter.outputMime
       ),
       converter.outputExtension
     );
@@ -7452,7 +4960,7 @@ ${output}
       await ensureXlsx();
 
 
-    const parsed =
+    const data =
       parseJson(
         await file.text()
       );
@@ -7460,13 +4968,13 @@ ${output}
 
     const rows =
       Array.isArray(
-        parsed
+        data
       )
-        ? parsed
-        : [parsed];
+        ? data
+        : [data];
 
 
-    const worksheet =
+    const sheet =
       XLSX.utils.json_to_sheet(
         rows
       );
@@ -7478,7 +4986,7 @@ ${output}
 
     XLSX.utils.book_append_sheet(
       workbook,
-      worksheet,
+      sheet,
       "Sheet1"
     );
 
@@ -7489,7 +4997,6 @@ ${output}
         {
           bookType:
             "xlsx",
-
           type:
             "array"
         }
@@ -7498,9 +5005,12 @@ ${output}
 
     return createResult(
       file,
-      blobFrom(
-        bytes,
-        converter.outputMime
+      new Blob(
+        [bytes],
+        {
+          type:
+            converter.outputMime
+        }
       ),
       converter.outputExtension
     );
@@ -7526,7 +5036,9 @@ ${output}
         await file.arrayBuffer(),
         {
           type:
-            "array"
+            "array",
+          cellText:
+            true
         }
       );
 
@@ -7537,6 +5049,11 @@ ${output}
 
     workbook.SheetNames.forEach(
       sheetName => {
+
+        lines.push(
+          `SHEET: ${sheetName}`
+        );
+
 
         const worksheet =
           workbook.Sheets[
@@ -7550,19 +5067,12 @@ ${output}
             {
               header:
                 1,
-
               raw:
                 false,
-
               defval:
                 ""
             }
           );
-
-
-        lines.push(
-          `SHEET: ${sheetName}`
-        );
 
 
         rows.forEach(
@@ -7598,319 +5108,2193 @@ ${output}
       lines.join(
         "\n"
       ),
-      converter.outputExtension,
-      converter.outputMime
+      converter
     );
 
   }
 
 
   /* ============================================================
-     GENERIC TEXT PDF
+     CONVERTER REGISTRY
      ============================================================ */
 
-  async function buildTextPdf(
-    file,
-    text,
-    extension,
-    mime
+  const CONVERTERS = {
+
+    /* IMAGE */
+
+    "jpg-png": {
+      title:
+        "JPG → PNG",
+      description:
+        "แปลง JPG / JPEG เป็น PNG",
+      category:
+        "image",
+      categoryLabel:
+        "IMAGE CONVERTER",
+      inputExtensions:
+        [
+          "jpg",
+          "jpeg"
+        ],
+      inputMimeTypes:
+        [
+          "image/jpeg"
+        ],
+      outputExtension:
+        "png",
+      outputMime:
+        "image/png",
+      convert:
+        convertImage
+    },
+
+
+    "png-jpg": {
+      title:
+        "PNG → JPG",
+      description:
+        "แปลง PNG เป็น JPG",
+      category:
+        "image",
+      categoryLabel:
+        "IMAGE CONVERTER",
+      inputExtensions:
+        [
+          "png"
+        ],
+      inputMimeTypes:
+        [
+          "image/png"
+        ],
+      outputExtension:
+        "jpg",
+      outputMime:
+        "image/jpeg",
+      convert:
+        convertImage
+    },
+
+
+    "jpg-webp": {
+      title:
+        "JPG → WebP",
+      description:
+        "แปลง JPG / JPEG เป็น WebP",
+      category:
+        "image",
+      categoryLabel:
+        "IMAGE CONVERTER",
+      inputExtensions:
+        [
+          "jpg",
+          "jpeg"
+        ],
+      inputMimeTypes:
+        [
+          "image/jpeg"
+        ],
+      outputExtension:
+        "webp",
+      outputMime:
+        "image/webp",
+      convert:
+        convertImage
+    },
+
+
+    "png-webp": {
+      title:
+        "PNG → WebP",
+      description:
+        "แปลง PNG เป็น WebP",
+      category:
+        "image",
+      categoryLabel:
+        "IMAGE CONVERTER",
+      inputExtensions:
+        [
+          "png"
+        ],
+      inputMimeTypes:
+        [
+          "image/png"
+        ],
+      outputExtension:
+        "webp",
+      outputMime:
+        "image/webp",
+      convert:
+        convertImage
+    },
+
+
+    "webp-jpg": {
+      title:
+        "WebP → JPG",
+      description:
+        "แปลง WebP เป็น JPG",
+      category:
+        "image",
+      categoryLabel:
+        "IMAGE CONVERTER",
+      inputExtensions:
+        [
+          "webp"
+        ],
+      inputMimeTypes:
+        [
+          "image/webp"
+        ],
+      outputExtension:
+        "jpg",
+      outputMime:
+        "image/jpeg",
+      convert:
+        convertImage
+    },
+
+
+    "webp-png": {
+      title:
+        "WebP → PNG",
+      description:
+        "แปลง WebP เป็น PNG",
+      category:
+        "image",
+      categoryLabel:
+        "IMAGE CONVERTER",
+      inputExtensions:
+        [
+          "webp"
+        ],
+      inputMimeTypes:
+        [
+          "image/webp"
+        ],
+      outputExtension:
+        "png",
+      outputMime:
+        "image/png",
+      convert:
+        convertImage
+    },
+
+
+    "svg-png": {
+      title:
+        "SVG → PNG",
+      description:
+        "แปลง SVG เป็น PNG",
+      category:
+        "image",
+      categoryLabel:
+        "IMAGE CONVERTER",
+      inputExtensions:
+        [
+          "svg"
+        ],
+      inputMimeTypes:
+        [
+          "image/svg+xml"
+        ],
+      outputExtension:
+        "png",
+      outputMime:
+        "image/png",
+      convert:
+        convertSvgToPng
+    },
+
+
+    "bmp-png": {
+      title:
+        "BMP → PNG",
+      description:
+        "แปลง BMP เป็น PNG",
+      category:
+        "image",
+      categoryLabel:
+        "IMAGE CONVERTER",
+      inputExtensions:
+        [
+          "bmp"
+        ],
+      inputMimeTypes:
+        [
+          "image/bmp",
+          "image/x-ms-bmp"
+        ],
+      outputExtension:
+        "png",
+      outputMime:
+        "image/png",
+      convert:
+        convertImage
+    },
+
+
+    "gif-png": {
+      title:
+        "GIF → PNG",
+      description:
+        "แปลง GIF เป็น PNG",
+      category:
+        "image",
+      categoryLabel:
+        "IMAGE CONVERTER",
+      inputExtensions:
+        [
+          "gif"
+        ],
+      inputMimeTypes:
+        [
+          "image/gif"
+        ],
+      outputExtension:
+        "png",
+      outputMime:
+        "image/png",
+      convert:
+        convertImage
+    },
+
+
+    "image-ico": {
+      title:
+        "Image → ICO",
+      description:
+        "สร้างไฟล์ ICO / Favicon",
+      category:
+        "image",
+      categoryLabel:
+        "IMAGE CONVERTER",
+      inputExtensions:
+        [
+          "jpg",
+          "jpeg",
+          "png",
+          "webp",
+          "bmp"
+        ],
+      inputMimeTypes:
+        [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "image/bmp",
+          "image/x-ms-bmp"
+        ],
+      outputExtension:
+        "ico",
+      outputMime:
+        "image/x-icon",
+      convert:
+        convertImageToIco
+    },
+
+
+    /* PDF */
+
+    "jpg-pdf": {
+      title:
+        "JPG → PDF",
+      description:
+        "แปลง JPG / JPEG เป็น PDF",
+      category:
+        "pdf",
+      categoryLabel:
+        "PDF CONVERTER",
+      inputExtensions:
+        [
+          "jpg",
+          "jpeg"
+        ],
+      inputMimeTypes:
+        [
+          "image/jpeg"
+        ],
+      outputExtension:
+        "pdf",
+      outputMime:
+        "application/pdf",
+      convert:
+        convertImageToPdf
+    },
+
+
+    "png-pdf": {
+      title:
+        "PNG → PDF",
+      description:
+        "แปลง PNG เป็น PDF",
+      category:
+        "pdf",
+      categoryLabel:
+        "PDF CONVERTER",
+      inputExtensions:
+        [
+          "png"
+        ],
+      inputMimeTypes:
+        [
+          "image/png"
+        ],
+      outputExtension:
+        "pdf",
+      outputMime:
+        "application/pdf",
+      convert:
+        convertImageToPdf
+    },
+
+
+    "image-pdf": {
+      title:
+        "Image → PDF",
+      description:
+        "รวมรูปภาพเป็น PDF",
+      category:
+        "pdf",
+      categoryLabel:
+        "PDF CONVERTER",
+      inputExtensions:
+        [
+          "jpg",
+          "jpeg",
+          "png",
+          "webp",
+          "bmp"
+        ],
+      inputMimeTypes:
+        [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "image/bmp",
+          "image/x-ms-bmp"
+        ],
+      outputExtension:
+        "pdf",
+      outputMime:
+        "application/pdf",
+      convert:
+        convertImageToPdf
+    },
+
+
+    "pdf-jpg": {
+      title:
+        "PDF → JPG",
+      description:
+        "แปลง PDF ทุกหน้าเป็น JPG ZIP",
+      category:
+        "pdf",
+      categoryLabel:
+        "PDF CONVERTER",
+      inputExtensions:
+        [
+          "pdf"
+        ],
+      inputMimeTypes:
+        [
+          "application/pdf"
+        ],
+      outputExtension:
+        "zip",
+      outputMime:
+        "application/zip",
+      convert:
+        convertPdfToJpgZip
+    },
+
+
+    "pdf-png": {
+      title:
+        "PDF → PNG",
+      description:
+        "แปลง PDF ทุกหน้าเป็น PNG ZIP",
+      category:
+        "pdf",
+      categoryLabel:
+        "PDF CONVERTER",
+      inputExtensions:
+        [
+          "pdf"
+        ],
+      inputMimeTypes:
+        [
+          "application/pdf"
+        ],
+      outputExtension:
+        "zip",
+      outputMime:
+        "application/zip",
+      convert:
+        convertPdfToPngZip
+    },
+
+
+    "pdf-txt": {
+      title:
+        "PDF → TXT",
+      description:
+        "ดึงข้อความจาก PDF",
+      category:
+        "pdf",
+      categoryLabel:
+        "PDF CONVERTER",
+      inputExtensions:
+        [
+          "pdf"
+        ],
+      inputMimeTypes:
+        [
+          "application/pdf"
+        ],
+      outputExtension:
+        "txt",
+      outputMime:
+        "text/plain;charset=utf-8",
+      convert:
+        convertPdfToText
+    },
+
+
+    "pdf-text": {
+      title:
+        "PDF → Text",
+      description:
+        "Extract ข้อความจาก PDF",
+      category:
+        "pdf",
+      categoryLabel:
+        "PDF CONVERTER",
+      inputExtensions:
+        [
+          "pdf"
+        ],
+      inputMimeTypes:
+        [
+          "application/pdf"
+        ],
+      outputExtension:
+        "txt",
+      outputMime:
+        "text/plain;charset=utf-8",
+      convert:
+        convertPdfToText
+    },
+
+
+    "pdf-images": {
+      title:
+        "PDF → Images",
+      description:
+        "แยกทุกหน้า PDF เป็น JPG ZIP",
+      category:
+        "pdf",
+      categoryLabel:
+        "PDF CONVERTER",
+      inputExtensions:
+        [
+          "pdf"
+        ],
+      inputMimeTypes:
+        [
+          "application/pdf"
+        ],
+      outputExtension:
+        "zip",
+      outputMime:
+        "application/zip",
+      convert:
+        convertPdfToJpgZip
+    },
+
+
+    /* DATA */
+
+    "csv-json": {
+      title:
+        "CSV → JSON",
+      description:
+        "แปลง CSV เป็น JSON",
+      category:
+        "data",
+      categoryLabel:
+        "DATA CONVERTER",
+      inputExtensions:
+        [
+          "csv"
+        ],
+      inputMimeTypes:
+        [
+          "text/csv",
+          "text/plain"
+        ],
+      outputExtension:
+        "json",
+      outputMime:
+        "application/json",
+      convert:
+        convertCsvToJson
+    },
+
+
+    "json-csv": {
+      title:
+        "JSON → CSV",
+      description:
+        "แปลง JSON เป็น CSV",
+      category:
+        "data",
+      categoryLabel:
+        "DATA CONVERTER",
+      inputExtensions:
+        [
+          "json"
+        ],
+      inputMimeTypes:
+        [
+          "application/json",
+          "text/json"
+        ],
+      outputExtension:
+        "csv",
+      outputMime:
+        "text/csv;charset=utf-8",
+      convert:
+        convertJsonToCsv
+    },
+
+
+    "json-xml": {
+      title:
+        "JSON → XML",
+      description:
+        "แปลง JSON เป็น XML",
+      category:
+        "data",
+      categoryLabel:
+        "DATA CONVERTER",
+      inputExtensions:
+        [
+          "json"
+        ],
+      inputMimeTypes:
+        [
+          "application/json",
+          "text/json"
+        ],
+      outputExtension:
+        "xml",
+      outputMime:
+        "application/xml;charset=utf-8",
+      convert:
+        convertJsonToXml
+    },
+
+
+    "xml-json": {
+      title:
+        "XML → JSON",
+      description:
+        "แปลง XML เป็น JSON",
+      category:
+        "data",
+      categoryLabel:
+        "DATA CONVERTER",
+      inputExtensions:
+        [
+          "xml"
+        ],
+      inputMimeTypes:
+        [
+          "application/xml",
+          "text/xml"
+        ],
+      outputExtension:
+        "json",
+      outputMime:
+        "application/json",
+      convert:
+        convertXmlToJson
+    },
+
+
+    "yaml-json": {
+      title:
+        "YAML → JSON",
+      description:
+        "แปลง YAML เป็น JSON",
+      category:
+        "data",
+      categoryLabel:
+        "DATA CONVERTER",
+      inputExtensions:
+        [
+          "yaml",
+          "yml"
+        ],
+      inputMimeTypes:
+        [
+          "text/yaml",
+          "application/yaml",
+          "text/plain"
+        ],
+      outputExtension:
+        "json",
+      outputMime:
+        "application/json",
+      convert:
+        convertYamlToJson
+    },
+
+
+    "json-yaml": {
+      title:
+        "JSON → YAML",
+      description:
+        "แปลง JSON เป็น YAML",
+      category:
+        "data",
+      categoryLabel:
+        "DATA CONVERTER",
+      inputExtensions:
+        [
+          "json"
+        ],
+      inputMimeTypes:
+        [
+          "application/json",
+          "text/json"
+        ],
+      outputExtension:
+        "yaml",
+      outputMime:
+        "text/yaml;charset=utf-8",
+      convert:
+        convertJsonToYaml
+    },
+
+
+    /* TEXT */
+
+    "txt-html": {
+      title:
+        "TXT → HTML",
+      description:
+        "แปลง Text เป็น HTML",
+      category:
+        "text",
+      categoryLabel:
+        "TEXT CONVERTER",
+      inputExtensions:
+        [
+          "txt"
+        ],
+      inputMimeTypes:
+        [
+          "text/plain"
+        ],
+      outputExtension:
+        "html",
+      outputMime:
+        "text/html;charset=utf-8",
+      convert:
+        convertTxtToHtml
+    },
+
+
+    "html-txt": {
+      title:
+        "HTML → TXT",
+      description:
+        "ดึงข้อความจาก HTML",
+      category:
+        "text",
+      categoryLabel:
+        "TEXT CONVERTER",
+      inputExtensions:
+        [
+          "html",
+          "htm"
+        ],
+      inputMimeTypes:
+        [
+          "text/html"
+        ],
+      outputExtension:
+        "txt",
+      outputMime:
+        "text/plain;charset=utf-8",
+      convert:
+        convertHtmlToTxt
+    },
+
+
+    "txt-pdf": {
+      title:
+        "TXT → PDF",
+      description:
+        "แปลง Text เป็น PDF",
+      category:
+        "text",
+      categoryLabel:
+        "TEXT CONVERTER",
+      inputExtensions:
+        [
+          "txt"
+        ],
+      inputMimeTypes:
+        [
+          "text/plain"
+        ],
+      outputExtension:
+        "pdf",
+      outputMime:
+        "application/pdf",
+      convert:
+        convertTextToPdf
+    },
+
+
+    "html-pdf": {
+      title:
+        "HTML → PDF",
+      description:
+        "แปลง HTML เป็น PDF",
+      category:
+        "document",
+      categoryLabel:
+        "DOCUMENT CONVERTER",
+      inputExtensions:
+        [
+          "html",
+          "htm"
+        ],
+      inputMimeTypes:
+        [
+          "text/html"
+        ],
+      outputExtension:
+        "pdf",
+      outputMime:
+        "application/pdf",
+      convert:
+        convertHtmlToPdf
+    },
+
+
+    "md-html": {
+      title:
+        "Markdown → HTML",
+      description:
+        "แปลง Markdown เป็น HTML",
+      category:
+        "text",
+      categoryLabel:
+        "TEXT CONVERTER",
+      inputExtensions:
+        [
+          "md"
+        ],
+      inputMimeTypes:
+        [
+          "text/markdown",
+          "text/plain"
+        ],
+      outputExtension:
+        "html",
+      outputMime:
+        "text/html;charset=utf-8",
+      convert:
+        convertMarkdownToHtml
+    },
+
+
+    /* SPREADSHEET */
+
+    "csv-xlsx": {
+      title:
+        "CSV → XLSX",
+      description:
+        "แปลง CSV เป็น Excel",
+      category:
+        "spreadsheet",
+      categoryLabel:
+        "SPREADSHEET CONVERTER",
+      inputExtensions:
+        [
+          "csv"
+        ],
+      inputMimeTypes:
+        [
+          "text/csv",
+          "text/plain"
+        ],
+      outputExtension:
+        "xlsx",
+      outputMime:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      convert:
+        convertCsvToXlsx
+    },
+
+
+    "xlsx-csv": {
+      title:
+        "XLSX → CSV",
+      description:
+        "แปลง Excel เป็น CSV",
+      category:
+        "spreadsheet",
+      categoryLabel:
+        "SPREADSHEET CONVERTER",
+      inputExtensions:
+        [
+          "xlsx",
+          "xls"
+        ],
+      inputMimeTypes:
+        [
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+      outputExtension:
+        "csv",
+      outputMime:
+        "text/csv;charset=utf-8",
+      convert:
+        convertXlsxToCsv
+    },
+
+
+    "json-xlsx": {
+      title:
+        "JSON → XLSX",
+      description:
+        "แปลง JSON เป็น Excel",
+      category:
+        "spreadsheet",
+      categoryLabel:
+        "SPREADSHEET CONVERTER",
+      inputExtensions:
+        [
+          "json"
+        ],
+      inputMimeTypes:
+        [
+          "application/json",
+          "text/json"
+        ],
+      outputExtension:
+        "xlsx",
+      outputMime:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      convert:
+        convertJsonToXlsx
+    },
+
+
+    "xlsx-pdf": {
+      title:
+        "XLSX → PDF",
+      description:
+        "แปลงข้อมูล Excel เป็น PDF",
+      category:
+        "document",
+      categoryLabel:
+        "DOCUMENT CONVERTER",
+      inputExtensions:
+        [
+          "xlsx",
+          "xls"
+        ],
+      inputMimeTypes:
+        [
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel"
+        ],
+      outputExtension:
+        "pdf",
+      outputMime:
+        "application/pdf",
+      convert:
+        convertXlsxToPdf
+    },
+
+
+    /* DOCUMENT */
+
+    "docx-pdf": {
+      title:
+        "DOCX → PDF",
+      description:
+        "แปลงข้อความจาก Word เป็น PDF",
+      category:
+        "document",
+      categoryLabel:
+        "DOCUMENT CONVERTER",
+      inputExtensions:
+        [
+          "docx"
+        ],
+      inputMimeTypes:
+        [
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ],
+      outputExtension:
+        "pdf",
+      outputMime:
+        "application/pdf",
+      convert:
+        convertDocxToPdf
+    },
+
+
+    "pptx-pdf": {
+      title:
+        "PPTX → PDF",
+      description:
+        "ดึงข้อความจาก PowerPoint แล้วสร้าง PDF",
+      category:
+        "document",
+      categoryLabel:
+        "DOCUMENT CONVERTER",
+      inputExtensions:
+        [
+          "pptx"
+        ],
+      inputMimeTypes:
+        [
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        ],
+      outputExtension:
+        "pdf",
+      outputMime:
+        "application/pdf",
+      convert:
+        convertPptxToPdf
+    }
+
+  };
+
+
+  /* ============================================================
+     ACCEPT ATTRIBUTE
+     ============================================================ */
+
+  function buildAcceptAttribute(
+    converter
   ) {
 
-    const PDFLib =
-      await ensurePdfLib();
+    return [
+      ...converter.inputExtensions.map(
+        ext =>
+          `.${ext}`
+      ),
+      ...converter.inputMimeTypes
+    ]
+      .filter(Boolean)
+      .join(",");
+
+  }
 
 
-    const pdfDoc =
-      await PDFLib.PDFDocument.create();
+  /* ============================================================
+     MODAL RESET
+     ============================================================ */
 
+  function cleanupResults() {
 
-    const pageWidth =
-      595.28;
+    convertedResults.forEach(
+      result => {
 
+        if (
+          result &&
+          result.url
+        ) {
 
-    const pageHeight =
-      841.89;
+          try {
 
+            URL.revokeObjectURL(
+              result.url
+            );
 
-    const margin =
-      36;
+          } catch {
+            /* ignore */
+          }
 
-
-    const font =
-      await pdfDoc.embedFont(
-        PDFLib.StandardFonts.Helvetica
-      );
-
-
-    const fontSize =
-      10;
-
-
-    const lineHeight =
-      15;
-
-
-    const lines =
-      wrapTextSimple(
-        text,
-        92
-      );
-
-
-    let page =
-      pdfDoc.addPage(
-        [
-          pageWidth,
-          pageHeight
-        ]
-      );
-
-
-    let y =
-      pageHeight -
-      margin;
-
-
-    for (
-      const originalLine of lines
-    ) {
-
-      if (
-        y <=
-        margin
-      ) {
-
-        page =
-          pdfDoc.addPage(
-            [
-              pageWidth,
-              pageHeight
-            ]
-          );
-
-
-        y =
-          pageHeight -
-          margin;
+        }
 
       }
+    );
 
 
-      const line =
-        normalizePdfText(
-          originalLine
-        );
+    convertedResults =
+      [];
+
+  }
 
 
-      page.drawText(
-        line,
-        {
-          x:
-            margin,
+  function resetConverterState() {
 
-          y,
+    selectedFiles =
+      [];
 
-          size:
-            fontSize,
 
-          font
-        }
+    cleanupResults();
+
+
+    fileList.innerHTML =
+      "";
+
+
+    fileListSection.hidden =
+      true;
+
+
+    fileCount.textContent =
+      "0 files";
+
+
+    resultSection.hidden =
+      true;
+
+
+    resultList.innerHTML =
+      "";
+
+
+    errorMessage.hidden =
+      true;
+
+
+    errorText.textContent =
+      "";
+
+
+    resetProgress();
+
+
+    convertButton.disabled =
+      true;
+
+
+    convertButton.classList.remove(
+      "is-loading"
+    );
+
+
+    convertButton.textContent =
+      "Convert →";
+
+
+    browseFilesButton.disabled =
+      false;
+
+
+    clearFilesButton.disabled =
+      false;
+
+  }
+
+
+  /* ============================================================
+     OPEN CONVERTER
+     ============================================================ */
+
+  function openConverter(
+    converterId
+  ) {
+
+    const converter =
+      CONVERTERS[
+        converterId
+      ];
+
+
+    if (
+      !converter
+    ) {
+
+      showError(
+        "ไม่พบ Converter นี้"
       );
 
 
-      y -=
-        lineHeight;
+      return;
+    }
+
+
+    activeConverterId =
+      converterId;
+
+
+    activeConverter =
+      converter;
+
+
+    previousActiveElement =
+      document.activeElement;
+
+
+    resetConverterState();
+
+
+    modalTitle.textContent =
+      converter.title;
+
+
+    modalDescription.textContent =
+      converter.description;
+
+
+    modalCategory.textContent =
+      converter.categoryLabel;
+
+
+    supportedFormats.textContent =
+      `รองรับ: ${
+        converter.inputExtensions
+          .map(
+            ext =>
+              ext.toUpperCase()
+          )
+          .join(
+            ", "
+          )
+      }`;
+
+
+    fileInput.accept =
+      buildAcceptAttribute(
+        converter
+      );
+
+
+    modal.hidden =
+      false;
+
+
+    previousBodyOverflow =
+      document.body.style.overflow;
+
+
+    document.body.style.overflow =
+      "hidden";
+
+
+    setTimeout(
+      () => {
+
+        modalClose.focus();
+
+      },
+      0
+    );
+
+  }
+
+
+  /* ============================================================
+     CLOSE CONVERTER
+     ============================================================ */
+
+  function closeConverter() {
+
+    if (
+      isConverting
+    ) {
+
+      return;
+    }
+
+
+    cleanupResults();
+
+
+    modal.hidden =
+      true;
+
+
+    document.body.style.overflow =
+      previousBodyOverflow;
+
+
+    activeConverterId =
+      null;
+
+
+    activeConverter =
+      null;
+
+
+    resetConverterState();
+
+
+    if (
+      previousActiveElement &&
+      typeof previousActiveElement.focus ===
+        "function"
+    ) {
+
+      try {
+
+        previousActiveElement.focus();
+
+      } catch {
+        /* ignore */
+      }
 
     }
 
 
-    const bytes =
-      await pdfDoc.save();
+    previousActiveElement =
+      null;
+
+  }
 
 
-    return createResult(
-      file,
-      blobFrom(
-        bytes,
+  /* ============================================================
+     ADD FILES
+     ============================================================ */
+
+  function addFiles(
+    files
+  ) {
+
+    if (
+      !activeConverter ||
+      isConverting
+    ) {
+
+      return;
+    }
+
+
+    if (
+      !Array.isArray(files) ||
+      !files.length
+    ) {
+
+      return;
+    }
+
+
+    hideError();
+
+
+    const rejected =
+      [];
+
+
+    const valid =
+      [];
+
+
+    for (
+      const file of files
+    ) {
+
+      if (
+        selectedFiles.length +
+        valid.length >=
+        MAX_FILES
+      ) {
+
+        rejected.push(
+          `เกินจำนวนสูงสุด ${MAX_FILES} ไฟล์`
+        );
+
+
+        break;
+
+      }
+
+
+      if (
+        file.size >
+        MAX_FILE_SIZE
+      ) {
+
+        rejected.push(
+          `${file.name}: ไฟล์ใหญ่เกิน ${formatBytes(
+            MAX_FILE_SIZE
+          )}`
+        );
+
+
+        continue;
+
+      }
+
+
+      if (
+        !isFileSupported(
+          file,
+          activeConverter
+        )
+      ) {
+
+        rejected.push(
+          `${file.name}: รูปแบบไฟล์ไม่รองรับ`
+        );
+
+
+        continue;
+
+      }
+
+
+      const duplicate =
+        selectedFiles.some(
+          existing =>
+            existing.name ===
+              file.name &&
+            existing.size ===
+              file.size &&
+            existing.lastModified ===
+              file.lastModified
+        );
+
+
+      if (
+        duplicate
+      ) {
+
+        continue;
+      }
+
+
+      valid.push(
+        file
+      );
+
+    }
+
+
+    selectedFiles.push(
+      ...valid
+    );
+
+
+    updateFileList();
+
+
+    convertButton.disabled =
+      selectedFiles.length ===
+      0;
+
+
+    if (
+      rejected.length
+    ) {
+
+      showError(
+        rejected.join(
+          "\n"
+        )
+      );
+
+    }
+
+  }
+
+
+  function isFileSupported(
+    file,
+    converter
+  ) {
+
+    const extension =
+      getExtension(
+        file.name
+      );
+
+
+    if (
+      converter.inputExtensions.includes(
+        extension
+      )
+    ) {
+
+      return true;
+    }
+
+
+    const mime =
+      normalize(
+        file.type
+      );
+
+
+    return (
+      Boolean(mime) &&
+      converter.inputMimeTypes.includes(
         mime
-      ),
-      extension
+      )
     );
 
   }
 
 
   /* ============================================================
-     PDF TEXT NORMALIZATION
+     UPDATE FILE LIST
      ============================================================ */
 
-  function normalizePdfText(
-    value
-  ) {
+  function updateFileList() {
 
-    /*
-       pdf-lib Standard Helvetica does not support
-       arbitrary Unicode such as Thai.
-
-       Keep printable Latin/basic text and replace
-       unsupported characters so conversion still works.
-    */
-
-    return String(
-      value ?? ""
-    )
-      .replace(
-        /[^\x09\x0A\x0D\x20-\x7E]/g,
-        "?"
-      );
-
-  }
+    fileList.innerHTML =
+      "";
 
 
-  /* ============================================================
-     TEXT WRAP
-     ============================================================ */
-
-  function wrapTextSimple(
-    text,
-    maxChars
-  ) {
-
-    const normalized =
-      String(
-        text ?? ""
-      )
-      .replace(
-        /\r\n/g,
-        "\n"
-      )
-      .replace(
-        /\r/g,
-        "\n"
-      );
+    const count =
+      selectedFiles.length;
 
 
-    const paragraphs =
-      normalized.split(
-        "\n"
-      );
+    fileCount.textContent =
+      `${count} file${
+        count === 1
+          ? ""
+          : "s"
+      }`;
 
 
-    const output =
-      [];
+    fileListSection.hidden =
+      count === 0;
 
 
-    paragraphs.forEach(
-      paragraph => {
+    if (
+      count === 0
+    ) {
 
-        if (
-          paragraph === ""
-        ) {
+      return;
+    }
 
-          output.push(
-            ""
+
+    const fragment =
+      document.createDocumentFragment();
+
+
+    selectedFiles.forEach(
+      (
+        file,
+        index
+      ) => {
+
+        const row =
+          document.createElement(
+            "div"
           );
 
 
-          return;
-
-        }
-
-
-        let remaining =
-          paragraph;
+        row.className =
+          "file-item";
 
 
-        while (
-          remaining.length >
-          maxChars
-        ) {
-
-          let cut =
-            remaining.lastIndexOf(
-              " ",
-              maxChars
-            );
-
-
-          if (
-            cut <= 0
-          ) {
-
-            cut =
-              maxChars;
-
-          }
-
-
-          output.push(
-            remaining.slice(
-              0,
-              cut
-            )
+        const extension =
+          getExtension(
+            file.name
           );
 
 
-          remaining =
-            remaining.slice(
-              cut
-            ).trimStart();
+        row.innerHTML =
+          `
+            <div class="file-item-icon">
+              ${escapeHtml(
+                extension ||
+                "FILE"
+              )}
+            </div>
 
-        }
+            <div class="file-item-info">
+
+              <div class="file-item-name">
+                ${escapeHtml(
+                  file.name
+                )}
+              </div>
+
+              <div class="file-item-size">
+                ${formatBytes(
+                  file.size
+                )}
+              </div>
+
+            </div>
+
+            <button
+              type="button"
+              class="file-item-remove"
+              data-remove-index="${index}"
+              aria-label="ลบไฟล์"
+            >
+              ×
+            </button>
+          `;
 
 
-        output.push(
-          remaining
+        fragment.appendChild(
+          row
         );
 
       }
     );
 
 
-    return output;
-
-  }
-
-
-  /* ============================================================
-     NATURAL SORT
-     ============================================================ */
-
-  function naturalSort(
-    a,
-    b
-  ) {
-
-    return a.localeCompare(
-      b,
-      undefined,
-      {
-        numeric:
-          true,
-
-        sensitivity:
-          "base"
-      }
+    fileList.appendChild(
+      fragment
     );
 
   }
 
 
-  function extractNumber(
-    value
-  ) {
+  /* ============================================================
+     REMOVE FILE
+     ============================================================ */
 
-    const match =
-      String(
-        value
-      ).match(
-        /(\d+)/
+  fileList.addEventListener(
+    "click",
+    event => {
+
+      const button =
+        event.target.closest(
+          "[data-remove-index]"
+        );
+
+
+      if (
+        !button ||
+        isConverting
+      ) {
+
+        return;
+      }
+
+
+      const index =
+        Number(
+          button.dataset.removeIndex
+        );
+
+
+      if (
+        !Number.isInteger(
+          index
+        ) ||
+        index < 0 ||
+        index >= selectedFiles.length
+      ) {
+
+        return;
+      }
+
+
+      selectedFiles.splice(
+        index,
+        1
       );
 
 
-    return match
-      ? match[1]
-      : "1";
+      updateFileList();
+
+
+      convertButton.disabled =
+        selectedFiles.length ===
+        0;
+
+    }
+  );
+
+
+  /* ============================================================
+     CLEAR FILES
+     ============================================================ */
+
+  clearFilesButton.addEventListener(
+    "click",
+    () => {
+
+      if (
+        isConverting
+      ) {
+
+        return;
+      }
+
+
+      selectedFiles =
+        [];
+
+
+      updateFileList();
+
+
+      cleanupResults();
+
+
+      resultSection.hidden =
+        true;
+
+
+      resultList.innerHTML =
+        "";
+
+
+      convertButton.disabled =
+        true;
+
+
+      hideError();
+
+
+      resetProgress();
+
+    }
+  );
+
+
+  /* ============================================================
+     DROP / INPUT
+     ============================================================ */
+
+  browseFilesButton.addEventListener(
+    "click",
+    event => {
+
+      event.stopPropagation();
+
+
+      if (
+        !isConverting
+      ) {
+
+        fileInput.click();
+
+      }
+
+    }
+  );
+
+
+  dropZone.addEventListener(
+    "click",
+    event => {
+
+      if (
+        event.target.closest(
+          "button"
+        )
+      ) {
+
+        return;
+      }
+
+
+      if (
+        isConverting
+      ) {
+
+        return;
+      }
+
+
+      fileInput.click();
+
+    }
+  );
+
+
+  dropZone.addEventListener(
+    "keydown",
+    event => {
+
+      if (
+        event.key === "Enter" ||
+        event.key === " "
+      ) {
+
+        event.preventDefault();
+
+
+        if (
+          !isConverting
+        ) {
+
+          fileInput.click();
+
+        }
+
+      }
+
+    }
+  );
+
+
+  fileInput.addEventListener(
+    "change",
+    event => {
+
+      addFiles(
+        Array.from(
+          event.target.files ||
+          []
+        )
+      );
+
+
+      fileInput.value =
+        "";
+
+    }
+  );
+
+
+  [
+    "dragenter",
+    "dragover"
+  ].forEach(
+    eventName => {
+
+      dropZone.addEventListener(
+        eventName,
+        event => {
+
+          event.preventDefault();
+          event.stopPropagation();
+
+
+          if (
+            !isConverting
+          ) {
+
+            dropZone.classList.add(
+              "drag-over"
+            );
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  [
+    "dragleave",
+    "drop"
+  ].forEach(
+    eventName => {
+
+      dropZone.addEventListener(
+        eventName,
+        event => {
+
+          event.preventDefault();
+          event.stopPropagation();
+
+
+          dropZone.classList.remove(
+            "drag-over"
+          );
+
+        }
+      );
+
+    }
+  );
+
+
+  dropZone.addEventListener(
+    "drop",
+    event => {
+
+      if (
+        isConverting
+      ) {
+
+        return;
+      }
+
+
+      addFiles(
+        Array.from(
+          event.dataTransfer?.files ||
+          []
+        )
+      );
+
+    }
+  );
+
+
+  /* ============================================================
+     PROGRESS
+     ============================================================ */
+
+  function setProgress(
+    percent,
+    status
+  ) {
+
+    const value =
+      Math.max(
+        0,
+        Math.min(
+          100,
+          Number(
+            percent
+          ) || 0
+        )
+      );
+
+
+    progressBar.style.width =
+      `${value}%`;
+
+
+    progressPercent.textContent =
+      `${value}%`;
+
+
+    progressStatus.textContent =
+      safeString(
+        status
+      ) ||
+      "กำลังดำเนินการ...";
+
+  }
+
+
+  function resetProgress() {
+
+    progressSection.hidden =
+      true;
+
+
+    progressBar.style.width =
+      "0%";
+
+
+    progressPercent.textContent =
+      "0%";
+
+
+    progressStatus.textContent =
+      "กำลังเตรียมไฟล์";
+
+  }
+
+
+  /* ============================================================
+     CONVERSION
+     ============================================================ */
+
+  convertButton.addEventListener(
+    "click",
+    async () => {
+
+      if (
+        isConverting ||
+        !activeConverter ||
+        selectedFiles.length === 0
+      ) {
+
+        return;
+      }
+
+
+      await runConversion();
+
+    }
+  );
+
+
+  async function runConversion() {
+
+    isConverting =
+      true;
+
+
+    hideError();
+
+
+    cleanupResults();
+
+
+    resultSection.hidden =
+      true;
+
+
+    resultList.innerHTML =
+      "";
+
+
+    progressSection.hidden =
+      false;
+
+
+    convertButton.disabled =
+      true;
+
+
+    convertButton.classList.add(
+      "is-loading"
+    );
+
+
+    convertButton.textContent =
+      "กำลังแปลง...";
+
+
+    browseFilesButton.disabled =
+      true;
+
+
+    clearFilesButton.disabled =
+      true;
+
+
+    try {
+
+      const total =
+        selectedFiles.length;
+
+
+      for (
+        let index = 0;
+        index < total;
+        index++
+      ) {
+
+        const file =
+          selectedFiles[index];
+
+
+        setProgress(
+          Math.round(
+            (
+              index /
+              total
+            ) *
+            100
+          ),
+          `กำลังแปลง ${index + 1}/${total}: ${file.name}`
+        );
+
+
+        await nextFrame();
+
+
+        const result =
+          await activeConverter.convert(
+            file,
+            activeConverter
+          );
+
+
+        convertedResults.push(
+          result
+        );
+
+
+        setProgress(
+          Math.round(
+            (
+              (index + 1) /
+              total
+            ) *
+            100
+          ),
+          `แปลง ${file.name} สำเร็จ`
+        );
+
+
+        await wait(
+          30
+        );
+
+      }
+
+
+      renderResults();
+
+
+      resultSection.hidden =
+        false;
+
+
+      progressStatus.textContent =
+        "แปลงไฟล์เสร็จเรียบร้อย";
+
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "[File Converter]",
+        error
+      );
+
+
+      showError(
+        getErrorMessage(
+          error
+        )
+      );
+
+    } finally {
+
+      isConverting =
+        false;
+
+
+      convertButton.classList.remove(
+        "is-loading"
+      );
+
+
+      convertButton.textContent =
+        "Convert →";
+
+
+      browseFilesButton.disabled =
+        false;
+
+
+      clearFilesButton.disabled =
+        false;
+
+
+      convertButton.disabled =
+        selectedFiles.length === 0;
+
+    }
+
+  }
+
+
+  /* ============================================================
+     RESULTS
+     ============================================================ */
+
+  function renderResults() {
+
+    resultList.innerHTML =
+      "";
+
+
+    resultSummary.textContent =
+      `${convertedResults.length} file${
+        convertedResults.length === 1
+          ? ""
+          : "s"
+      } converted`;
+
+
+    const fragment =
+      document.createDocumentFragment();
+
+
+    convertedResults.forEach(
+      result => {
+
+        const row =
+          document.createElement(
+            "div"
+          );
+
+
+        row.className =
+          "result-item";
+
+
+        row.innerHTML =
+          `
+            <div class="file-item-icon">
+              ${escapeHtml(
+                (
+                  result.extension ||
+                  "file"
+                ).toUpperCase()
+              )}
+            </div>
+
+            <div class="result-item-info">
+
+              <div class="result-item-name">
+                ${escapeHtml(
+                  result.name
+                )}
+              </div>
+
+              <div class="result-item-size">
+                ${formatBytes(
+                  result.blob.size
+                )}
+              </div>
+
+            </div>
+
+            <a
+              class="result-download"
+              href="${result.url}"
+              download="${escapeHtml(
+                result.name
+              )}"
+            >
+              Download
+            </a>
+          `;
+
+
+        fragment.appendChild(
+          row
+        );
+
+      }
+    );
+
+
+    resultList.appendChild(
+      fragment
+    );
+
+  }
+
+
+  /* ============================================================
+     ERROR
+     ============================================================ */
+
+  function showError(
+    message
+  ) {
+
+    errorText.textContent =
+      safeString(
+        message
+      );
+
+
+    errorMessage.hidden =
+      false;
+
+  }
+
+
+  function hideError() {
+
+    errorMessage.hidden =
+      true;
+
+
+    errorText.textContent =
+      "";
 
   }
 
@@ -7953,8 +7337,7 @@ ${output}
 
 
         const categoryMatched =
-          activeFilter ===
-            "all" ||
+          activeFilter === "all" ||
           category ===
             activeFilter;
 
@@ -8002,21 +7385,17 @@ ${output}
           );
 
 
-        const hasVisible =
+        let visible =
           cards.some(
             card =>
               !card.hidden
           );
 
 
-        let visible =
-          hasVisible;
-
-
         if (
           query &&
           sectionName ===
-          "popular"
+            "popular"
         ) {
 
           visible =
@@ -8033,8 +7412,7 @@ ${output}
 
 
     emptyState.hidden =
-      visibleCount !==
-      0;
+      visibleCount > 0;
 
 
     clearSearchButton.hidden =
@@ -8043,8 +7421,7 @@ ${output}
 
     if (
       query ||
-      activeFilter !==
-      "all"
+      activeFilter !== "all"
     ) {
 
       searchResultInfo.textContent =
@@ -8170,7 +7547,9 @@ ${output}
         () => {
 
           const converterId =
-            card.dataset.converter;
+            safeString(
+              card.dataset.converter
+            );
 
 
           if (
@@ -8191,7 +7570,7 @@ ${output}
 
 
   /* ============================================================
-     MODAL
+     MODAL EVENTS
      ============================================================ */
 
   modalClose.addEventListener(
@@ -8242,12 +7621,16 @@ ${output}
 
 
   /* ============================================================
-     BEFORE UNLOAD
+     CLEANUP
      ============================================================ */
 
   window.addEventListener(
     "beforeunload",
-    cleanupResults
+    () => {
+
+      cleanupResults();
+
+    }
   );
 
 
@@ -8262,7 +7645,7 @@ ${output}
 
 
   console.log(
-    "[File Converter] Ready."
+    "[File Converter] Initialized successfully."
   );
 
 
