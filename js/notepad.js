@@ -3,7 +3,7 @@
    notepad.js
    ============================================================ */
 
-/* global window, document, localStorage, navigator, Blob, URL */
+/* global window, document, localStorage, navigator, Blob, URL, Intl */
 
 (() => {
   'use strict';
@@ -61,6 +61,12 @@
 
   const AUTO_SAVE_DELAY =
     450;
+
+  const HISTORY_DELAY =
+    350;
+
+  const TEMP_BUTTON_DELAY =
+    1200;
 
   const MAX_HISTORY =
     100;
@@ -357,6 +363,9 @@
       isSaving =
         false;
 
+      saveTimer =
+        null;
+
 
       setStatus(
         'notepad.status.saved',
@@ -376,6 +385,9 @@
       isSaving =
         false;
 
+      saveTimer =
+        null;
+
 
       setStatus(
         'notepad.status.saveFailed',
@@ -385,11 +397,36 @@
   }
 
 
+  function cancelScheduledSave() {
+
+    if (
+      saveTimer !== null
+    ) {
+
+      clearTimeout(
+        saveTimer
+      );
+    }
+
+
+    saveTimer =
+      null;
+
+    isSaving =
+      false;
+  }
+
+
   function scheduleSave() {
 
-    clearTimeout(
-      saveTimer
-    );
+    if (
+      saveTimer !== null
+    ) {
+
+      clearTimeout(
+        saveTimer
+      );
+    }
 
 
     isSaving =
@@ -405,6 +442,9 @@
     saveTimer =
       setTimeout(
         () => {
+
+          saveTimer =
+            null;
 
           saveNote();
 
@@ -546,11 +586,137 @@
       getLanguage();
 
 
-    /*
-     * zh-CN / zh-TW ใช้ locale ได้โดยตรง
-     * ส่วนภาษาที่เหลือก็ใช้ code เดิม
-     */
     return lang || 'en';
+  }
+
+
+  function countCharacters(
+    text
+  ) {
+
+    /*
+     * Array.from() รองรับ Unicode code points
+     * ทำให้ emoji เช่น 😀 ถูกนับเป็น 1 ตัว
+     */
+    return Array.from(
+      text
+    ).length;
+  }
+
+
+  function countWords(
+    text
+  ) {
+
+    const trimmed =
+      text.trim();
+
+
+    if (!trimmed) {
+      return 0;
+    }
+
+
+    /*
+     * ใช้ Intl.Segmenter เมื่อรองรับ
+     * เพื่อให้ภาษาไทย / จีน / ญี่ปุ่น
+     * นับคำได้แม่นกว่า whitespace
+     */
+    if (
+      typeof Intl !== 'undefined' &&
+      typeof Intl.Segmenter === 'function'
+    ) {
+
+      try {
+
+        const segmenter =
+          new Intl.Segmenter(
+            getCountLocale(),
+            {
+              granularity:
+                'word'
+            }
+          );
+
+
+        let count =
+          0;
+
+
+        for (
+          const segment
+            of segmenter.segment(trimmed)
+        ) {
+
+          if (
+            segment &&
+            segment.isWordLike
+          ) {
+
+            count++;
+          }
+        }
+
+
+        return count;
+
+      } catch (_) {
+
+        /*
+         * fallback ด้านล่าง
+         */
+      }
+    }
+
+
+    /*
+     * Fallback สำหรับ browser
+     * ที่ไม่มี Intl.Segmenter
+     */
+    const englishWords =
+      trimmed.match(
+        /[A-Za-z0-9À-ÿ]+/g
+      );
+
+
+    const whitespaceBlocks =
+      trimmed
+        .split(/\s+/)
+        .filter(
+          Boolean
+        );
+
+
+    if (
+      englishWords
+    ) {
+
+      return Math.max(
+        englishWords.length,
+        whitespaceBlocks.length
+      );
+    }
+
+
+    return whitespaceBlocks.length;
+  }
+
+
+  function countLines(
+    text
+  ) {
+
+    if (
+      text === ''
+    ) {
+
+      return 0;
+    }
+
+
+    return text.split(
+      /\r\n|\r|\n/
+    ).length;
   }
 
 
@@ -568,8 +734,14 @@
       characterCount
     ) {
 
+      const characters =
+        countCharacters(
+          text
+        );
+
+
       characterCount.textContent =
-        text.length.toLocaleString(
+        characters.toLocaleString(
           getCountLocale()
         );
     }
@@ -583,40 +755,10 @@
       wordCount
     ) {
 
-      const trimmed =
-        text.trim();
-
-
-      let words =
-        0;
-
-
-      if (
-        trimmed
-      ) {
-
-        const englishWords =
-          trimmed.match(
-            /[A-Za-z0-9À-ÿ]+/g
-          );
-
-
-        const whitespaceBlocks =
-          trimmed
-            .split(/\s+/)
-            .filter(
-              Boolean
-            );
-
-
-        words =
-          englishWords
-            ? Math.max(
-                englishWords.length,
-                whitespaceBlocks.length
-              )
-            : whitespaceBlocks.length;
-      }
+      const words =
+        countWords(
+          text
+        );
 
 
       wordCount.textContent =
@@ -635,11 +777,9 @@
     ) {
 
       const lines =
-        text === ''
-          ? 0
-          : text.split(
-              /\r\n|\r|\n/
-            ).length;
+        countLines(
+          text
+        );
 
 
       lineCount.textContent =
@@ -654,7 +794,27 @@
   // HISTORY
   // ============================================================
 
+  function cancelPendingHistory() {
+
+    if (
+      historyTimer !== null
+    ) {
+
+      clearTimeout(
+        historyTimer
+      );
+    }
+
+
+    historyTimer =
+      null;
+  }
+
+
   function resetHistory() {
+
+    cancelPendingHistory();
+
 
     history = [
       textarea.value
@@ -676,6 +836,7 @@
     if (
       suppressHistory
     ) {
+
       return;
     }
 
@@ -747,26 +908,30 @@
 
   function delayedHistoryPush() {
 
-    clearTimeout(
-      historyTimer
-    );
+    cancelPendingHistory();
 
 
     historyTimer =
       setTimeout(
         () => {
 
+          historyTimer =
+            null;
+
           pushHistory(
             textarea.value
           );
 
         },
-        350
+        HISTORY_DELAY
       );
   }
 
 
   function undo() {
+
+    cancelPendingHistory();
+
 
     if (
       historyIndex <= 0
@@ -786,6 +951,9 @@
 
 
   function redo() {
+
+    cancelPendingHistory();
+
 
     if (
       historyIndex >=
@@ -826,6 +994,8 @@
     scheduleSave();
 
     updateHistoryButtons();
+
+    refreshSearchAfterTextChange();
 
     focusTextarea();
   }
@@ -880,13 +1050,11 @@
     if (
       !button
     ) {
+
       return;
     }
 
 
-    /*
-     * ยกเลิก timeout เดิม
-     */
     const oldTimer =
       tempButtonTimers.get(
         button
@@ -903,11 +1071,6 @@
     }
 
 
-    /*
-     * ไม่เก็บ HTML เดิมแบบ string
-     * เพราะถ้าเปลี่ยนภาษาระหว่างนี้
-     * เราต้องให้ i18n แปลใหม่ได้
-     */
     button.dataset.tempI18nKey =
       key;
 
@@ -955,7 +1118,6 @@
             I18n.applyTranslations(
               button
             );
-
           }
 
 
@@ -968,7 +1130,7 @@
           );
 
         },
-        1200
+        TEMP_BUTTON_DELAY
       );
 
 
@@ -991,11 +1153,13 @@
           !button ||
           !button.dataset.tempI18nKey
         ) {
+
           return;
         }
 
 
-        let values = null;
+        let values =
+          null;
 
 
         if (
@@ -1047,7 +1211,7 @@
       );
 
 
-      return;
+      return false;
     }
 
 
@@ -1070,7 +1234,7 @@
         );
 
 
-        return;
+        return true;
       }
 
 
@@ -1083,6 +1247,9 @@
         copyBtn,
         'notepad.buttons.copied'
       );
+
+
+      return true;
 
     } catch (
       error
@@ -1106,6 +1273,9 @@
           'notepad.buttons.copied'
         );
 
+
+        return true;
+
       } catch (
         fallbackError
       ) {
@@ -1120,6 +1290,9 @@
           copyBtn,
           'notepad.buttons.copyFailed'
         );
+
+
+        return false;
       }
     }
   }
@@ -1188,7 +1361,9 @@
     );
 
 
-    if (!successful) {
+    if (
+      !successful
+    ) {
 
       throw new Error(
         'Copy command failed'
@@ -1211,6 +1386,9 @@
     }
 
 
+    cancelPendingHistory();
+
+
     textarea.value =
       '';
 
@@ -1224,6 +1402,8 @@
 
     scheduleSave();
 
+    refreshSearchAfterTextChange();
+
     focusTextarea();
   }
 
@@ -1231,6 +1411,15 @@
   // ============================================================
   // NEW NOTE MODAL
   // ============================================================
+
+  function isModalOpen() {
+
+    return Boolean(
+      confirmModal &&
+      !confirmModal.hidden
+    );
+  }
+
 
   function openConfirmModal() {
 
@@ -1284,10 +1473,16 @@
 
     document.body.style.overflow =
       '';
+
+
+    focusTextarea();
   }
 
 
   function createNewNote() {
+
+    cancelPendingHistory();
+
 
     textarea.value =
       '';
@@ -1298,6 +1493,8 @@
     updateCounters();
 
     scheduleSave();
+
+    refreshSearchAfterTextChange();
 
     closeConfirmModal();
 
@@ -1403,15 +1600,19 @@
     }
 
 
+    const locale =
+      getCountLocale();
+
+
     const lowerText =
       text.toLocaleLowerCase(
-        getCountLocale()
+        locale
       );
 
 
     const lowerQuery =
       query.toLocaleLowerCase(
-        getCountLocale()
+        locale
       );
 
 
@@ -1456,6 +1657,10 @@
     focusTextarea();
 
 
+    /*
+     * indexOf() ทำงานใน UTF-16 index
+     * ซึ่งสอดคล้องกับ textarea selection API
+     */
     textarea.setSelectionRange(
       index,
       index +
@@ -1491,6 +1696,35 @@
 
 
     focusTextarea();
+  }
+
+
+  function refreshSearchAfterTextChange() {
+
+    if (
+      !searchInput
+    ) {
+
+      return;
+    }
+
+
+    if (
+      searchInput.value
+    ) {
+
+      searchText();
+
+    } else {
+
+      currentSearchState =
+        'idle';
+
+
+      searchInput.removeAttribute(
+        'aria-label'
+      );
+    }
   }
 
 
@@ -1542,6 +1776,100 @@
     delayedHistoryPush();
 
     scheduleSave();
+
+    refreshSearchAfterTextChange();
+  }
+
+
+  // ============================================================
+  // MODAL FOCUS TRAP
+  // ============================================================
+
+  function trapModalFocus(
+    event
+  ) {
+
+    if (
+      !isModalOpen()
+    ) {
+
+      return;
+    }
+
+
+    if (
+      event.key !==
+      'Tab'
+    ) {
+
+      return;
+    }
+
+
+    const focusableElements =
+      confirmModal.querySelectorAll(
+        [
+          'button',
+          '[href]',
+          'input',
+          'select',
+          'textarea',
+          '[tabindex]:not([tabindex="-1"])'
+        ].join(',')
+      );
+
+
+    const focusable =
+      Array.from(
+        focusableElements
+      ).filter(
+        element =>
+          !element.disabled &&
+          !element.hidden
+      );
+
+
+    if (
+      focusable.length === 0
+    ) {
+
+      event.preventDefault();
+
+      return;
+    }
+
+
+    const first =
+      focusable[0];
+
+    const last =
+      focusable[
+        focusable.length - 1
+      ];
+
+
+    if (
+      event.shiftKey &&
+      document.activeElement === first
+    ) {
+
+      event.preventDefault();
+
+      last.focus();
+
+      return;
+    }
+
+
+    if (
+      !event.shiftKey &&
+      document.activeElement === last
+    ) {
+
+      event.preventDefault();
+
+      first.focus();
+    }
   }
 
 
@@ -1560,10 +1888,71 @@
 
 
     // ----------------------------------------------------------
+    // Modal Focus Trap
+    // ----------------------------------------------------------
+
+    if (
+      isModalOpen()
+    ) {
+
+      trapModalFocus(
+        event
+      );
+    }
+
+
+    // ----------------------------------------------------------
+    // ESC Modal
+    // ----------------------------------------------------------
+
+    if (
+      key === 'escape' &&
+      isModalOpen()
+    ) {
+
+      event.preventDefault();
+
+      event.stopPropagation();
+
+      closeConfirmModal();
+
+      return;
+    }
+
+
+    /*
+     * ไม่ให้ global shortcut
+     * ไปชนกับช่อง input / search อื่น
+     */
+    const activeElement =
+      document.activeElement;
+
+
+    const isEditable =
+      activeElement &&
+      (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.tagName === 'SELECT' ||
+        activeElement.isContentEditable
+      );
+
+
+    /*
+     * Undo / Redo ทำงานจาก textarea
+     * หรือเมื่อ focus อยู่บน element ที่ไม่ใช่ editable
+     */
+    const allowHistoryShortcut =
+      activeElement === textarea ||
+      !isEditable;
+
+
+    // ----------------------------------------------------------
     // Ctrl / Cmd + Z
     // ----------------------------------------------------------
 
     if (
+      allowHistoryShortcut &&
       (event.ctrlKey ||
         event.metaKey) &&
       key === 'z' &&
@@ -1585,6 +1974,7 @@
     // ----------------------------------------------------------
 
     if (
+      allowHistoryShortcut &&
       event.ctrlKey &&
       key === 'y'
     ) {
@@ -1604,6 +1994,7 @@
     // ----------------------------------------------------------
 
     if (
+      allowHistoryShortcut &&
       event.metaKey &&
       event.shiftKey &&
       key === 'z'
@@ -1616,22 +2007,6 @@
       redo();
 
       return;
-    }
-
-
-    // ----------------------------------------------------------
-    // Escape
-    // ----------------------------------------------------------
-
-    if (
-      key === 'escape' &&
-      confirmModal &&
-      !confirmModal.hidden
-    ) {
-
-      closeConfirmModal();
-
-      focusTextarea();
     }
   }
 
@@ -1650,10 +2025,7 @@
     }
 
 
-    clearTimeout(
-      saveTimer
-    );
-
+    cancelScheduledSave();
 
     saveNote();
   }
@@ -1720,12 +2092,6 @@
   );
 
 
-  textarea.addEventListener(
-    'keydown',
-    handleKeyboard
-  );
-
-
   if (
     newNoteBtn
   ) {
@@ -1756,9 +2122,11 @@
       'click',
       () => {
 
-        clearTimeout(
-          saveTimer
-        );
+        /*
+         * ยกเลิก auto-save ที่รออยู่
+         * และบันทึกข้อมูลปัจจุบันก่อนดาวน์โหลด
+         */
+        cancelScheduledSave();
 
 
         if (
@@ -1903,6 +2271,16 @@
   }
 
 
+  /*
+   * Global keyboard
+   * เพื่อให้ ESC ทำงานแม้ focus อยู่ใน Modal
+   */
+  document.addEventListener(
+    'keydown',
+    handleKeyboard
+  );
+
+
   window.addEventListener(
     'beforeunload',
     handleBeforeUnload
@@ -1939,6 +2317,13 @@
 
 
   /*
+   * เก็บภาษาไว้ที่ html ตั้งแต่เริ่มต้น
+   */
+  document.documentElement.dataset.language =
+    getLanguage();
+
+
+  /*
    * ให้ textarea พร้อมพิมพ์ทันที
    */
   setTimeout(
@@ -1967,6 +2352,9 @@
       text = ''
     ) {
 
+      cancelPendingHistory();
+
+
       textarea.value =
         String(
           text
@@ -1981,6 +2369,8 @@
       updateCounters();
 
       scheduleSave();
+
+      refreshSearchAfterTextChange();
     },
 
 
@@ -1992,10 +2382,7 @@
 
     save() {
 
-      clearTimeout(
-        saveTimer
-      );
-
+      cancelScheduledSave();
 
       saveNote();
     },
