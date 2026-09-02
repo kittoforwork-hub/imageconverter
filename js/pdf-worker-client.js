@@ -1,4 +1,4 @@
-/* global window, Worker, document, URL, Blob */
+/* global window, Worker, document, URL, fetch */
 
 window.PdfWorkerClient = (() => {
   'use strict';
@@ -32,52 +32,89 @@ window.PdfWorkerClient = (() => {
     return String(
       key
     );
+
   }
 
 
   // ============================================================
-  // CONFIG / STATE
+  // CONFIG
+  // ============================================================
+
+  /*
+   * Request timeout
+   *
+   * ถ้า Worker ไม่ตอบกลับภายในเวลานี้
+   * Promise จะ reject เพื่อป้องกัน request ค้างถาวร
+   */
+  const REQUEST_TIMEOUT =
+    120000;
+
+
+  /*
+   * cache control ตอน fetch worker source
+   *
+   * ใช้ no-store เพื่อให้ debugging / deploy
+   * ไม่ติด source เก่า
+   */
+  const WORKER_FETCH_CACHE =
+    'no-store';
+
+
+  // ============================================================
+  // STATE
   // ============================================================
 
   const supported =
     typeof Worker !== 'undefined';
 
-  let worker = null;
 
-  let workerPromise = null;
+  let worker =
+    null;
 
-  let seq = 0;
+
+  /*
+   * Promise สำหรับ Worker ที่กำลังสร้าง
+   *
+   * Promise รุ่นเก่าสามารถถูก invalidate ได้
+   * โดย dispose() จะ set เป็น null
+   *
+   * finally() ของ Promise เก่าจะไม่แตะ Promise ใหม่
+   * เพราะมี identity check
+   */
+  let workerPromise =
+    null;
+
+
+  /*
+   * Request sequence
+   */
+  let seq =
+    0;
+
 
   /*
    * Worker generation
    *
-   * ทุกครั้งที่ dispose / reset Worker
-   * generation จะเพิ่มขึ้น
+   * ทุกครั้งที่ dispose()
+   * generation จะเพิ่ม
    *
-   * Worker ที่ถูกสร้างจาก generation เก่า
-   * จะไม่มีสิทธิ์กลายเป็น Worker ตัวใหม่
-   *
-   * ใช้ป้องกัน race condition เช่น:
-   *
-   * createWorker()
-   *      ↓
-   * dispose()
-   *      ↓
-   * createWorker() เสร็จ
-   *
-   * Worker เก่าจะถูก terminate ทิ้งทันที
+   * Worker รุ่นเก่าจะไม่มีสิทธิ์กลับมาเป็น current worker
    */
-  let workerGeneration = 0;
-
-
-  const pending = new Map();
+  let workerGeneration =
+    0;
 
 
   /*
-   * เก็บ URL ของ client ตั้งแต่ตอน script โหลด
+   * requestId -> pending entry
+   */
+  const pending =
+    new Map();
+
+
+  /*
+   * เก็บ URL ของ script ตั้งแต่ตอนโหลด
    *
-   * ไม่ใช้ document.currentScript ตอนผู้ใช้กดปุ่มทีหลัง
-   * เพราะตอนนั้น document.currentScript มักเป็น null
+   * ไม่ใช้ document.currentScript ตอนเรียกภายหลัง
    */
   const clientScriptUrl =
     document.currentScript &&
@@ -104,194 +141,153 @@ window.PdfWorkerClient = (() => {
 
 
   // ============================================================
-  // CREATE WORKER
+  // SAFE ERROR MESSAGE
   // ============================================================
 
-  async function createWorker() {
-
-    if (!supported) {
-
-      throw new Error(
-        t(
-          'pdfWorker.browserNotSupported'
-        )
-      );
-
-    }
-
-
-    const url =
-      getWorkerUrl();
-
-
-    // ----------------------------------------------------------
-    // Fetch worker source ก่อน
-    // ----------------------------------------------------------
-
-    let res;
-
-    try {
-
-      res =
-        await fetch(
-          url,
-          {
-            cache:
-              'no-store'
-          }
-        );
-
-    } catch (
-      error
-    ) {
-
-      throw new Error(
-        t(
-          'pdfWorker.loadFailed',
-          {
-            message:
-              error?.message ||
-              String(
-                error
-              )
-          }
-        )
-      );
-
-    }
-
-
-    if (!res.ok) {
-
-      throw new Error(
-        t(
-          'pdfWorker.httpFailed',
-          {
-            status:
-              res.status
-          }
-        )
-      );
-
-    }
-
-
-    const source =
-      await res.text();
-
-
-    // ----------------------------------------------------------
-    // Basic validation
-    // ----------------------------------------------------------
+  function getErrorMessage(
+    error
+  ) {
 
     if (
-      !/\bimportScripts\s*\(/.test(
-        source
-      ) ||
-      !/\bself\.onmessage\s*=/.test(
-        source
+      error &&
+      typeof error.message === 'string' &&
+      error.message
+    ) {
+
+      return error.message;
+
+    }
+
+
+    return String(
+      error ||
+      t(
+        'pdfWorker.unknownError'
       )
-    ) {
-
-      throw new Error(
-        t(
-          'pdfWorker.invalidWorker'
-        )
-      );
-
-    }
-
-
-    // ----------------------------------------------------------
-    // Create Blob Worker
-    // ----------------------------------------------------------
-
-    const blob =
-      new Blob(
-        [
-          source
-        ],
-        {
-          type:
-            'text/javascript'
-        }
-      );
-
-
-    const blobUrl =
-      URL.createObjectURL(
-        blob
-      );
-
-
-    let w =
-      null;
-
-
-    try {
-
-      w =
-        new Worker(
-          blobUrl
-        );
-
-    } catch (
-      error
-    ) {
-
-      try {
-
-        URL.revokeObjectURL(
-          blobUrl
-        );
-
-      } catch (
-        _
-      ) {}
-
-
-      throw error;
-
-    }
-
-
-    /*
-     * เก็บ Blob URL ไว้กับ Worker
-     * เพื่อ revoke เมื่อ Worker ถูกทำลาย
-     */
-    w.__pdfWorkerBlobUrl =
-      blobUrl;
-
-
-    return w;
+    );
 
   }
 
 
   // ============================================================
-  // TERMINATE WORKER
+  // CREATE CLIENT ERROR FROM WORKER DATA
   // ============================================================
 
-  function terminateWorker(
-    targetWorker = worker
+  function createClientErrorFromWorkerData(
+    data
   ) {
 
     /*
-     * ถ้า target เป็น Worker ตัวปัจจุบัน
-     * ให้ล้าง reference ก่อน
+     * Worker ควรส่ง:
+     *
+     * {
+     *   ok: false,
+     *   errorKey,
+     *   errorData,
+     *   error
+     * }
+     *
+     * Client จะใช้ errorKey ก่อน
+     * และ fallback ไป error
      */
+
+
+    const errorKey =
+      data &&
+      typeof data.errorKey ===
+        'string' &&
+      data.errorKey
+        ? data.errorKey
+        : null;
+
+
+    const errorData =
+      data &&
+      data.errorData &&
+      typeof data.errorData ===
+        'object'
+        ? data.errorData
+        : {};
+
+
     if (
-      targetWorker === worker
+      errorKey
     ) {
 
-      worker =
-        null;
+      const translated =
+        t(
+          errorKey,
+          errorData
+        );
+
+
+      const error =
+        new Error(
+          translated
+        );
+
+
+      error.errorKey =
+        errorKey;
+
+
+      error.errorData =
+        errorData;
+
+
+      /*
+       * ถ้า Worker ส่ง error code เพิ่มมา
+       * สามารถรักษา metadata เอาไว้ได้
+       */
+      if (
+        data &&
+        data.errorCode
+      ) {
+
+        error.errorCode =
+          data.errorCode;
+
+      }
+
+
+      return error;
 
     }
 
 
     if (
-      !targetWorker
+      data &&
+      typeof data.error ===
+        'string' &&
+      data.error
+    ) {
+
+      return new Error(
+        data.error
+      );
+
+    }
+
+
+    return new Error(
+      t(
+        'pdfWorker.requestFailed'
+      )
+    );
+
+  }
+
+
+  // ============================================================
+  // CLEAR REQUEST TIMER
+  // ============================================================
+
+  function clearRequestTimer(
+    entry
+  ) {
+
+    if (
+      !entry
     ) {
 
       return;
@@ -299,38 +295,19 @@ window.PdfWorkerClient = (() => {
     }
 
 
-    try {
+    if (
+      entry.timer !== null
+    ) {
 
-      targetWorker.terminate();
-
-    } catch (
-      _
-    ) {}
-
-
-    /*
-     * Blob URL เป็น resource ที่ต้อง revoke
-     * หลังจาก Worker ตัวนั้นหมดอายุ
-     */
-    try {
-
-      if (
-        targetWorker.__pdfWorkerBlobUrl
-      ) {
-
-        URL.revokeObjectURL(
-          targetWorker.__pdfWorkerBlobUrl
-        );
+      clearTimeout(
+        entry.timer
+      );
 
 
-        targetWorker.__pdfWorkerBlobUrl =
-          null;
+      entry.timer =
+        null;
 
-      }
-
-    } catch (
-      _
-    ) {}
+    }
 
   }
 
@@ -368,6 +345,11 @@ window.PdfWorkerClient = (() => {
     entries.forEach(
       entry => {
 
+        clearRequestTimer(
+          entry
+        );
+
+
         try {
 
           entry.reject(
@@ -385,100 +367,610 @@ window.PdfWorkerClient = (() => {
 
 
   // ============================================================
-  // FORMAT WORKER ERROR
+  // TERMINATE WORKER
   // ============================================================
 
-  function createClientErrorFromWorkerData(
-    data
+  function terminateWorker(
+    targetWorker = worker
   ) {
 
     /*
-     * P0 FIX:
-     *
-     * pdf-worker.js ส่ง:
-     *
-     *   errorKey
-     *   errorData
-     *   error
-     *
-     * Client เดิมอ่านเฉพาะ `error`
-     * ทำให้ localized error key หาย
-     *
-     * ตอนนี้จะใช้ errorKey/errorData ก่อน
-     * และ fallback เป็น error
+     * ถ้าเป็น current worker
+     * ล้าง reference ก่อน
      */
-
-    const errorKey =
-      data &&
-      typeof data.errorKey ===
-        'string' &&
-      data.errorKey
-        ? data.errorKey
-        : null;
-
-
-    const errorData =
-      data &&
-      data.errorData &&
-      typeof data.errorData ===
-        'object'
-        ? data.errorData
-        : {};
-
-
     if (
-      errorKey
+      targetWorker === worker
     ) {
 
-      const translated =
-        t(
-          errorKey,
-          errorData
-        );
-
-
-      /*
-       * เก็บ metadata ไว้กับ Error
-       * เผื่อ caller ต้องการตรวจสอบภายหลัง
-       */
-      const error =
-        new Error(
-          translated
-        );
-
-
-      error.errorKey =
-        errorKey;
-
-
-      error.errorData =
-        errorData;
-
-
-      return error;
+      worker =
+        null;
 
     }
 
 
     if (
-      data &&
-      typeof data.error ===
-        'string' &&
-      data.error
+      !targetWorker
     ) {
 
-      return new Error(
-        data.error
+      return;
+
+    }
+
+
+    /*
+     * ป้องกัน event เก่า
+     * หลัง terminate()
+     */
+    try {
+
+      targetWorker.onmessage =
+        null;
+
+    } catch (
+      _
+    ) {}
+
+
+    try {
+
+      targetWorker.onerror =
+        null;
+
+    } catch (
+      _
+    ) {}
+
+
+    try {
+
+      targetWorker.onmessageerror =
+        null;
+
+    } catch (
+      _
+    ) {}
+
+
+    try {
+
+      targetWorker.terminate();
+
+    } catch (
+      _
+    ) {}
+
+  }
+
+
+  // ============================================================
+  // HANDLE WORKER FAILURE
+  // ============================================================
+
+  function handleWorkerFailure(
+    targetWorker,
+    error
+  ) {
+
+    /*
+     * Worker ตัวเก่าไม่มีสิทธิ์
+     * ทำลาย Worker ตัวใหม่
+     */
+    if (
+      worker !== targetWorker
+    ) {
+
+      return;
+
+    }
+
+
+    rejectAllPending(
+      error instanceof Error
+        ? error
+        : new Error(
+            t(
+              'pdfWorker.workerError'
+            )
+          )
+    );
+
+
+    terminateWorker(
+      targetWorker
+    );
+
+  }
+
+
+  // ============================================================
+  // ATTACH WORKER HANDLERS
+  // ============================================================
+
+  function attachWorkerHandlers(
+    targetWorker
+  ) {
+
+    /*
+     * MESSAGE
+     */
+    targetWorker.onmessage =
+      event => {
+
+        /*
+         * Worker เก่า
+         */
+        if (
+          worker !== targetWorker
+        ) {
+
+          return;
+
+        }
+
+
+        const data =
+          event &&
+          event.data
+            ? event.data
+            : {};
+
+
+        const reqId =
+          data.reqId;
+
+
+        /*
+         * ไม่มี reqId
+         * ไม่ใช่ response ของ RPC
+         */
+        if (
+          typeof reqId !== 'string' ||
+          !reqId
+        ) {
+
+          return;
+
+        }
+
+
+        const entry =
+          pending.get(
+            reqId
+          );
+
+
+        /*
+         * Request อาจถูก timeout/dispose
+         * ไปแล้ว
+         */
+        if (
+          !entry
+        ) {
+
+          return;
+
+        }
+
+
+        /*
+         * ป้องกัน Worker ผิดตัว
+         */
+        if (
+          entry.worker !==
+          targetWorker
+        ) {
+
+          return;
+
+        }
+
+
+        /*
+         * ป้องกัน generation ผิดรุ่น
+         */
+        if (
+          entry.generation !==
+          workerGeneration
+        ) {
+
+          pending.delete(
+            reqId
+          );
+
+
+          clearRequestTimer(
+            entry
+          );
+
+
+          try {
+
+            entry.reject(
+              new Error(
+                t(
+                  'pdfWorker.stopped'
+                )
+              )
+            );
+
+          } catch (
+            _
+          ) {}
+
+
+          return;
+
+        }
+
+
+        pending.delete(
+          reqId
+        );
+
+
+        clearRequestTimer(
+          entry
+        );
+
+
+        if (
+          data.ok
+        ) {
+
+          try {
+
+            entry.resolve(
+              data.result
+            );
+
+          } catch (
+            _
+          ) {}
+
+        } else {
+
+          try {
+
+            entry.reject(
+              createClientErrorFromWorkerData(
+                data
+              )
+            );
+
+          } catch (
+            error
+          ) {
+
+            entry.reject(
+              error
+            );
+
+          }
+
+        }
+
+      };
+
+
+    /*
+     * WORKER ERROR
+     */
+    targetWorker.onerror =
+      event => {
+
+        /*
+         * Worker เก่า
+         */
+        if (
+          worker !== targetWorker
+        ) {
+
+          return;
+
+        }
+
+
+        const message =
+          event &&
+          event.message
+            ? event.message
+            : t(
+                'pdfWorker.unknownError'
+              );
+
+
+        const error =
+          new Error(
+            t(
+              'pdfWorker.workerError',
+              {
+                message
+              }
+            )
+          );
+
+
+        /*
+         * เก็บข้อมูลเพิ่ม
+         */
+        if (
+          event
+        ) {
+
+          if (
+            event.filename
+          ) {
+
+            error.filename =
+              event.filename;
+
+          }
+
+
+          if (
+            typeof event.lineno ===
+              'number'
+          ) {
+
+            error.lineno =
+              event.lineno;
+
+          }
+
+
+          if (
+            typeof event.colno ===
+              'number'
+          ) {
+
+            error.colno =
+              event.colno;
+
+          }
+
+        }
+
+
+        handleWorkerFailure(
+          targetWorker,
+          error
+        );
+
+      };
+
+
+    /*
+     * MESSAGE ERROR
+     */
+    targetWorker.onmessageerror =
+      () => {
+
+        if (
+          worker !== targetWorker
+        ) {
+
+          return;
+
+        }
+
+
+        handleWorkerFailure(
+          targetWorker,
+          new Error(
+            t(
+              'pdfWorker.messageError'
+            )
+          )
+        );
+
+      };
+
+  }
+
+
+  // ============================================================
+  // CREATE WORKER
+  // ============================================================
+
+  async function createWorker() {
+
+    if (
+      !supported
+    ) {
+
+      throw new Error(
+        t(
+          'pdfWorker.browserNotSupported'
+        )
       );
 
     }
 
 
-    return new Error(
-      t(
-        'pdfWorker.requestFailed'
-      )
-    );
+    const url =
+      getWorkerUrl();
+
+
+    // ----------------------------------------------------------
+    // FETCH WORKER SOURCE FOR VALIDATION
+    // ----------------------------------------------------------
+
+    let res;
+
+
+    try {
+
+      res =
+        await fetch(
+          url,
+          {
+            cache:
+              WORKER_FETCH_CACHE
+          }
+        );
+
+    } catch (
+      error
+    ) {
+
+      throw new Error(
+        t(
+          'pdfWorker.loadFailed',
+          {
+            message:
+              getErrorMessage(
+                error
+              )
+          }
+        )
+      );
+
+    }
+
+
+    if (
+      !res.ok
+    ) {
+
+      throw new Error(
+        t(
+          'pdfWorker.httpFailed',
+          {
+            status:
+              res.status
+          }
+        )
+      );
+
+    }
+
+
+    let source;
+
+
+    try {
+
+      source =
+        await res.text();
+
+    } catch (
+      error
+    ) {
+
+      throw new Error(
+        t(
+          'pdfWorker.loadFailed',
+          {
+            message:
+              getErrorMessage(
+                error
+              )
+          }
+        )
+      );
+
+    }
+
+
+    // ----------------------------------------------------------
+    // BASIC VALIDATION
+    // ----------------------------------------------------------
+
+    if (
+      typeof source !== 'string' ||
+      !source.trim()
+    ) {
+
+      throw new Error(
+        t(
+          'pdfWorker.invalidWorker'
+        )
+      );
+
+    }
+
+
+    /*
+     * Worker ของระบบนี้ควรมี onmessage
+     *
+     * รองรับทั้ง:
+     *
+     * self.onmessage =
+     *
+     * และ
+     *
+     * onmessage =
+     */
+    const hasMessageHandler =
+      /\bself\.onmessage\s*=/.test(
+        source
+      ) ||
+      /\bonmessage\s*=/.test(
+        source
+      );
+
+
+    if (
+      !hasMessageHandler
+    ) {
+
+      throw new Error(
+        t(
+          'pdfWorker.invalidWorker'
+        )
+      );
+
+    }
+
+
+    /*
+     * ----------------------------------------------------------
+     * IMPORTANT
+     * ----------------------------------------------------------
+     *
+     * ไม่ใช้ Blob URL
+     *
+     * เพราะถ้า pdf-worker.js ใช้:
+     *
+     * importScripts('./pdf-lib.min.js')
+     *
+     * Blob Worker อาจทำให้ relative path
+     * อ้างอิงจาก blob: URL แทนตำแหน่งจริง
+     *
+     * ดังนั้นให้ Browser โหลด Worker
+     * จาก URL จริงโดยตรง
+     */
+    let w =
+      null;
+
+
+    try {
+
+      w =
+        new Worker(
+          url
+        );
+
+    } catch (
+      error
+    ) {
+
+      throw new Error(
+        t(
+          'pdfWorker.loadFailed',
+          {
+            message:
+              getErrorMessage(
+                error
+              )
+          }
+        )
+      );
+
+    }
+
+
+    return w;
 
   }
 
@@ -490,7 +982,7 @@ window.PdfWorkerClient = (() => {
   async function ensureWorker() {
 
     // ----------------------------------------------------------
-    // Worker พร้อมใช้
+    // WORKER READY
     // ----------------------------------------------------------
 
     if (
@@ -503,7 +995,7 @@ window.PdfWorkerClient = (() => {
 
 
     // ----------------------------------------------------------
-    // กำลังสร้าง Worker อยู่
+    // WORKER IS CURRENTLY CREATING
     // ----------------------------------------------------------
 
     if (
@@ -516,30 +1008,24 @@ window.PdfWorkerClient = (() => {
 
 
     /*
-     * จับ generation ปัจจุบันไว้
-     *
-     * ถ้ามี dispose() ระหว่าง createWorker()
-     * generation จะเปลี่ยน
-     * และ Worker ที่กำลังสร้างอยู่จะถูกถือว่า stale
+     * จำ generation ตอนเริ่มสร้าง
      */
     const generation =
       workerGeneration;
 
 
-    const creationPromise =
+    let creationPromise;
+
+
+    creationPromise =
       createWorker()
         .then(
           w => {
 
             /*
              * --------------------------------------------------
-             * P0 FIX: DISPOSE RACE
+             * STALE GENERATION
              * --------------------------------------------------
-             *
-             * ถ้าระหว่าง createWorker() มี dispose()
-             * generation จะไม่ตรงกัน
-             *
-             * Worker ตัวนี้ห้ามถูกติดตั้งกลับเข้าระบบ
              */
             if (
               generation !==
@@ -561,8 +1047,8 @@ window.PdfWorkerClient = (() => {
 
 
             /*
-             * ถ้ามี Worker ตัวอื่นติดตั้งไปแล้ว
-             * Worker ตัวนี้ถือว่า stale เช่นกัน
+             * ถ้ามี Worker ตัวอื่นถูกติดตั้ง
+             * Worker นี้ไม่ใช่ตัวที่ต้องใช้
              */
             if (
               worker &&
@@ -583,182 +1069,12 @@ window.PdfWorkerClient = (() => {
               w;
 
 
-            // --------------------------------------------------
-            // MESSAGE
-            // --------------------------------------------------
-
-            w.onmessage =
-              event => {
-
-                /*
-                 * ถ้า Worker นี้ไม่ใช่ Worker ปัจจุบัน
-                 * message นี้ถือเป็น stale message
-                 */
-                if (
-                  worker !== w
-                ) {
-
-                  return;
-
-                }
-
-
-                const data =
-                  event &&
-                  event.data
-                    ? event.data
-                    : {};
-
-
-                const {
-                  reqId,
-                  ok,
-                  result
-                } =
-                  data;
-
-
-                const entry =
-                  pending.get(
-                    reqId
-                  );
-
-
-                /*
-                 * request อาจถูก reject ไปแล้วโดย
-                 * dispose() หรือ worker error
-                 */
-                if (
-                  !entry
-                ) {
-
-                  return;
-
-                }
-
-
-                /*
-                 * ป้องกัน request คนละ Worker
-                 * มา resolve entry นี้
-                 */
-                if (
-                  entry.worker !==
-                  w
-                ) {
-
-                  return;
-
-                }
-
-
-                pending.delete(
-                  reqId
-                );
-
-
-                if (
-                  ok
-                ) {
-
-                  entry.resolve(
-                    result
-                  );
-
-                } else {
-
-                  entry.reject(
-                    createClientErrorFromWorkerData(
-                      data
-                    )
-                  );
-
-                }
-
-              };
-
-
-            // --------------------------------------------------
-            // WORKER ERROR
-            // --------------------------------------------------
-
-            w.onerror =
-              event => {
-
-                /*
-                 * ถ้าเป็น Worker เก่า
-                 * อย่าไปทำลาย Worker ตัวใหม่
-                 */
-                if (
-                  worker !== w
-                ) {
-
-                  return;
-
-                }
-
-
-                const message =
-                  event &&
-                  event.message
-                    ? event.message
-                    : t(
-                        'pdfWorker.unknownError'
-                      );
-
-
-                rejectAllPending(
-                  new Error(
-                    t(
-                      'pdfWorker.workerError',
-                      {
-                        message
-                      }
-                    )
-                  )
-                );
-
-
-                /*
-                 * terminateWorker จะ clear worker
-                 * และ revoke Blob URL
-                 */
-                terminateWorker(
-                  w
-                );
-
-              };
-
-
-            // --------------------------------------------------
-            // MESSAGE ERROR
-            // --------------------------------------------------
-
-            w.onmessageerror =
-              () => {
-
-                if (
-                  worker !== w
-                ) {
-
-                  return;
-
-                }
-
-
-                rejectAllPending(
-                  new Error(
-                    t(
-                      'pdfWorker.messageError'
-                    )
-                  )
-                );
-
-
-                terminateWorker(
-                  w
-                );
-
-              };
+            /*
+             * ผูก handlers ทันที
+             */
+            attachWorkerHandlers(
+              w
+            );
 
 
             return w;
@@ -769,9 +1085,11 @@ window.PdfWorkerClient = (() => {
           error => {
 
             /*
-             * ถ้ามีการติดตั้ง Worker ไประหว่างทาง
-             * แต่ Promise สุดท้าย fail
-             * อย่าปล่อย Worker ค้าง
+             * ถ้า Worker นี้ถูกติดตั้งไปแล้ว
+             * แต่ creation chain fail
+             * ต้อง cleanup
+             *
+             * เฉพาะ current worker เท่านั้น
              */
             if (
               worker
@@ -790,39 +1108,37 @@ window.PdfWorkerClient = (() => {
         );
 
 
+    /*
+     * สำคัญมาก:
+     *
+     * workerPromise ต้อง set ก่อน return
+     */
     workerPromise =
       creationPromise;
 
 
     /*
-     * ----------------------------------------------------------
-     * P0 FIX: workerPromise ownership
-     * ----------------------------------------------------------
-     *
-     * สำคัญ:
-     * Promise รุ่นเก่าห้ามไปล้าง workerPromise
-     * ของ generation ใหม่
-     *
-     * จึงตรวจว่า workerPromise ยังเป็น Promise
-     * ตัวเดียวกับที่เราสร้าง
+     * Promise รุ่นเก่าห้ามล้าง Promise รุ่นใหม่
      */
-    creationPromise.finally(
-      () => {
+    creationPromise
+      .finally(
+        () => {
 
-        if (
-          workerPromise ===
-          creationPromise
-        ) {
+          if (
+            workerPromise ===
+            creationPromise
+          ) {
 
-          workerPromise =
-            null;
+            workerPromise =
+              null;
+
+          }
 
         }
-
-      }
-    ).catch(
-      () => {}
-    );
+      )
+      .catch(
+        () => {}
+      );
 
 
     return creationPromise;
@@ -855,6 +1171,22 @@ window.PdfWorkerClient = (() => {
     }
 
 
+    if (
+      typeof type !== 'string' ||
+      !type
+    ) {
+
+      return Promise.reject(
+        new Error(
+          t(
+            'pdfWorker.invalidRequest'
+          )
+        )
+      );
+
+    }
+
+
     const reqId =
       'req-' +
       (++seq);
@@ -869,10 +1201,7 @@ window.PdfWorkerClient = (() => {
 
 
     /*
-     * จับ generation ตั้งแต่ตอนเริ่ม request
-     *
-     * ถ้ามี dispose() ระหว่าง ensureWorker()
-     * request นี้จะไม่ถูกส่งเข้า Worker รุ่นใหม่
+     * generation ตอน request เริ่ม
      */
     const requestGeneration =
       workerGeneration;
@@ -882,11 +1211,10 @@ window.PdfWorkerClient = (() => {
       .then(
         w => {
 
-          /*
-           * ----------------------------------------------------
-           * P0 FIX: GENERATION CHECK
-           * ----------------------------------------------------
-           */
+          // ----------------------------------------------------
+          // GENERATION CHECK
+          // ----------------------------------------------------
+
           if (
             requestGeneration !==
             workerGeneration
@@ -901,10 +1229,10 @@ window.PdfWorkerClient = (() => {
           }
 
 
-          /*
-           * Worker อาจถูก dispose ระหว่างที่
-           * ensureWorker() กำลัง resolve
-           */
+          // ----------------------------------------------------
+          // WORKER CHECK
+          // ----------------------------------------------------
+
           if (
             worker !== w
           ) {
@@ -925,11 +1253,11 @@ window.PdfWorkerClient = (() => {
             ) => {
 
               /*
-               * ตรวจอีกครั้งก่อนลง pending
+               * ตรวจสอบก่อนลง pending
                */
               if (
                 requestGeneration !==
-                workerGeneration ||
+                  workerGeneration ||
                 worker !== w
               ) {
 
@@ -947,58 +1275,131 @@ window.PdfWorkerClient = (() => {
               }
 
 
+              const entry = {
+
+                resolve,
+
+                reject,
+
+                worker:
+                  w,
+
+                generation:
+                  requestGeneration,
+
+                timer:
+                  null
+
+              };
+
+
               pending.set(
                 reqId,
-                {
-                  resolve,
-                  reject,
-
-                  worker:
-                    w,
-
-                  generation:
-                    requestGeneration
-                }
+                entry
               );
 
 
-              try {
+              /*
+               * ------------------------------------------------
+               * REQUEST TIMEOUT
+               * ------------------------------------------------
+               */
+              entry.timer =
+                setTimeout(
+                  () => {
 
-                /*
-                 * ตรวจครั้งสุดท้ายก่อน postMessage
-                 *
-                 * ป้องกัน race ระหว่าง:
-                 *
-                 * pending.set()
-                 *
-                 * และ
-                 *
-                 * dispose()
-                 */
-                if (
-                  requestGeneration !==
-                    workerGeneration ||
-                  worker !== w
-                ) {
-
-                  pending.delete(
-                    reqId
-                  );
+                    const current =
+                      pending.get(
+                        reqId
+                      );
 
 
-                  reject(
-                    new Error(
-                      t(
-                        'pdfWorker.stoppedBeforeSend'
-                      )
+                    /*
+                     * Request อาจเสร็จไปแล้ว
+                     */
+                    if (
+                      current !==
+                      entry
+                    ) {
+
+                      return;
+
+                    }
+
+
+                    pending.delete(
+                      reqId
+                    );
+
+
+                    clearRequestTimer(
+                      entry
+                    );
+
+
+                    try {
+
+                      reject(
+                        new Error(
+                          t(
+                            'pdfWorker.requestTimeout'
+                          )
+                        )
+                      );
+
+                    } catch (
+                      _
+                    ) {}
+
+                  },
+                  REQUEST_TIMEOUT
+                );
+
+
+              /*
+               * ------------------------------------------------
+               * FINAL RACE CHECK
+               * ------------------------------------------------
+               *
+               * dispose() อาจเกิดหลัง pending.set()
+               * ดังนั้นต้องตรวจอีกครั้ง
+               */
+              if (
+                requestGeneration !==
+                  workerGeneration ||
+                worker !== w
+              ) {
+
+                pending.delete(
+                  reqId
+                );
+
+
+                clearRequestTimer(
+                  entry
+                );
+
+
+                reject(
+                  new Error(
+                    t(
+                      'pdfWorker.stoppedBeforeSend'
                     )
-                  );
+                  )
+                );
 
 
-                  return;
+                return;
 
-                }
+              }
 
+
+              /*
+               * ------------------------------------------------
+               * POST MESSAGE
+               * ------------------------------------------------
+               */
+              try {
 
                 w.postMessage(
                   {
@@ -1009,13 +1410,17 @@ window.PdfWorkerClient = (() => {
                   transferList
                 );
 
-
               } catch (
                 error
               ) {
 
                 pending.delete(
                   reqId
+                );
+
+
+                clearRequestTimer(
+                  entry
                 );
 
 
@@ -1035,7 +1440,7 @@ window.PdfWorkerClient = (() => {
 
 
   // ============================================================
-  // MERGE PDF
+  // MERGE PDFS
   // ============================================================
 
   function mergePdfs(
@@ -1060,10 +1465,36 @@ window.PdfWorkerClient = (() => {
 
 
     /*
-     * ArrayBuffer ทุกตัวจะถูก transfer เข้า Worker
+     * ตรวจว่าทุกตัวเป็น ArrayBuffer
+     */
+    for (
+      const buffer of buffers
+    ) {
+
+      if (
+        !(buffer instanceof ArrayBuffer)
+      ) {
+
+        return Promise.reject(
+          new Error(
+            t(
+              'pdfWorker.invalidPdfData'
+            )
+          )
+        );
+
+      }
+
+    }
+
+
+    /*
+     * IMPORTANT:
      *
-     * หลังเรียกฟังก์ชันนี้ buffer ต้นฉบับจะถูก detach
-     * ดังนั้น caller ไม่ควรใช้ buffer เดิมต่อ
+     * ทุก ArrayBuffer จะถูก transfer
+     * และจะ detach ฝั่ง caller
+     *
+     * caller ไม่ควรใช้ buffer เดิมหลังจากเรียก
      */
     return call(
       'mergePdfs',
@@ -1117,6 +1548,33 @@ window.PdfWorkerClient = (() => {
     }
 
 
+    /*
+     * ตรวจ page index ให้เป็น number
+     */
+    for (
+      const index of indices
+    ) {
+
+      if (
+        !Number.isInteger(
+          index
+        ) ||
+        index < 0
+      ) {
+
+        return Promise.reject(
+          new Error(
+            t(
+              'pdfWorker.invalidPageList'
+            )
+          )
+        );
+
+      }
+
+    }
+
+
     return call(
       'buildPagesPdf',
       {
@@ -1155,26 +1613,53 @@ window.PdfWorkerClient = (() => {
     }
 
 
+    if (
+      opts === null ||
+      typeof opts !== 'object' ||
+      Array.isArray(opts)
+    ) {
+
+      return Promise.reject(
+        new Error(
+          t(
+            'pdfWorker.invalidOptions'
+          )
+        )
+      );
+
+    }
+
+
     const transfer = [
       buffer
     ];
 
 
     /*
-     * PNG watermark
-     *
-     * transfer ได้เฉพาะ ArrayBuffer
-     * ไม่ใช่ Blob / Uint8Array โดยตรง
+     * watermarkImage ต้องเป็น ArrayBuffer
      */
     if (
-      opts.watermarkImage &&
-      opts.watermarkImage instanceof
-        ArrayBuffer
+      opts.watermarkImage !== undefined &&
+      opts.watermarkImage !== null
     ) {
 
+      if (
+        !(opts.watermarkImage instanceof ArrayBuffer)
+      ) {
+
+        return Promise.reject(
+          new Error(
+            t(
+              'pdfWorker.invalidWatermarkImage'
+            )
+          )
+        );
+
+      }
+
+
       /*
-       * ป้องกันกรณีส่ง buffer เดิมซ้ำ
-       * ซึ่งจะทำให้ transfer list มีตัวเดียวกัน 2 ครั้ง
+       * ป้องกัน buffer เดิมถูก transfer ซ้ำ
        */
       if (
         opts.watermarkImage !==
@@ -1228,6 +1713,26 @@ window.PdfWorkerClient = (() => {
     }
 
 
+    if (
+      opts !== undefined &&
+      opts !== null &&
+      (
+        typeof opts !== 'object' ||
+        Array.isArray(opts)
+      )
+    ) {
+
+      return Promise.reject(
+        new Error(
+          t(
+            'pdfWorker.invalidOptions'
+          )
+        )
+      );
+
+    }
+
+
     return call(
       'applyPageNumbers',
       Object.assign(
@@ -1252,20 +1757,38 @@ window.PdfWorkerClient = (() => {
 
     /*
      * ----------------------------------------------------------
-     * P0 FIX: INVALIDATE CURRENT GENERATION
+     * INVALIDATE GENERATION
      * ----------------------------------------------------------
      *
      * ทำก่อนทุกอย่าง
      *
-     * Worker ที่กำลังสร้างอยู่จะถูก mark เป็น stale
-     * แม้ createWorker() จะเสร็จทีหลัง
+     * Worker / request รุ่นเก่าทั้งหมด
+     * จะไม่มีสิทธิ์กลับมาใช้งาน
      */
     workerGeneration++;
 
 
     /*
-     * ยกเลิกทุก request ที่ยังรออยู่ก่อน
-     * เพื่อไม่ให้ Promise ค้าง
+     * ----------------------------------------------------------
+     * INVALIDATE CREATION PROMISE
+     * ----------------------------------------------------------
+     *
+     * สำคัญ:
+     *
+     * ถ้า createWorker() กำลังทำงานอยู่
+     * ให้ request ใหม่สามารถสร้าง Worker generation ใหม่ได้ทันที
+     *
+     * Promise รุ่นเก่ายังอาจ resolve ภายหลัง
+     * แต่ generation check จะทำให้มันกลายเป็น stale
+     */
+    workerPromise =
+      null;
+
+
+    /*
+     * ----------------------------------------------------------
+     * REJECT PENDING REQUESTS
+     * ----------------------------------------------------------
      */
     rejectAllPending(
       new Error(
@@ -1277,7 +1800,9 @@ window.PdfWorkerClient = (() => {
 
 
     /*
-     * terminate Worker ที่ใช้งานอยู่
+     * ----------------------------------------------------------
+     * TERMINATE CURRENT WORKER
+     * ----------------------------------------------------------
      */
     if (
       worker
@@ -1288,24 +1813,6 @@ window.PdfWorkerClient = (() => {
       );
 
     }
-
-
-    /*
-     * ----------------------------------------------------------
-     * IMPORTANT
-     * ----------------------------------------------------------
-     *
-     * ไม่ terminate Worker ที่ยังไม่เสร็จจาก createWorker()
-     * ตรงนี้ เพราะเรายังไม่มี reference ของ Worker
-     *
-     * แต่ generation check ใน ensureWorker()
-     * จะจับ stale Worker แล้ว terminate ให้เองทันที
-     * เมื่อ createWorker() resolve
-     *
-     * เราไม่ set workerPromise = null ตรงนี้
-     * เพื่อไม่ให้ request ใหม่เข้าใจผิดว่า
-     * Worker รุ่นเก่ายังเป็น Worker ที่ใช้ได้
-     */
 
   }
 
