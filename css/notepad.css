@@ -10,25 +10,25 @@
    ============================================================ */
 
 :root {
-  --notepad-paper: #f7f8fc;
-  --notepad-paper-2: #eef1f8;
-  --notepad-card: rgba(255, 255, 255, .94);
+  --notepad-paper: #fff8fb;
+  --notepad-paper-2: #fceef5;
+  --notepad-card: rgba(255, 255, 255, .96);
 
-  --notepad-ink: #24304a;
-  --notepad-ink-soft: #66718a;
-  --notepad-ink-faint: #9aa5bb;
+  --notepad-ink: #44384f;
+  --notepad-ink-soft: #7b6d84;
+  --notepad-ink-faint: #b09eaf;
 
-  --notepad-line: #dde3ef;
-  --notepad-line-strong: #c8d1e2;
+  --notepad-line: #eadde6;
+  --notepad-line-strong: #dcc9d7;
 
-  --notepad-accent: #ffb86b;
-  --notepad-accent-ink: #5f3a10;
-  --notepad-accent-soft: #fff1dd;
+  --notepad-accent: #f5a8c7;
+  --notepad-accent-ink: #6a3f58;
+  --notepad-accent-soft: #fff0f7;
 
-  --notepad-success: #49aa7a;
+  --notepad-success: #79b89a;
   --notepad-success-soft: #e4f7ed;
 
-  --notepad-danger: #df6a6a;
+  --notepad-danger: #db7b8f;
 
   --notepad-radius: 14px;
 
@@ -44,11 +44,11 @@
 
   --notepad-shadow:
     0 16px 40px
-    rgba(52, 65, 94, .08);
+    rgba(110, 74, 105, .10);
 
   --notepad-shadow-soft:
     0 8px 24px
-    rgba(36,48,74,.06);
+    rgba(110,74,105,.07);
 }
 
 
@@ -134,19 +134,19 @@ body {
   background-image:
     radial-gradient(
       circle at 8% 5%,
-      rgba(255,184,107,.18),
+      rgba(245,168,199,.20),
       transparent 24%
     ),
     radial-gradient(
       circle at 92% 10%,
-      rgba(193,211,255,.22),
+      rgba(219,197,255,.20),
       transparent 26%
     ),
     linear-gradient(
       180deg,
-      #fbfcff 0%,
+      #fffaff 0%,
       var(--notepad-paper) 55%,
-      #f4f6fb 100%
+      #f8f1f6 100%
     );
 
   background-attachment:
@@ -186,6 +186,7 @@ body {
 
 .notepad-page::before,
 .notepad-page::after {
+
   content: '';
 
   position: fixed;
@@ -222,7 +223,7 @@ body {
     );
 
   background:
-    rgba(255,205,153,.35);
+    rgba(255,196,218,.34);
 
   transform:
     rotate(-12deg);
@@ -240,7 +241,7 @@ body {
     8%;
 
   background:
-    rgba(203,218,255,.34);
+    rgba(220,205,255,.32);
 
   transform:
     rotate(17deg);
@@ -518,7 +519,7 @@ body {
     #fff;
 
   border-color:
-    #c4cedf;
+    #d9c5d3;
 
   color:
     var(--notepad-ink);
@@ -599,7 +600,7 @@ body {
 
   border:
     1px solid
-    #f0d5b2;
+    #ecc7da;
 
   border-radius:
     16px;
@@ -607,13 +608,13 @@ body {
   background:
     linear-gradient(
       145deg,
-      #fffaf4,
+      #fff6fa,
       #fff
     );
 
   box-shadow:
     0 7px 18px
-    rgba(245,166,35,.09);
+    rgba(245,168,199,.11);
 
   font-size:
     24px;
@@ -628,7 +629,7 @@ body {
 
 .notepad-icon::after {
   content:
-    '✦';
+    '🐾';
 
   position:
     absolute;
@@ -687,7 +688,7 @@ body {
 
 .notepad-title h1::after {
   content:
-    '✦';
+    '🐾';
 
   display:
     inline-block;
@@ -762,7 +763,7 @@ body {
     999px;
 
   background:
-    rgba(255,255,255,.72);
+    rgba(255,249,252,.78);
 
   color:
     var(--notepad-ink-soft);
@@ -1039,7 +1040,7 @@ body {
 
 .notepad-btn:hover:not(:disabled) {
   background:
-    #f5f7fb;
+    #fdf3f8;
 
   border-color:
     var(--notepad-line);
@@ -1159,14 +1160,14 @@ body {
 
 .search-box:focus-within {
   border-color:
-    #efc17f;
+    #e5a5c2;
 
   background:
     #fff;
 
   box-shadow:
     0 0 0 3px
-    rgba(255,184,107,.10);
+    rgba(245,168,199,.12);
 }
 
 
@@ -1223,7 +1224,7 @@ body {
 
 #notepad-search::placeholder {
   color:
-    #a4aec0;
+    #b7a7b4;
 }
 
 
@@ -1298,7 +1299,7 @@ body {
 
 .search-clear:hover {
   background:
-    #f0f2f7;
+    #f7eaf1;
 
   color:
     var(--notepad-ink);
@@ -1391,13 +1392,13 @@ body {
 
 .notepad-editor:focus-within {
   border-color:
-    #efcf9f;
+    #e8bfd2;
 
   box-shadow:
     0 16px 40px
     rgba(52,65,94,.08),
     0 0 0 3px
-    rgba(255,184,107,.07);
+    rgba(245,168,199,.09);
 }
 
 
@@ -1468,7 +1469,7 @@ body {
     .01em;
 
   caret-color:
-    #e9a24d;
+    #dc82ae;
 
   white-space:
     pre-wrap;
@@ -1489,7 +1490,7 @@ body {
 
 .notepad-textarea::selection {
   background:
-    rgba(255,184,107,.28);
+    rgba(245,168,199,.30);
 
   color:
     var(--notepad-ink);
@@ -1521,7 +1522,7 @@ body {
     999px;
 
   background:
-    #d5dbe6;
+    #decdd8;
 
   background-clip:
     padding-box;
@@ -1530,7 +1531,7 @@ body {
 
 .notepad-textarea::-webkit-scrollbar-thumb:hover {
   background:
-    #bec7d6;
+    #cdb9c7;
 
   background-clip:
     padding-box;
@@ -1561,7 +1562,7 @@ body {
     0 4px;
 
   color:
-    #8b96aa;
+    #9f8e9b;
 
   font-family:
     var(--notepad-font-mono);
@@ -1610,7 +1611,7 @@ body {
 
 .info-divider {
   color:
-    #c0c7d3;
+    #d2c4ce;
 }
 
 
@@ -1666,7 +1667,7 @@ body {
 
   border:
     1px solid
-    #d3d9e4;
+    #ddcfd8;
 
   border-bottom-width:
     2px;
@@ -1678,7 +1679,7 @@ body {
     rgba(255,255,255,.86);
 
   color:
-    #737d90;
+    #7f707b;
 
   font-family:
     var(--notepad-font-mono);
@@ -1691,7 +1692,7 @@ body {
 
   box-shadow:
     0 1px 0
-    rgba(36,48,74,.03);
+    rgba(86,61,81,.03);
 }
 
 
@@ -1737,7 +1738,7 @@ body {
     0;
 
   background:
-    rgba(36,48,74,.24);
+    rgba(75,58,72,.24);
 
   backdrop-filter:
     blur(5px);
@@ -1815,7 +1816,7 @@ body {
 
   border:
     1px solid
-    #f0d5b2;
+    #ecc7da;
 
   border-radius:
     15px;
@@ -2523,4 +2524,124 @@ html[lang^="th"] .notepad-page {
       .001ms !important;
   }
 
+}
+
+/* ============================================================
+   CUTE CAT THEME OVERRIDES
+   ============================================================ */
+
+.notepad-page::before,
+.notepad-page::after {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  opacity: .38;
+  filter: blur(2px);
+}
+
+.notepad-page::before {
+  background:
+    radial-gradient(circle at 35% 35%, rgba(245,168,199,.42) 0 10px, transparent 11px),
+    radial-gradient(circle at 62% 35%, rgba(245,168,199,.42) 0 10px, transparent 11px),
+    radial-gradient(circle at 50% 62%, rgba(245,168,199,.42) 0 24px, transparent 25px);
+}
+
+.notepad-page::after {
+  background:
+    radial-gradient(circle at 35% 35%, rgba(208,184,244,.38) 0 10px, transparent 11px),
+    radial-gradient(circle at 62% 35%, rgba(208,184,244,.38) 0 10px, transparent 11px),
+    radial-gradient(circle at 50% 62%, rgba(208,184,244,.38) 0 24px, transparent 25px);
+}
+
+.notepad-icon {
+  border-color: #ecc7da !important;
+  background:
+    linear-gradient(145deg, #fff1f7, #fffafe) !important;
+  box-shadow: 0 8px 20px rgba(224,133,174,.12) !important;
+}
+
+.notepad-icon::before {
+  content: '⌒';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 8px;
+  text-align: center;
+  color: #b87399;
+  font-size: 11px;
+  transform: rotate(180deg);
+}
+
+.notepad-icon::after {
+  content: '🐾' !important;
+  color: #d989b0 !important;
+}
+
+.notepad-title h1::after {
+  content: '🐱' !important;
+  color: transparent !important;
+  -webkit-text-fill-color: initial;
+}
+
+.notepad-home-btn:hover {
+  background: #fff4f8 !important;
+  border-color: #e6c8d8 !important;
+}
+
+.notepad-btn:hover:not(:disabled) {
+  background: #fff4f8 !important;
+  border-color: #ead8e2 !important;
+}
+
+.notepad-btn:focus-visible,
+.notepad-home-btn:focus-visible,
+.modal-btn:focus-visible {
+  outline-color: rgba(245,168,199,.40) !important;
+}
+
+.search-box:focus-within {
+  border-color: #e5a6c1 !important;
+  box-shadow: 0 0 0 3px rgba(245,168,199,.12) !important;
+}
+
+.notepad-editor::before {
+  background:
+    radial-gradient(circle at 72% 26%, rgba(255,221,235,.95), transparent 28%),
+    radial-gradient(circle at 90% 10%, rgba(234,219,255,.65), transparent 22%) !important;
+}
+
+.notepad-modal-box::before {
+  content: '🐾';
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 17px;
+  opacity: .55;
+  transform: rotate(-12deg);
+}
+
+.notepad-modal-box {
+  border-color: rgba(236,199,218,.8) !important;
+  box-shadow: 0 22px 55px rgba(110,74,105,.14) !important;
+}
+
+.modal-btn-confirm {
+  border-color: #d98db2 !important;
+  background: #f5a8c7 !important;
+  color: #693d57 !important;
+  box-shadow: 0 7px 16px rgba(245,168,199,.18) !important;
+}
+
+.notepad-status.is-saving {
+  color: #8d6377 !important;
+  border-color: #ebcad9 !important;
+  background: #fff5f9 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notepad-page *,
+  .notepad-page *::before,
+  .notepad-page *::after {
+    animation-duration: .001ms !important;
+  }
 }
