@@ -19,46 +19,46 @@
 :root {
 
   --fc-paper:
-    var(--paper, #f7f8fc);
+    var(--paper, #fff8fb);
 
   --fc-paper-2:
-    var(--paper-2, #eef1f8);
+    var(--paper-2, #f8eef5);
 
   --fc-card:
     var(--card, rgba(255,255,255,.94));
 
   --fc-ink:
-    var(--ink, #24304a);
+    var(--ink, #4a4056);
 
   --fc-ink-soft:
-    var(--ink-soft, #66718a);
+    var(--ink-soft, #7f7188);
 
   --fc-ink-faint:
-    var(--ink-faint, #9aa5bb);
+    var(--ink-faint, #b7a8b9);
 
   --fc-line:
-    var(--line, #dde3ef);
+    var(--line, #eadde7);
 
   --fc-line-strong:
-    var(--line-strong, #c8d1e2);
+    var(--line-strong, #d8c5d4);
 
   --fc-accent:
-    var(--accent, #ffb86b);
+    var(--accent, #f3a8c7);
 
   --fc-accent-ink:
-    var(--accent-ink, #5f3a10);
+    var(--accent-ink, #684257);
 
   --fc-accent-soft:
-    var(--accent-soft, #fff1dd);
+    var(--accent-soft, #fff0f6);
 
   --fc-success:
-    var(--success, #49aa7a);
+    var(--success, #77b89a);
 
   --fc-success-soft:
-    var(--success-soft, #e4f7ed);
+    var(--success-soft, #eaf8f1);
 
   --fc-danger:
-    var(--danger, #df6a6a);
+    var(--danger, #d47b8a);
 
   --fc-radius:
     var(--radius, 14px);
@@ -315,16 +315,16 @@
     5px 10px;
 
   border:
-    1px solid #f0d5b2;
+    1px solid #e8bfd1;
 
   border-radius:
     999px;
 
   background:
-    #fffaf4;
+    #fff7fa;
 
   color:
-    #866640;
+    #8d5f75;
 
   font-family:
     var(--fc-font-mono);
@@ -639,7 +639,7 @@
 
 #converter-search:focus {
   border-color:
-    #efc183;
+    #e9a8c2;
 
   background:
     #fff;
@@ -771,7 +771,7 @@
     thin;
 
   scrollbar-color:
-    #cbd4e2 transparent;
+    #dbcbd7 transparent;
 }
 
 
@@ -789,7 +789,7 @@
 
 .fc-filter-scroll::-webkit-scrollbar-thumb {
   background:
-    #cbd4e2;
+    #dbcbd7;
 
   border-radius:
     999px;
@@ -964,7 +964,7 @@
     3px;
 
   color:
-    #a2937e;
+    #9a7185;
 
   font-family:
     var(--fc-font-mono);
@@ -1835,7 +1835,7 @@
     4px;
 
   color:
-    #a2937e;
+    #9a7185;
 
   font-family:
     var(--fc-font-mono);
@@ -2084,10 +2084,10 @@
 
 .drop-zone:hover {
   border-color:
-    #efbd79;
+    #e6a0bc;
 
   background:
-    #fffdf9;
+    #fff8fb;
 
   transform:
     translateY(-1px);
@@ -2106,7 +2106,7 @@
 
 .drop-zone:focus-visible {
   border-color:
-    #efbd79;
+    #e6a0bc;
 
   outline:
     none;
@@ -2744,9 +2744,9 @@
   background:
     linear-gradient(
       90deg,
-      #ffd39f,
+      #f6c0d7,
       var(--fc-accent),
-      #ffd39f
+      #f6c0d7
     );
 
   background-size:
@@ -3010,7 +3010,7 @@
 
 .result-download:hover {
   background:
-    #ffe8c6;
+    #ffe0ee;
 
   transform:
     translateY(-1px);
@@ -3073,7 +3073,7 @@
     block;
 
   color:
-    #ad6060;
+    #ae6678;
 
   font-size:
     10px;
@@ -3085,7 +3085,7 @@
     3px 0 0;
 
   color:
-    #977979;
+    #92717d;
 
   font-size:
     9px;
@@ -3805,4 +3805,124 @@
       auto !important;
   }
 
+}
+
+/* ============================================================
+   CUTE CAT / PASTEL OVERLAY
+   ============================================================ */
+
+.file-converter-page::before {
+  width: 155px;
+  height: 155px;
+  opacity: .34;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(243,168,199,.28), transparent 58%);
+}
+
+.file-converter-page::after {
+  width: 170px;
+  height: 170px;
+  opacity: .30;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(202,184,232,.24), transparent 60%);
+}
+
+/* Soft cat-ear corners on major interactive surfaces */
+.fc-hero,
+#converter-content,
+.modal-panel {
+  position: relative;
+}
+
+.fc-hero::after {
+  content: 'ฅ^•ﻌ•^ฅ';
+  position: absolute;
+  top: -8px;
+  right: 4px;
+  color: #d68cab;
+  font-size: 18px;
+  opacity: .58;
+  letter-spacing: .02em;
+  pointer-events: none;
+  animation: fcCatFloat 3.2s ease-in-out infinite;
+}
+
+#converter-content::before {
+  content: '🐾';
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  font-size: 17px;
+  opacity: .32;
+  transform: rotate(-12deg);
+  pointer-events: none;
+}
+
+.converter-card::before {
+  background:
+    radial-gradient(circle, rgba(243,168,199,.18), transparent 68%);
+}
+
+.converter-card::after {
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(243,168,199,.55),
+      transparent
+    );
+}
+
+.card-icon,
+.drop-icon,
+.empty-icon,
+.privacy-icon,
+.modal-close {
+  border-color: #ead0dd;
+  background: #fff7fb;
+}
+
+.converter-card:hover .card-icon {
+  background: #fff0f6;
+  border-color: #e6bfd1;
+}
+
+.filter-button.active,
+.primary-button {
+  background: #5b4b63;
+  border-color: #5b4b63;
+}
+
+.filter-button.active:hover,
+.primary-button:hover:not(:disabled) {
+  background: #6b5874;
+}
+
+.progress-bar {
+  background:
+    linear-gradient(
+      90deg,
+      #f8c9dc,
+      var(--fc-accent),
+      #f8c9dc
+    );
+}
+
+.result-header {
+  border-color: #b9dac8;
+}
+
+@keyframes fcCatFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(2deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-hero::after {
+    animation: none;
+  }
 }
