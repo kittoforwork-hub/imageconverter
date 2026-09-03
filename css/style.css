@@ -4736,3 +4736,434 @@ a {
   }
 
 }
+
+/* ============================================================
+   CUTE CAT THEME
+   ------------------------------------------------------------
+   Visual override only — preserves existing layout/functionality.
+   ============================================================ */
+
+:root {
+  --paper: #fff9fb;
+  --paper-2: #f8eef4;
+  --card: rgba(255, 255, 255, .95);
+
+  --ink: #4b4252;
+  --ink-soft: #817486;
+  --ink-faint: #b0a2b1;
+
+  --line: #eadde6;
+  --line-strong: #dac7d4;
+
+  --accent: #f4a9c4;
+  --accent-ink: #704657;
+  --accent-soft: #fff0f5;
+
+  --success: #70b895;
+  --success-soft: #ebf8f0;
+  --danger: #df7d88;
+
+  --radius: 16px;
+
+  --cute-ink: #554a59;
+  --cute-soft: #fff8fb;
+  --cute-line: #eee1e9;
+  --cute-shadow: 0 16px 40px rgba(126, 92, 113, .10);
+}
+
+/* Soft cat-inspired background */
+body {
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(circle at 7% 5%, rgba(244,169,196,.20), transparent 23%),
+    radial-gradient(circle at 92% 9%, rgba(217,199,241,.22), transparent 24%),
+    radial-gradient(circle at 90% 88%, rgba(255,221,187,.18), transparent 20%),
+    linear-gradient(180deg, #fffdfd 0%, #fff9fb 55%, #faf3f7 100%);
+}
+
+/* Tiny paw-print watermark */
+body::before {
+  content: '🐾';
+  position: fixed;
+  left: 18px;
+  bottom: 16px;
+  font-size: 22px;
+  opacity: .16;
+  pointer-events: none;
+  z-index: 0;
+  transform: rotate(-12deg);
+}
+
+body::after {
+  content: '🐾';
+  position: fixed;
+  right: 18px;
+  top: 18px;
+  font-size: 20px;
+  opacity: .13;
+  pointer-events: none;
+  z-index: 0;
+  transform: rotate(14deg) scaleX(-1);
+}
+
+/* Decorative blobs become softer and more organic */
+.sheet::before,
+.sheet::after {
+  width: 125px;
+  height: 125px;
+  opacity: .40;
+  border-radius: 46% 54% 59% 41% / 55% 42% 58% 45%;
+  filter: blur(2px);
+}
+
+.sheet::before {
+  background: rgba(250, 190, 210, .32);
+  transform: rotate(-16deg);
+}
+
+.sheet::after {
+  background: rgba(216, 201, 241, .30);
+  transform: rotate(20deg);
+}
+
+/* Header */
+.eyebrow {
+  color: #8a6273;
+  border-color: #f1d5df;
+  background: #fff8fb;
+  box-shadow: 0 5px 16px rgba(120, 83, 105, .06);
+}
+
+.topbar h1 {
+  color: #504655;
+  position: relative;
+}
+
+.topbar h1::before {
+  content: '◡̈';
+  position: absolute;
+  left: -2px;
+  top: -18px;
+  font-size: 13px;
+  color: #d98ca9;
+  opacity: .70;
+  transform: rotate(-8deg);
+}
+
+.topbar h1::after {
+  content: '✦';
+  color: #ef9ebc;
+}
+
+/* Category navigation */
+.cat-bar {
+  background: rgba(255,255,255,.82);
+  border-color: #eadde6;
+  box-shadow: 0 9px 24px rgba(118, 84, 105, .07);
+}
+
+.cat-btn {
+  color: #7f7280;
+  border-radius: 999px;
+}
+
+.cat-btn.is-active {
+  background: #554a59;
+  color: #fffafc;
+  box-shadow: 0 6px 15px rgba(85, 74, 89, .18);
+}
+
+/* Add a subtle paw to category buttons */
+.cat-btn::before {
+  content: '🐾';
+  font-size: 11px;
+  opacity: .42;
+  transform: translateY(-.5px);
+}
+
+.cat-btn.is-active::before {
+  opacity: .80;
+}
+
+/* Tool chips */
+.tool-chip {
+  border-color: #eadde6;
+  background: rgba(255,255,255,.84);
+  color: #796c7a;
+  box-shadow: 0 4px 13px rgba(118,84,105,.04);
+}
+
+.tool-chip.is-active {
+  background: #fff0f5;
+  border-color: #efbfd0;
+  color: #704657;
+  box-shadow: 0 4px 14px rgba(224,145,175,.11);
+}
+
+/* Main panel */
+.panels {
+  border-color: rgba(234,221,230,.95);
+  border-radius: 26px;
+  background: rgba(255,255,255,.64);
+  box-shadow: 0 18px 48px rgba(111, 81, 99, .08);
+}
+
+.tool-panel {
+  --tool-accent: #e7a6bf;
+  --tool-accent-2: #fde7ef;
+}
+
+.tool-panel[data-tool-kind="image"] {
+  --tool-accent: #b7a5e8;
+  --tool-accent-2: #eee8fb;
+}
+
+.tool-panel[data-tool-kind="pdf"] {
+  --tool-accent: #e9a5b9;
+  --tool-accent-2: #fde9f0;
+}
+
+.tool-panel[data-tool="img-bgremove"] {
+  --tool-accent: #8dc7b0;
+  --tool-accent-2: #e1f4eb;
+}
+
+.tool-panel[data-tool="img-crop"] {
+  --tool-accent: #9bb8e7;
+  --tool-accent-2: #e7effd;
+}
+
+.tool-panel[data-tool="img-compress"] {
+  --tool-accent: #9cc9b0;
+  --tool-accent-2: #e7f4eb;
+}
+
+.tool-panel[data-tool="pdf-merge"] {
+  --tool-accent: #ef9fb9;
+  --tool-accent-2: #ffe3ec;
+}
+
+.tool-panel[data-tool="pdf-pages"] {
+  --tool-accent: #baa0dd;
+  --tool-accent-2: #efe7fa;
+}
+
+.tool-panel[data-tool="pdf-watermark"] {
+  --tool-accent: #e5b27c;
+  --tool-accent-2: #fff0df;
+}
+
+.tool-panel[data-tool="pdf-pagenumbers"] {
+  --tool-accent: #96b4d4;
+  --tool-accent-2: #e4eff8;
+}
+
+.tool-panel[data-tool="pdf-to-images"] {
+  --tool-accent: #8fc4ad;
+  --tool-accent-2: #e2f2ea;
+}
+
+.tool-panel[data-tool="pdf-from-images"] {
+  --tool-accent: #e5a57f;
+  --tool-accent-2: #ffecdf;
+}
+
+/* Upload area */
+.dropzone {
+  border-color: #decbd7;
+  border-radius: 22px;
+  background: rgba(255,255,255,.90);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 11px 28px rgba(111,81,99,.05);
+}
+
+.dropzone:hover,
+.dropzone:focus-visible {
+  border-color: #e5a7be;
+  background: #fffafb;
+}
+
+.dz-icon {
+  color: #ba9cab;
+}
+
+/* Make the upload icon feel like a little cat badge */
+.dz-icon {
+  position: relative;
+  display: inline-block;
+}
+
+.dz-icon::after {
+  content: '🐱';
+  position: absolute;
+  right: -16px;
+  top: -8px;
+  font-size: 15px;
+  opacity: .72;
+  transform: rotate(7deg);
+}
+
+/* Empty state / progress */
+.cute-empty-state,
+.cute-progress {
+  border-color: #eee1e9;
+  background: rgba(255,255,255,.78);
+}
+
+.cute-progress {
+  box-shadow: 0 8px 24px rgba(104,75,94,.05);
+}
+
+.cute-progress-bar {
+  background: linear-gradient(
+    90deg,
+    #fde7ef,
+    #e8afc5,
+    #fde7ef
+  );
+}
+
+/* Cards */
+.bulkbar,
+.form-card,
+.ticket,
+.file-row,
+.page-card {
+  border-color: #eadde6;
+  background: rgba(255,255,255,.95);
+  box-shadow: 0 10px 26px rgba(111,81,99,.055);
+}
+
+.ticket:hover,
+.file-row:hover,
+.page-card:hover {
+  box-shadow: 0 13px 30px rgba(111,81,99,.085);
+}
+
+.ticket-perf {
+  opacity: .72;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      #decbd7 0 6px,
+      transparent 6px 12px
+    );
+}
+
+/* Thumbnails */
+.ticket-thumb {
+  border-color: #eadde6;
+  background:
+    linear-gradient(45deg, #f5eef2 25%, transparent 25%) -8px 0/16px 16px,
+    linear-gradient(-45deg, #f5eef2 25%, transparent 25%) -8px 0/16px 16px,
+    linear-gradient(45deg, transparent 75%, #f5eef2 75%) -8px 0/16px 16px,
+    linear-gradient(-45deg, transparent 75%, #f5eef2 75%) -8px 0/16px 16px,
+    #fff;
+}
+
+/* Labels and controls */
+.spec-label {
+  color: #ad9eac;
+}
+
+.seg-group {
+  border-color: #dfd0da;
+}
+
+.seg-btn {
+  border-right-color: #dfd0da;
+  background: #fffafb;
+  color: #7e7080;
+}
+
+.seg-btn.is-active {
+  background: #6a5968;
+  color: #fffafd;
+}
+
+.mono-select,
+input[type="text"],
+input[type="number"] {
+  border-color: #dfd0da;
+  background: #fffafb;
+  color: #554a59;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+.mono-select:focus,
+.dim-input:focus,
+input:focus {
+  outline: 2px solid rgba(239, 159, 188, .24);
+  border-color: #e6a5bd;
+}
+
+/* Buttons */
+.btn-primary {
+  background: #5b4d5b;
+  color: #fffafd;
+  box-shadow: 0 7px 16px rgba(85,74,89,.15);
+}
+
+.btn-accent {
+  background: #f3aec5;
+  border-color: #dc90ad;
+  color: #6f4355;
+  box-shadow: 0 7px 16px rgba(224,145,175,.17);
+}
+
+.btn-ghost,
+.icon-btn,
+.lock-btn {
+  border-color: #dfd0da;
+  background: #fffafb;
+  color: #7d7080;
+}
+
+.btn-ghost:hover:not(:disabled),
+.icon-btn:hover:not(:disabled),
+.lock-btn:hover {
+  background: #f8eef4;
+}
+
+.lock-btn.is-locked {
+  background: #fff0f5;
+  border-color: #e4a0bb;
+  color: #5b4d5b;
+}
+
+/* A little cat face in the empty/result areas */
+.page-drag-placeholder-inner::before {
+  content: '🐱';
+}
+
+/* Selection / status */
+.status.is-ready {
+  color: #62a884;
+}
+
+.status.is-error {
+  color: #d87883;
+}
+
+/* Responsive-safe decoration */
+@media (max-width: 560px) {
+  body::before {
+    left: 8px;
+    bottom: 8px;
+    font-size: 18px;
+  }
+
+  body::after {
+    right: 8px;
+    top: 8px;
+    font-size: 17px;
+  }
+
+  .topbar h1::before {
+    top: -14px;
+    font-size: 11px;
+  }
+}
