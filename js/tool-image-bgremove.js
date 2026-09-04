@@ -109,7 +109,7 @@
   ) {
 
     console.warn(
-      '[BiRefNet Background Removal] Required elements not found.'
+      '[BiRefNet] Required elements not found.'
     );
 
     return;
@@ -118,13 +118,13 @@
 
 
   // ============================================================
-  // CONSTANTS
+  // AI CONFIG
   // ============================================================
 
   /*
    * Transformers.js
    *
-   * v3.8.1 is the current stable release documented by Hugging Face.
+   * Loaded dynamically from jsDelivr.
    */
   const TRANSFORMERS_VERSION =
     '3.8.1';
@@ -135,27 +135,44 @@
 
 
   /*
-   * Full BiRefNet model.
-   *
-   * We intentionally use the full-resolution 1024px model rather
-   * than the 512px variant because the purpose here is quality.
+   * Official ONNX-community BiRefNet model.
    */
   const MODEL_ID =
     'onnx-community/BiRefNet-ONNX';
 
 
   /*
-   * FP16 weights are much smaller than FP32:
+   * GPU uses FP16 because the repository provides:
    *
-   * FP16 ~= 490 MB
-   * FP32 ~= 973 MB
+   * onnx/model_fp16.onnx
    *
-   * FP16 is the practical choice for browser WebGPU.
+   * at roughly 490 MB.
    */
-  const MODEL_DTYPE =
+  const GPU_DTYPE =
     'fp16';
 
 
+  /*
+   * WASM fallback uses FP32 because the repository provides:
+   *
+   * onnx/model.onnx
+   *
+   * at roughly 973 MB.
+   */
+  const CPU_DTYPE =
+    'fp32';
+
+
+  /*
+   * Prefer GPU.
+   */
+  const PREFER_WEBGPU =
+    true;
+
+
+  /*
+   * Final output format.
+   */
   const OUTPUT_FORMAT =
     'image/png';
 
@@ -165,70 +182,49 @@
 
 
   /*
-   * WebGPU first.
+   * Model input is handled by the model processor.
+   *
+   * We DO NOT resize the user's final output.
    */
-  const PREFER_WEBGPU =
-    true;
+  const MODEL_INPUT_SIZE =
+    1024;
 
 
   /*
-   * Keep original source resolution.
-   *
-   * Unlike the previous version, we do NOT permanently resize the
-   * user's source image to 1800px before generating the final file.
+   * Prevent browser canvas allocations that are unreasonable
+   * for typical desktop/mobile hardware.
    */
   const MAX_OUTPUT_DIMENSION =
     8192;
 
 
-  /*
-   * Alpha refinement.
-   *
-   * Values in the middle are adjusted more strongly than already
-   * opaque / already transparent pixels.
-   */
-  const ALPHA_LOW =
-    0.08;
-
-
-  const ALPHA_HIGH =
-    0.92;
-
-
-  /*
-   * Mild edge sharpening.
-   *
-   * This is deliberately conservative so thin object details don't
-   * get destroyed by aggressive thresholding.
-   */
-  const EDGE_GAMMA =
-    0.92;
-
-
-  /*
-   * Halo removal.
-   *
-   * Designed primarily for white/light product-photo backgrounds.
-   * The estimation is conservative and only strongly affects
-   * partially transparent edge pixels.
-   */
-  const DECONTAMINATION_STRENGTH =
-    0.72;
-
-
-  const BORDER_SAMPLE_SIZE =
-    12;
-
-
-  /*
-   * Browser canvas security / maximum-size protection.
-   */
   const MAX_CANVAS_AREA =
-    50000000;
+    60000000;
 
 
   // ============================================================
-  // STATE
+  // ALPHA REFINEMENT
+  // ============================================================
+
+  /*
+   * Keep the threshold conservative.
+   *
+   * The goal is to avoid destroying small product details.
+   */
+  const ALPHA_LOW =
+    0.045;
+
+
+  const ALPHA_HIGH =
+    0.955;
+
+
+  const EDGE_GAMMA =
+    0.96;
+
+
+  // ============================================================
+  // MEMORY / MODEL STATE
   // ============================================================
 
   let jobSeq =
@@ -251,11 +247,15 @@
     null;
 
 
-  let engineMode =
+  let modelMode =
     null;
 
 
   let webgpuKnownBad =
+    false;
+
+
+  let modelLoading =
     false;
 
 
@@ -314,7 +314,7 @@
 
 
   // ============================================================
-  // SAFE YIELD
+  // SAFE UI YIELD
   // ============================================================
 
   async function yieldToUI() {
@@ -396,7 +396,7 @@
     file
   ) {
 
-    const url =
+    const objectUrl =
       URL.createObjectURL(
         file
       );
@@ -437,7 +437,7 @@
 
 
           img.src =
-            url;
+            objectUrl;
 
         }
       );
@@ -445,7 +445,7 @@
     } finally {
 
       revokeUrl(
-        url
+        objectUrl
       );
 
     }
@@ -454,7 +454,7 @@
 
 
   // ============================================================
-  // TRANSFORMERS.JS LOAD
+  // TRANSFORMERS.JS
   // ============================================================
 
   async function loadTransformers() {
@@ -477,7 +477,13 @@
           module => {
 
             if (
-              !module
+              !module ||
+              typeof module.AutoModel !==
+                'function' ||
+              typeof module.AutoProcessor !==
+                'function' ||
+              typeof module.RawImage !==
+                'function'
             ) {
 
               throw new Error(
@@ -495,7 +501,7 @@
           error => {
 
             console.error(
-              '[BiRefNet Background Removal] Transformers.js load failed:',
+              '[BiRefNet] Transformers.js load failed:',
               error
             );
 
@@ -518,7 +524,7 @@
 
 
   // ============================================================
-  // WEBGPU DETECTION
+  // WEBGPU CHECK
   // ============================================================
 
   async function canUseWebGPU() {
@@ -576,7 +582,7 @@
     ) {
 
       console.warn(
-        '[BiRefNet Background Removal] WebGPU probe failed:',
+        '[BiRefNet] WebGPU probe failed:',
         error
       );
 
@@ -589,142 +595,123 @@
 
 
   // ============================================================
-  // MODEL LOAD
+  // MODEL PROGRESS
   // ============================================================
 
-  async function loadModel(
-    mode,
-    progressCallback
+  function updateModelProgress(
+    job,
+    info
   ) {
 
-    const {
-
-      AutoModel,
-      AutoProcessor
-
-    } =
-      await loadTransformers();
-
-
-    /*
-     * Keep a separate cache per engine.
-     */
     if (
-      mode ===
-      'gpu'
+      !job ||
+      job.disposed ||
+      !job.isProcessing ||
+      !info
     ) {
 
-      if (
-        !modelPromise
-      ) {
+      return;
 
-        modelPromise =
-          AutoModel.from_pretrained(
-            MODEL_ID,
-            {
-
-              dtype:
-                MODEL_DTYPE,
-
-              device:
-                'webgpu',
-
-              progress_callback:
-                progressCallback
-
-            }
-          );
-
-      }
+    }
 
 
-      if (
-        !processorPromise
-      ) {
+    let percent =
+      Number(
+        info.progress
+      );
 
-        processorPromise =
-          AutoProcessor.from_pretrained(
-            MODEL_ID,
-            {
 
-              progress_callback:
-                progressCallback
+    if (
+      !Number.isFinite(
+        percent
+      )
+    ) {
 
-            }
-          );
+      const loaded =
+        Number(
+          info.loaded
+        );
 
-      }
 
-    } else {
-
-      if (
-        !modelPromise
-      ) {
-
-        modelPromise =
-          AutoModel.from_pretrained(
-            MODEL_ID,
-            {
-
-              dtype:
-                MODEL_DTYPE,
-
-              device:
-                'wasm',
-
-              progress_callback:
-                progressCallback
-
-            }
-          );
-
-      }
+      const total =
+        Number(
+          info.total
+        );
 
 
       if (
-        !processorPromise
+        Number.isFinite(
+          loaded
+        ) &&
+        Number.isFinite(
+          total
+        ) &&
+        total >
+          0
       ) {
 
-        processorPromise =
-          AutoProcessor.from_pretrained(
-            MODEL_ID,
-            {
-
-              progress_callback:
-                progressCallback
-
-            }
-          );
+        percent =
+          (
+            loaded /
+            total
+          ) *
+          100;
 
       }
 
     }
 
 
-    const model =
-      await modelPromise;
+    if (
+      !Number.isFinite(
+        percent
+      )
+    ) {
+
+      return;
+
+    }
 
 
-    const processor =
-      await processorPromise;
+    percent =
+      Math.max(
+        0,
+        Math.min(
+          100,
+          Math.round(
+            percent
+          )
+        )
+      );
 
 
-    return {
+    job.setProgress(
+      percent
+    );
 
-      model,
 
-      processor
+    if (
+      job.statusEl
+    ) {
 
-    };
+      job.statusEl.textContent =
+        t(
+          'image.loadingModelProgress',
+          {
+            percent
+          }
+        );
+
+    }
 
   }
 
 
   // ============================================================
-  // RESET MODEL CACHE
+  // RESET MODEL
   // ============================================================
 
-  function resetModelCache() {
+  function resetModel() {
 
     modelPromise =
       null;
@@ -737,133 +724,149 @@
 
 
   // ============================================================
-  // PROGRESS CALLBACK
+  // LOAD BirefNet
   // ============================================================
 
-  function createProgressHandler(
+  async function loadBiRefNet(
+    mode,
     job
   ) {
 
-    return progress => {
-
-      if (
-        !job ||
-        job.disposed ||
-        !job.isProcessing
-      ) {
-
-        return;
-
-      }
+    const {
+      AutoModel,
+      AutoProcessor
+    } =
+      await loadTransformers();
 
 
-      if (
-        !progress
-      ) {
+    /*
+     * Reuse already-loaded model when possible.
+     */
+    if (
+      modelPromise &&
+      processorPromise &&
+      modelMode === mode
+    ) {
 
-        return;
+      return {
 
-      }
+        model:
+          await modelPromise,
 
+        processor:
+          await processorPromise
 
-      let percent =
-        null;
+      };
 
-
-      if (
-        Number.isFinite(
-          Number(
-            progress.progress
-          )
-        )
-      ) {
-
-        percent =
-          Number(
-            progress.progress
-          );
-
-      }
+    }
 
 
-      if (
-        percent ===
-        null &&
-        Number.isFinite(
-          Number(
-            progress.loaded
-          )
-        ) &&
-        Number.isFinite(
-          Number(
-            progress.total
-          )
-        ) &&
-        Number(
-          progress.total
-        ) >
-          0
-      ) {
-
-        percent =
-          (
-            Number(
-              progress.loaded
-            ) /
-            Number(
-              progress.total
-            )
-          ) *
-          100;
-
-      }
+    /*
+     * Engine changed:
+     *
+     * GPU → WASM
+     * or
+     * WASM → GPU
+     *
+     * therefore reload model.
+     */
+    resetModel();
 
 
-      if (
-        percent ===
-        null
-      ) {
-
-        return;
-
-      }
+    modelMode =
+      mode;
 
 
-      percent =
-        Math.max(
-          0,
-          Math.min(
-            100,
-            Math.round(
-              percent
-            )
-          )
+    const progressCallback =
+      info =>
+        updateModelProgress(
+          job,
+          info
         );
 
 
-      job.setProgress(
-        percent
-      );
+    modelLoading =
+      true;
 
 
-      job.statusEl &&
-        (
-          job.statusEl.textContent =
-            t(
-              'image.loadingModelProgress',
-              {
-                percent
-              }
-            )
+    try {
+
+      /*
+       * --------------------------------------------------------
+       * MODEL
+       * --------------------------------------------------------
+       */
+
+      const modelOptions =
+        {
+
+          dtype:
+            mode === 'gpu'
+              ? GPU_DTYPE
+              : CPU_DTYPE,
+
+          device:
+            mode === 'gpu'
+              ? 'webgpu'
+              : 'wasm',
+
+          progress_callback:
+            progressCallback
+
+        };
+
+
+      modelPromise =
+        AutoModel.from_pretrained(
+          MODEL_ID,
+          modelOptions
         );
 
-    };
+
+      /*
+       * --------------------------------------------------------
+       * PROCESSOR
+       * --------------------------------------------------------
+       */
+
+      processorPromise =
+        AutoProcessor.from_pretrained(
+          MODEL_ID,
+          {
+            progress_callback:
+              progressCallback
+          }
+        );
+
+
+      const model =
+        await modelPromise;
+
+
+      const processor =
+        await processorPromise;
+
+
+      return {
+
+        model,
+
+        processor
+
+      };
+
+    } finally {
+
+      modelLoading =
+        false;
+
+    }
 
   }
 
 
   // ============================================================
-  // MASK HELPERS
+  // CLAMP
   // ============================================================
 
   function clamp01(
@@ -874,74 +877,50 @@
       0,
       Math.min(
         1,
-        value
+        Number(
+          value
+        ) || 0
       )
     );
 
   }
 
 
-  function smoothstep(
-    edge0,
-    edge1,
-    x
+  function clampByte(
+    value
   ) {
 
-    if (
-      edge0 ===
-      edge1
-    ) {
-
-      return x <
-        edge0
-        ? 0
-        : 1;
-
-    }
-
-
-    const t =
-      clamp01(
-        (
-          x -
-          edge0
-        ) /
-        (
-          edge1 -
-          edge0
+    return Math.max(
+      0,
+      Math.min(
+        255,
+        Math.round(
+          Number(
+            value
+          ) || 0
         )
-      );
-
-
-    return (
-      t *
-      t *
-      (
-        3 -
-        2 *
-        t
       )
     );
 
   }
 
+
+  // ============================================================
+  // ALPHA REFINEMENT
+  // ============================================================
 
   function refineAlpha(
-    alpha
+    value
   ) {
 
-    let a =
+    let alpha =
       clamp01(
-        alpha
+        value
       );
 
 
-    /*
-     * Preserve hard foreground/background decisions while
-     * improving the transition band.
-     */
     if (
-      a <=
+      alpha <=
       ALPHA_LOW
     ) {
 
@@ -951,7 +930,7 @@
 
 
     if (
-      a >=
+      alpha >=
       ALPHA_HIGH
     ) {
 
@@ -960,587 +939,49 @@
     }
 
 
-    a =
-      smoothstep(
-        ALPHA_LOW,
-        ALPHA_HIGH,
-        a
+    alpha =
+      (
+        alpha -
+        ALPHA_LOW
+      ) /
+      (
+        ALPHA_HIGH -
+        ALPHA_LOW
       );
 
 
     /*
-     * Mild gamma correction.
+     * Smooth transition.
      */
-    a =
+    alpha =
+      alpha *
+      alpha *
+      (
+        3 -
+        2 *
+        alpha
+      );
+
+
+    /*
+     * Very mild gamma correction.
+     */
+    alpha =
       Math.pow(
-        a,
+        alpha,
         EDGE_GAMMA
       );
 
 
     return clamp01(
-      a
+      alpha
     );
 
   }
 
 
   // ============================================================
-  // BACKGROUND COLOR ESTIMATION
-  // ============================================================
-
-  function estimateBorderColor(
-    imageData
-  ) {
-
-    const {
-      data,
-      width,
-      height
-    } =
-      imageData;
-
-
-    const sample =
-      Math.max(
-        1,
-        Math.min(
-          BORDER_SAMPLE_SIZE,
-          Math.floor(
-            Math.min(
-              width,
-              height
-            ) /
-            4
-          )
-        )
-      );
-
-
-    let r =
-      0;
-
-
-    let g =
-      0;
-
-
-    let b =
-      0;
-
-
-    let count =
-      0;
-
-
-    function addPixel(
-      x,
-      y
-    ) {
-
-      const idx =
-        (
-          y *
-          width +
-          x
-        ) *
-        4;
-
-
-      const alpha =
-        data[
-          idx +
-          3
-        ];
-
-
-      if (
-        alpha <
-        250
-      ) {
-
-        return;
-
-      }
-
-
-      r +=
-        data[
-          idx
-        ];
-
-
-      g +=
-        data[
-          idx +
-          1
-        ];
-
-
-      b +=
-        data[
-          idx +
-          2
-        ];
-
-
-      count++;
-
-    }
-
-
-    for (
-      let y = 0;
-      y < sample;
-      y++
-    ) {
-
-      for (
-        let x = 0;
-        x < width;
-        x++
-      ) {
-
-        addPixel(
-          x,
-          y
-        );
-
-
-        addPixel(
-          x,
-          height -
-            1 -
-            y
-        );
-
-      }
-
-    }
-
-
-    for (
-      let y =
-        sample;
-      y <
-        height -
-        sample;
-      y++
-    ) {
-
-      for (
-        let x = 0;
-        x < sample;
-        x++
-      ) {
-
-        addPixel(
-          x,
-          y
-        );
-
-      }
-
-
-      for (
-        let x =
-          width -
-          sample;
-        x < width;
-        x++
-      ) {
-
-        addPixel(
-          x,
-          y
-        );
-
-      }
-
-    }
-
-
-    if (
-      count <=
-      0
-    ) {
-
-      return {
-        r:
-          255,
-        g:
-          255,
-        b:
-          255
-      };
-
-    }
-
-
-    return {
-
-      r:
-        r /
-        count,
-
-      g:
-        g /
-        count,
-
-      b:
-        b /
-        count
-
-    };
-
-  }
-
-
-  // ============================================================
-  // HIGH QUALITY COMPOSITE
-  // ============================================================
-
-  function compositeToCanvas(
-    sourceCanvas,
-    maskImage
-  ) {
-
-    const width =
-      sourceCanvas.width;
-
-
-    const height =
-      sourceCanvas.height;
-
-
-    const sourceCtx =
-      sourceCanvas.getContext(
-        '2d',
-        {
-          willReadFrequently:
-            true
-        }
-      );
-
-
-    if (
-      !sourceCtx
-    ) {
-
-      throw new Error(
-        'SOURCE_CANVAS_CONTEXT_FAILED'
-      );
-
-    }
-
-
-    const sourceImageData =
-      sourceCtx.getImageData(
-        0,
-        0,
-        width,
-        height
-      );
-
-
-    const maskData =
-      maskImage.data;
-
-
-    if (
-      !maskData
-    ) {
-
-      throw new Error(
-        'MASK_DATA_MISSING'
-      );
-
-    }
-
-
-    if (
-      maskData.length <
-        width *
-        height
-    ) {
-
-      throw new Error(
-        'MASK_SIZE_INVALID'
-      );
-
-    }
-
-
-    const background =
-      estimateBorderColor(
-        sourceImageData
-      );
-
-
-    const outCanvas =
-      document.createElement(
-        'canvas'
-      );
-
-
-    outCanvas.width =
-      width;
-
-
-    outCanvas.height =
-      height;
-
-
-    const outCtx =
-      outCanvas.getContext(
-        '2d',
-        {
-          willReadFrequently:
-            true
-        }
-      );
-
-
-    if (
-      !outCtx
-    ) {
-
-      throw new Error(
-        'OUTPUT_CANVAS_CONTEXT_FAILED'
-      );
-
-    }
-
-
-    const outImageData =
-      outCtx.createImageData(
-        width,
-        height
-      );
-
-
-    const src =
-      sourceImageData.data;
-
-
-    const dst =
-      outImageData.data;
-
-
-    for (
-      let i = 0,
-      p = 0;
-      i < dst.length;
-      i += 4,
-      p++
-    ) {
-
-      const alphaRaw =
-        (
-          Number(
-            maskData[p]
-          ) ||
-          0
-        ) /
-        255;
-
-
-      const alpha =
-        refineAlpha(
-          alphaRaw
-        );
-
-
-      const sr =
-        src[i];
-
-
-      const sg =
-        src[i + 1];
-
-
-      const sb =
-        src[i + 2];
-
-
-      /*
-       * Conservative edge decontamination.
-       *
-       * Only modify RGB where the pixel is partially transparent.
-       */
-      let rr =
-        sr;
-
-
-      let rg =
-        sg;
-
-
-      let rb =
-        sb;
-
-
-      if (
-        alpha >
-          0.02 &&
-        alpha <
-          0.98
-      ) {
-
-        const strength =
-          (
-            1 -
-            alpha
-          ) *
-          DECONTAMINATION_STRENGTH;
-
-
-        rr =
-          clampByte(
-            (
-              sr -
-              (
-                1 -
-                alpha
-              ) *
-              background.r
-            ) /
-            Math.max(
-              alpha,
-              0.18
-            ) *
-            (
-              0.18 +
-              0.82 *
-              strength
-            ) +
-            sr *
-            (
-              1 -
-              strength
-            )
-          );
-
-
-        rg =
-          clampByte(
-            (
-              sg -
-              (
-                1 -
-                alpha
-              ) *
-              background.g
-            ) /
-            Math.max(
-              alpha,
-              0.18
-            ) *
-            (
-              0.18 +
-              0.82 *
-              strength
-            ) +
-            sg *
-            (
-              1 -
-              strength
-            )
-          );
-
-
-        rb =
-          clampByte(
-            (
-              sb -
-              (
-                1 -
-                alpha
-              ) *
-              background.b
-            ) /
-            Math.max(
-              alpha,
-              0.18
-            ) *
-            (
-              0.18 +
-              0.82 *
-              strength
-            ) +
-            sb *
-            (
-              1 -
-              strength
-            )
-          );
-
-      }
-
-
-      dst[i] =
-        rr;
-
-
-      dst[i + 1] =
-        rg;
-
-
-      dst[i + 2] =
-        rb;
-
-
-      dst[i + 3] =
-        Math.round(
-          alpha *
-          255
-        );
-
-    }
-
-
-    outCtx.putImageData(
-      outImageData,
-      0,
-      0
-    );
-
-
-    return outCanvas;
-
-  }
-
-
-  function clampByte(
-    value
-  ) {
-
-    if (
-      !Number.isFinite(
-        value
-      )
-    ) {
-
-      return 0;
-
-    }
-
-
-    return Math.max(
-      0,
-      Math.min(
-        255,
-        Math.round(
-          value
-        )
-      )
-    );
-
-  }
-
-
-  // ============================================================
-  // CANVAS IMAGE
+  // CREATE SOURCE CANVAS
   // ============================================================
 
   async function createSourceCanvas(
@@ -1574,9 +1015,15 @@
 
 
     if (
-      width *
+      width >
+        MAX_OUTPUT_DIMENSION ||
       height >
-      MAX_CANVAS_AREA
+        MAX_OUTPUT_DIMENSION ||
+      (
+        width *
+        height
+      ) >
+        MAX_CANVAS_AREA
     ) {
 
       throw new Error(
@@ -1602,7 +1049,14 @@
 
     const ctx =
       canvas.getContext(
-        '2d'
+        '2d',
+        {
+          alpha:
+            true,
+
+          willReadFrequently:
+            true
+        }
       );
 
 
@@ -1611,7 +1065,7 @@
     ) {
 
       throw new Error(
-        'SOURCE_CANVAS_CONTEXT_FAILED'
+        'CANVAS_CONTEXT_FAILED'
       );
 
     }
@@ -1623,6 +1077,14 @@
 
     ctx.imageSmoothingQuality =
       'high';
+
+
+    ctx.clearRect(
+      0,
+      0,
+      width,
+      height
+    );
 
 
     ctx.drawImage(
@@ -1638,35 +1100,323 @@
 
 
   // ============================================================
-  // CREATE OUTPUT BLOB
+  // MASK NORMALIZATION
+  // ============================================================
+
+  function normalizeMask(
+    rawMask
+  ) {
+
+    if (
+      !rawMask
+    ) {
+
+      throw new Error(
+        'MASK_DATA_MISSING'
+      );
+
+    }
+
+
+    /*
+     * RawImage exposes:
+     *
+     * data
+     * width
+     * height
+     * channels
+     */
+    const width =
+      Number(
+        rawMask.width
+      );
+
+
+    const height =
+      Number(
+        rawMask.height
+      );
+
+
+    const channels =
+      Number(
+        rawMask.channels
+      );
+
+
+    const data =
+      rawMask.data;
+
+
+    if (
+      !width ||
+      !height ||
+      !data
+    ) {
+
+      throw new Error(
+        'MASK_DATA_INVALID'
+      );
+
+    }
+
+
+    if (
+      channels !==
+      1
+    ) {
+
+      /*
+       * BiRefNet should produce a single-channel matte.
+       *
+       * Fail explicitly rather than silently producing a bad mask.
+       */
+      throw new Error(
+        'MASK_CHANNELS_INVALID'
+      );
+
+    }
+
+
+    return {
+
+      width,
+
+      height,
+
+      data
+
+    };
+
+  }
+
+
+  // ============================================================
+  // COMPOSITE
+  // ============================================================
+
+  async function compositeMask(
+    file,
+    mask
+  ) {
+
+    const sourceCanvas =
+      await createSourceCanvas(
+        file
+      );
+
+
+    const sourceCtx =
+      sourceCanvas.getContext(
+        '2d',
+        {
+          alpha:
+            true,
+
+          willReadFrequently:
+            true
+        }
+      );
+
+
+    if (
+      !sourceCtx
+    ) {
+
+      throw new Error(
+        'CANVAS_CONTEXT_FAILED'
+      );
+
+    }
+
+
+    const width =
+      sourceCanvas.width;
+
+
+    const height =
+      sourceCanvas.height;
+
+
+    const maskInfo =
+      normalizeMask(
+        mask
+      );
+
+
+    /*
+     * The model gives us a 1024-class matte.
+     *
+     * Resize that matte to the original image dimensions.
+     */
+    const {
+      RawImage
+    } =
+      await loadTransformers();
+
+
+    const rawMask =
+      new RawImage(
+        maskInfo.data,
+        maskInfo.width,
+        maskInfo.height,
+        1
+      );
+
+
+    const resizedMask =
+      await rawMask.resize(
+        width,
+        height,
+        {
+          resample:
+            3
+        }
+      );
+
+
+    if (
+      !resizedMask ||
+      !resizedMask.data
+    ) {
+
+      throw new Error(
+        'MASK_RESIZE_FAILED'
+      );
+
+    }
+
+
+    const sourceImageData =
+      sourceCtx.getImageData(
+        0,
+        0,
+        width,
+        height
+      );
+
+
+    const outputImageData =
+      sourceCtx.createImageData(
+        width,
+        height
+      );
+
+
+    const src =
+      sourceImageData.data;
+
+
+    const dst =
+      outputImageData.data;
+
+
+    const alphaData =
+      resizedMask.data;
+
+
+    if (
+      alphaData.length <
+        width *
+        height
+    ) {
+
+      throw new Error(
+        'MASK_SIZE_INVALID'
+      );
+
+    }
+
+
+    /*
+     * Final alpha composition.
+     *
+     * RGB remains untouched.
+     *
+     * This is deliberate:
+     * aggressive RGB decontamination can damage metallic products,
+     * black tools, chromed tools and colored edges.
+     */
+    for (
+      let p = 0,
+      i = 0;
+      p <
+        width *
+        height;
+      p++,
+      i += 4
+    ) {
+
+      const alphaRaw =
+        (
+          Number(
+            alphaData[p]
+          ) || 0
+        ) /
+        255;
+
+
+      const alpha =
+        refineAlpha(
+          alphaRaw
+        );
+
+
+      dst[i] =
+        src[i];
+
+
+      dst[i + 1] =
+        src[i + 1];
+
+
+      dst[i + 2] =
+        src[i + 2];
+
+
+      dst[i + 3] =
+        Math.round(
+          alpha *
+          255
+        );
+
+    }
+
+
+    sourceCtx.putImageData(
+      outputImageData,
+      0,
+      0
+    );
+
+
+    return sourceCanvas;
+
+  }
+
+
+  // ============================================================
+  // CANVAS → PNG
   // ============================================================
 
   async function canvasToPNG(
     canvas
   ) {
 
-    const blob =
-      await new Promise(
-        (
-          resolve,
-          reject
-        ) => {
+    return await new Promise(
+      (
+        resolve,
+        reject
+      ) => {
 
-          canvas.toBlob(
-            result => {
+        canvas.toBlob(
+          blob => {
 
-              if (
-                result
-              ) {
-
-                resolve(
-                  result
-                );
-
-                return;
-
-              }
-
+            if (
+              !blob ||
+              blob.size <=
+                0
+            ) {
 
               reject(
                 new Error(
@@ -1674,14 +1424,277 @@
                 )
               );
 
-            },
+              return;
 
-            OUTPUT_FORMAT,
+            }
 
-            1
-          );
 
+            resolve(
+              blob
+            );
+
+          },
+
+          OUTPUT_FORMAT,
+
+          1
+        );
+
+      }
+    );
+
+  }
+
+
+  // ============================================================
+  // RUN BirefNet
+  // ============================================================
+
+  async function runBiRefNet(
+    file,
+    job
+  ) {
+
+    const {
+      RawImage
+    } =
+      await loadTransformers();
+
+
+    /*
+     * Load original image.
+     *
+     * It stays at original resolution.
+     */
+    const image =
+      await RawImage.fromBlob(
+        file
+      );
+
+
+    if (
+      !image ||
+      !image.width ||
+      !image.height
+    ) {
+
+      throw new Error(
+        'IMAGE_DIMENSIONS_INVALID'
+      );
+
+    }
+
+
+    /*
+     * Inform the user that model is loading.
+     */
+    if (
+      job.statusEl
+    ) {
+
+      job.statusEl.textContent =
+        t(
+          'image.loadingModelProgress',
+          {
+            percent:
+              0
+          }
+        );
+
+    }
+
+
+    const {
+      model,
+      processor
+    } =
+      await loadBiRefNet(
+        modelMode,
+        job
+      );
+
+
+    if (
+      job.disposed
+    ) {
+
+      return null;
+
+    }
+
+
+    await yieldToUI();
+
+
+    /*
+     * ----------------------------------------------------------
+     * PREPROCESS
+     * ----------------------------------------------------------
+     *
+     * The repository's preprocessor config specifies 1024x1024.
+     * We let AutoProcessor handle this transformation.
+     */
+    if (
+      job.statusEl
+    ) {
+
+      job.statusEl.textContent =
+        t(
+          'image.removingBackgroundProgress',
+          {
+            percent:
+              0
+          }
+        );
+
+    }
+
+
+    const {
+      pixel_values
+    } =
+      await processor(
+        image
+      );
+
+
+    if (
+      job.disposed
+    ) {
+
+      return null;
+
+    }
+
+
+    await yieldToUI();
+
+
+    /*
+     * ----------------------------------------------------------
+     * INFERENCE
+     * ----------------------------------------------------------
+     */
+
+    const outputs =
+      await model(
+        {
+          input_image:
+            pixel_values
         }
+      );
+
+
+    if (
+      job.disposed
+    ) {
+
+      return null;
+
+    }
+
+
+    if (
+      !outputs ||
+      !outputs.output_image ||
+      !outputs.output_image[0]
+    ) {
+
+      throw new Error(
+        'BACKGROUND_EMPTY_RESULT'
+      );
+
+    }
+
+
+    /*
+     * ----------------------------------------------------------
+     * LOGITS → MASK
+     * ----------------------------------------------------------
+     *
+     * This follows the official model example:
+     *
+     * output_image[0]
+     *   .sigmoid()
+     *   .mul(255)
+     *   .to('uint8')
+     */
+    const maskTensor =
+      outputs
+        .output_image[0]
+        .sigmoid()
+        .mul(
+          255
+        )
+        .to(
+          'uint8'
+        );
+
+
+    if (
+      job.disposed
+    ) {
+
+      return null;
+
+    }
+
+
+    /*
+     * Convert tensor → RawImage.
+     */
+    const maskImage =
+      RawImage.fromTensor(
+        maskTensor
+      );
+
+
+    if (
+      !maskImage
+    ) {
+
+      throw new Error(
+        'MASK_DATA_MISSING'
+      );
+
+    }
+
+
+    await yieldToUI();
+
+
+    /*
+     * ----------------------------------------------------------
+     * COMPOSITE ON ORIGINAL RESOLUTION
+     * ----------------------------------------------------------
+     */
+    const outputCanvas =
+      await compositeMask(
+        file,
+        maskImage
+      );
+
+
+    if (
+      job.disposed
+    ) {
+
+      return null;
+
+    }
+
+
+    await yieldToUI();
+
+
+    /*
+     * ----------------------------------------------------------
+     * EXPORT
+     * ----------------------------------------------------------
+     */
+    const blob =
+      await canvasToPNG(
+        outputCanvas
       );
 
 
@@ -1704,250 +1717,7 @@
 
 
   // ============================================================
-  // AI INFERENCE
-  // ============================================================
-
-  async function runBiRefNet(
-    file,
-    job
-  ) {
-
-    const transformers =
-      await loadTransformers();
-
-
-    const {
-      RawImage
-    } =
-      transformers;
-
-
-    /*
-     * Create input image without downscaling the user's original
-     * output image.
-     *
-     * The processor itself performs the model-required resize.
-     */
-    const image =
-      await RawImage.fromBlob(
-        file
-      );
-
-
-    const progressCallback =
-      createProgressHandler(
-        job
-      );
-
-
-    job.statusEl &&
-      (
-        job.statusEl.textContent =
-          t(
-            'image.loadingModelProgress',
-            {
-              percent:
-                0
-            }
-          )
-      );
-
-
-    const {
-      model,
-      processor
-    } =
-      await loadModel(
-        engineMode,
-        progressCallback
-      );
-
-
-    if (
-      job.disposed
-    ) {
-
-      return null;
-
-    }
-
-
-    await yieldToUI();
-
-
-    job.statusEl &&
-      (
-        job.statusEl.textContent =
-          t(
-            'image.removingBackgroundProgress',
-            {
-              percent:
-                0
-            }
-          )
-      );
-
-
-    /*
-     * Processor resizes according to the model's own
-     * preprocessor configuration (1024x1024 for this model).
-     */
-    const {
-      pixel_values
-    } =
-      await processor(
-        image
-      );
-
-
-    if (
-      job.disposed
-    ) {
-
-      return null;
-
-    }
-
-
-    await yieldToUI();
-
-
-    /*
-     * BiRefNet output is logits.
-     */
-    const outputs =
-      await model(
-        {
-          input_image:
-            pixel_values
-        }
-      );
-
-
-    if (
-      job.disposed
-    ) {
-
-      return null;
-
-    }
-
-
-    if (
-      !outputs ||
-      !outputs.output_image
-    ) {
-
-      throw new Error(
-        'BACKGROUND_EMPTY_RESULT'
-      );
-
-    }
-
-
-    /*
-     * Convert logits to alpha mask.
-     *
-     * Official Transformers.js model usage:
-     *
-     * output_image[0]
-     *   .sigmoid()
-     *   .mul(255)
-     *   .to('uint8')
-     */
-    let mask =
-      outputs
-        .output_image[0]
-        .sigmoid()
-        .mul(
-          255
-        )
-        .to(
-          'uint8'
-        );
-
-
-    if (
-      job.disposed
-    ) {
-
-      return null;
-
-    }
-
-
-    /*
-     * Resize mask to source resolution.
-     */
-    mask =
-      await RawImage
-        .fromTensor(
-          mask
-        )
-        .resize(
-          image.width,
-          image.height,
-          {
-            resample:
-              3
-          }
-        );
-
-
-    if (
-      job.disposed
-    ) {
-
-      return null;
-
-    }
-
-
-    await yieldToUI();
-
-
-    /*
-     * The final composition is performed on the ORIGINAL source
-     * resolution, not on the model's 1024px input.
-     */
-    const sourceCanvas =
-      await createSourceCanvas(
-        file
-      );
-
-
-    if (
-      job.disposed
-    ) {
-
-      return null;
-
-    }
-
-
-    const outputCanvas =
-      compositeToCanvas(
-        sourceCanvas,
-        mask
-      );
-
-
-    await yieldToUI();
-
-
-    const outputBlob =
-      await canvasToPNG(
-        outputCanvas
-      );
-
-
-    return outputBlob;
-
-  }
-
-
-  // ============================================================
-  // ERROR CLASSIFICATION
+  // WEBGPU ERROR DETECTION
   // ============================================================
 
   function isLikelyWebGPUError(
@@ -1982,11 +1752,7 @@
       ) ||
 
       text.includes(
-        'webnn'
-      ) ||
-
-      text.includes(
-        'requestadapter'
+        'backend'
       ) ||
 
       text.includes(
@@ -1994,11 +1760,11 @@
       ) ||
 
       text.includes(
-        'backend'
+        'failed to create session'
       ) ||
 
       text.includes(
-        'failed to create session'
+        'ort'
       )
 
     );
@@ -2007,7 +1773,7 @@
 
 
   // ============================================================
-  // ERROR → I18N KEY
+  // ERROR → I18N
   // ============================================================
 
   function getErrorKey(
@@ -2033,15 +1799,15 @@
 
 
       case
-        'BACKGROUND_EMPTY_RESULT':
-
-        return 'image.backgroundRemovalFailed';
-
-
-      case
         'IMAGE_DECODE_FAILED':
 
         return 'image.openFailed';
+
+
+      case
+        'BACKGROUND_EMPTY_RESULT':
+
+        return 'image.backgroundRemovalFailed';
 
 
       case
@@ -2351,19 +2117,19 @@
             el.remove();
 
 
-            const idx =
+            const index =
               jobs.indexOf(
                 this
               );
 
 
             if (
-              idx >=
+              index >=
               0
             ) {
 
               jobs.splice(
-                idx,
+                index,
                 1
               );
 
@@ -2487,7 +2253,7 @@
 
 
     // ========================================================
-    // SET ERROR
+    // ERROR
     // ========================================================
 
     setError(
@@ -2623,6 +2389,17 @@
 
       }
 
+
+      if (
+        this.afterWrap
+      ) {
+
+        this.afterWrap.classList.add(
+          'hidden'
+        );
+
+      }
+
     }
 
 
@@ -2635,15 +2412,7 @@
       if (
         this.disposed ||
         this.resultBlob ||
-        this.isProcessing
-      ) {
-
-        return;
-
-      }
-
-
-      if (
+        this.isProcessing ||
         !this.file
       ) {
 
@@ -2711,28 +2480,34 @@
       try {
 
         /*
-         * Detect engine.
+         * ------------------------------------------------------
+         * Select engine
+         * ------------------------------------------------------
          */
-        const useGpu =
+
+        const gpuAvailable =
           await canUseWebGPU();
 
 
-        engineMode =
-          useGpu
+        modelMode =
+          gpuAvailable
             ? 'gpu'
             : 'cpu';
 
 
         this.processingMode =
-          engineMode;
+          modelMode;
 
 
-        /*
-         * First attempt.
-         */
         let blob =
           null;
 
+
+        /*
+         * ------------------------------------------------------
+         * Primary attempt
+         * ------------------------------------------------------
+         */
 
         try {
 
@@ -2747,21 +2522,21 @@
         ) {
 
           /*
-           * WebGPU failure → hard fallback to WASM.
+           * ----------------------------------------------------
+           * GPU → WASM fallback
+           * ----------------------------------------------------
            */
+
           if (
-            engineMode ===
+            modelMode ===
               'gpu' &&
-            (
-              isLikelyWebGPUError(
-                primaryError
-              ) ||
-              !blob
+            isLikelyWebGPUError(
+              primaryError
             )
           ) {
 
             console.warn(
-              '[BiRefNet Background Removal] WebGPU failed. Switching to WASM.',
+              '[BiRefNet] WebGPU failed. Falling back to WASM:',
               primaryError
             );
 
@@ -2770,10 +2545,10 @@
               true;
 
 
-            resetModelCache();
+            resetModel();
 
 
-            engineMode =
+            modelMode =
               'cpu';
 
 
@@ -2826,19 +2601,7 @@
 
 
         if (
-          !blob
-        ) {
-
-          throw new Error(
-            'BACKGROUND_EMPTY_RESULT'
-          );
-
-        }
-
-
-        if (
-          typeof blob.size ===
-            'number' &&
+          !blob ||
           blob.size <=
             0
         ) {
@@ -2850,8 +2613,11 @@
         }
 
 
-        this.clearResult();
-
+        /*
+         * ------------------------------------------------------
+         * RESULT
+         * ------------------------------------------------------
+         */
 
         this.resultBlob =
           blob;
@@ -2884,6 +2650,12 @@
         }
 
 
+        /*
+         * ------------------------------------------------------
+         * DOWNLOAD
+         * ------------------------------------------------------
+         */
+
         if (
           this.downloadBtn
         ) {
@@ -2895,7 +2667,7 @@
           this.downloadBtn.download =
             `${U.baseName(
               this.file.name
-            )}-nobg.${OUTPUT_EXTENSION}`;
+            )}-nobg.png`;
 
 
           this.downloadBtn.classList.remove(
@@ -2942,7 +2714,7 @@
       ) {
 
         console.error(
-          '[BiRefNet Background Removal] Error:',
+          '[BiRefNet] Processing failed:',
           error
         );
 
@@ -3003,7 +2775,7 @@
 
 
     // ========================================================
-    // REVOKE OBJECT URL
+    // OBJECT URL
     // ========================================================
 
     revokeObjectUrl() {
@@ -3307,7 +3079,6 @@
                 ),
 
               total
-
             }
           );
 
@@ -3319,10 +3090,9 @@
       try {
 
         /*
-         * Sequential processing is intentional.
+         * Sequential processing.
          *
-         * BiRefNet is significantly heavier than ISNet and parallel
-         * inference can exhaust GPU memory on normal desktops.
+         * One image at a time keeps GPU/WASM memory under control.
          */
         for (
           const job of
@@ -3513,13 +3283,12 @@
           'no-background.zip'
         );
 
-
       } catch (
         error
       ) {
 
         console.error(
-          '[BiRefNet Background Removal] ZIP failed:',
+          '[BiRefNet] ZIP failed:',
           error
         );
 
