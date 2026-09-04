@@ -1,97 +1,88 @@
 /* global window, document, URL, JSZip */
 
+/*
+ * ============================================================
+ * IMAGE BACKGROUND REMOVAL
+ * ============================================================
+ *
+ * Single-file implementation.
+ *
+ * No transformer.js required.
+ * No index.html changes required.
+ *
+ * Architecture:
+ *
+ * Main Thread
+ *   ├─ UI
+ *   ├─ Preview
+ *   ├─ Queue
+ *   └─ ZIP
+ *
+ * Web Worker
+ *   ├─ Image decode
+ *   ├─ Resize
+ *   ├─ @imgly/background-removal
+ *   ├─ WebGPU
+ *   └─ CPU/WASM fallback
+ *
+ * ============================================================
+ */
+
 (() => {
   'use strict';
-
 
   // ============================================================
   // GLOBALS
   // ============================================================
 
-  const U =
-    window.Utils;
-
-  const I18n =
-    window.I18n || null;
-
+  const U = window.Utils;
+  const I18n = window.I18n || null;
 
   // ============================================================
-  // TRANSLATION HELPER
+  // TRANSLATION
   // ============================================================
 
-  function t(
-    key,
-    values
-  ) {
-
+  function t(key, values) {
     if (
       I18n &&
       typeof I18n.t === 'function'
     ) {
-
-      return I18n.t(
-        key,
-        values
-      );
-
+      return I18n.t(key, values);
     }
 
-    return String(
-      key
-    );
-
+    return String(key);
   }
-
 
   // ============================================================
   // ELEMENTS
   // ============================================================
 
   const dropzone =
-    document.getElementById(
-      'dz-img-bgremove'
-    );
+    document.getElementById('dz-img-bgremove');
 
   const fileInput =
-    document.getElementById(
-      'input-img-bgremove'
-    );
+    document.getElementById('input-img-bgremove');
 
   const bulkbar =
-    document.getElementById(
-      'bulk-img-bgremove'
-    );
+    document.getElementById('bulk-img-bgremove');
 
   const countEl =
-    document.getElementById(
-      'count-img-bgremove'
-    );
+    document.getElementById('count-img-bgremove');
 
   const clearAllBtn =
-    document.getElementById(
-      'clearAll-img-bgremove'
-    );
+    document.getElementById('clearAll-img-bgremove');
 
   const processAllBtn =
-    document.getElementById(
-      'processAll-img-bgremove'
-    );
+    document.getElementById('processAll-img-bgremove');
 
   const downloadZipBtn =
-    document.getElementById(
-      'downloadZip-img-bgremove'
-    );
+    document.getElementById('downloadZip-img-bgremove');
 
   const jobsEl =
-    document.getElementById(
-      'jobs-img-bgremove'
-    );
+    document.getElementById('jobs-img-bgremove');
 
   const jobTemplate =
-    document.getElementById(
-      'tpl-img-bgremove'
-    );
-
+    document.getElementById('tpl-img-bgremove');
 
   // ============================================================
   // SAFETY CHECK
@@ -108,942 +99,1433 @@
     !jobsEl ||
     !jobTemplate
   ) {
-
     console.warn(
       '[Image Background Removal] Required elements not found.'
     );
 
     return;
-
   }
-
 
   // ============================================================
   // CONSTANTS
   // ============================================================
 
-  /*
-   * Use a newer package version.
-   *
-   * 1.7.0 is the current npm latest.
-   */
-  const LIB_VERSION =
-    '1.7.0';
-
+  const LIB_VERSION = '1.7.0';
 
   const LIB_URL =
     `https://cdn.jsdelivr.net/npm/@imgly/background-removal@${LIB_VERSION}/+esm`;
 
-
   /*
-   * Speed-first model.
+   * Full precision model.
    *
-   * 'isnet_fp16' was tried here for speed but produced broken/empty
-   * masks in testing (background AND subject both wiped out on some
-   * inputs) — the quantized weights are not reliable enough in the
-   * currently pinned library version. Staying on full-precision
-   * 'isnet' until that's verified fixed upstream. It's slower, but
-   * correct results matter more than speed. The image downscaling
-   * below (MAX_INPUT_DIMENSION) is what actually gives most of the
-   * real-world speedup, independent of which model is used.
+   * This is intentionally kept as "isnet" because the previous
+   * implementation already identified unstable/incorrect results
+   * with isnet_fp16 for some inputs.
    */
-  const MODEL =
-    'isnet';
+  const MODEL = 'isnet';
 
-
-  const OUTPUT_FORMAT =
-    'image/png';
-
-
-  const OUTPUT_EXTENSION =
-    'png';
-
+  const OUTPUT_FORMAT = 'image/png';
+  const OUTPUT_EXTENSION = 'png';
 
   /*
-   * WebGPU should be attempted first.
-   * We do NOT blindly trust navigator.gpu.
-   * The actual removal call is wrapped so that
-   * an incompatible WebGPU backend can fall back.
+   * Browser should attempt WebGPU first.
    */
-  const PREFER_GPU =
-    true;
-
+  const PREFER_GPU = true;
 
   /*
-   * WebGPU calculations can be proxied to Worker.
+   * Much safer than sending 3000-6000px camera images directly
+   * into the segmentation model.
    *
-   * Both the WebGPU and CPU/WASM code paths are routed through a
-   * worker so a slow removal never blocks the main thread and the
-   * page stays responsive (progress bar, cancel clicks, etc.) even
-   * on the CPU fallback.
+   * Resize happens inside Worker, not the main thread.
    */
-  const PROXY_TO_WORKER =
-    true;
-
+  const MAX_INPUT_DIMENSION = 1536;
 
   /*
-   * Background removal is memory heavy. Jobs are processed strictly
-   * one at a time in "Process all" (see the sequential for-loop
-   * below) rather than in parallel, since ISNet-family models can
-   * spike RAM/VRAM usage significantly per inference.
+   * Quality of the temporary worker resize.
    */
+  const RESIZE_OUTPUT_QUALITY = 0.92;
 
-
-  const ALLOWED_IMAGE_PREFIX =
-    'image/';
-
+  const ALLOWED_IMAGE_PREFIX = 'image/';
 
   /*
-   * Large source images (typical of phone/camera photos, 4000px+ on
-   * the long edge) slow inference down a lot and can exhaust GPU/WASM
-   * memory without adding visible quality to the cutout. Images with
-   * a longer side above this value are downscaled to it before being
-   * handed to the model. Output resolution therefore matches this
-   * cap for oversized inputs; images already at or under it are left
-   * untouched (no quality loss for typical product photos).
+   * Worker inactivity cleanup.
+   *
+   * Worker itself stays alive between jobs so model initialization
+   * does not happen again for every image.
    */
-  const MAX_INPUT_DIMENSION =
-    1800;
-
-
-  const RESIZE_OUTPUT_QUALITY =
-    0.92;
-
+  const WORKER_IDLE_TIMEOUT = 5 * 60 * 1000;
 
   // ============================================================
   // STATE
   // ============================================================
 
-  let jobSeq =
-    0;
+  let jobSeq = 0;
 
+  const jobs = [];
 
-  const jobs =
-    [];
+  let worker = null;
+  let workerBlobUrl = null;
+  let workerGeneration = 0;
 
+  let workerRequestSeq = 0;
 
-  let libraryPromise =
-    null;
+  const pendingWorkerRequests =
+    new Map();
 
+  let workerIdleTimer = null;
 
-  let removeBackgroundFn =
-    null;
-
-
-  let libraryUsers =
-    0;
-
-
-  /*
-   * Once a WebGPU failure happens in this browser session,
-   * don't keep hammering the same backend.
-   */
-  let gpuKnownBad =
-    false;
-
-
-  // ============================================================
-  // FILE KEY
-  // ============================================================
-
-  function getFileKey(
-    file
-  ) {
-
-    if (
-      !file
-    ) {
-
-      return '';
-
-    }
-
-
-    return [
-
-      file.name,
-
-      file.size,
-
-      file.lastModified,
-
-      file.type
-
-    ].join('|');
-
-  }
-
-
-  function hasDuplicateFile(
-    file
-  ) {
-
-    const key =
-      getFileKey(
-        file
-      );
-
-
-    return jobs.some(
-      job =>
-        job &&
-        !job.disposed &&
-        getFileKey(
-          job.file
-        ) === key
-    );
-
-  }
-
+  let gpuKnownBad = false;
 
   // ============================================================
   // SAFE YIELD
   // ============================================================
 
   async function yieldToUI() {
-
     if (
       U &&
-      typeof U.yieldToUI ===
-        'function'
+      typeof U.yieldToUI === 'function'
     ) {
-
       await U.yieldToUI();
-
       return;
-
     }
 
-
-    await new Promise(
-      resolve =>
-        requestAnimationFrame(
-          resolve
-        )
-    );
-
-  }
-
-
-  // ============================================================
-  // URL HELPERS
-  // ============================================================
-
-  function revokeUrl(
-    url
-  ) {
-
-    if (
-      !url
-    ) {
-
-      return;
-
-    }
-
-
-    try {
-
-      URL.revokeObjectURL(
-        url
-      );
-
-    } catch (_) {}
-
-  }
-
-
-  // ============================================================
-  // IMAGE DOWNSCALE
-  // ============================================================
-
-  /*
-   * Loads `file` into an <img>, and if its longer side exceeds
-   * MAX_INPUT_DIMENSION, draws it to a canvas at a scaled-down size
-   * and returns a new File (same basename, JPEG/PNG per original
-   * type where practical) for the model to run on instead. If the
-   * image is already small enough, the original File is returned
-   * unchanged. Never throws — on any failure it falls back to the
-   * original file so processing can still proceed at full size.
-   */
-  async function downscaleIfNeeded(
-    file
-  ) {
-
-    if (
-      !file ||
-      typeof file.type !==
-        'string' ||
-      !file.type.startsWith(
-        ALLOWED_IMAGE_PREFIX
-      )
-    ) {
-
-      return file;
-
-    }
-
-
-    let objectUrl =
-      null;
-
-
-    try {
-
-      objectUrl =
-        URL.createObjectURL(
-          file
-        );
-
-
-      const img =
-        await new Promise(
-          (
-            resolve,
-            reject
-          ) => {
-
-            const el =
-              new Image();
-
-
-            el.onload =
-              () =>
-                resolve(
-                  el
-                );
-
-
-            el.onerror =
-              reject;
-
-
-            el.src =
-              objectUrl;
-
-          }
-        );
-
-
-      const width =
-        img.naturalWidth;
-
-
-      const height =
-        img.naturalHeight;
-
-
-      const longSide =
-        Math.max(
-          width,
-          height
-        );
-
-
+    await new Promise(resolve => {
       if (
-        !width ||
-        !height ||
-        longSide <=
-          MAX_INPUT_DIMENSION
-      ) {
-
-        return file;
-
-      }
-
-
-      const scale =
-        MAX_INPUT_DIMENSION /
-        longSide;
-
-
-      const targetWidth =
-        Math.max(
-          1,
-          Math.round(
-            width *
-              scale
-          )
-        );
-
-
-      const targetHeight =
-        Math.max(
-          1,
-          Math.round(
-            height *
-              scale
-          )
-        );
-
-
-      const canvas =
-        document.createElement(
-          'canvas'
-        );
-
-
-      canvas.width =
-        targetWidth;
-
-
-      canvas.height =
-        targetHeight;
-
-
-      const ctx =
-        canvas.getContext(
-          '2d'
-        );
-
-
-      if (
-        !ctx
-      ) {
-
-        return file;
-
-      }
-
-
-      ctx.imageSmoothingEnabled =
-        true;
-
-
-      ctx.imageSmoothingQuality =
-        'high';
-
-
-      ctx.drawImage(
-        img,
-        0,
-        0,
-        targetWidth,
-        targetHeight
-      );
-
-
-      const outType =
-        file.type ===
-        'image/png'
-          ? 'image/png'
-          : 'image/jpeg';
-
-
-      const blob =
-        await new Promise(
-          resolve =>
-            canvas.toBlob(
-              resolve,
-              outType,
-              RESIZE_OUTPUT_QUALITY
-            )
-        );
-
-
-      if (
-        !blob
-      ) {
-
-        return file;
-
-      }
-
-
-      return new File(
-        [
-          blob
-        ],
-        file.name,
-        {
-          type:
-            outType,
-
-          lastModified:
-            file.lastModified
-        }
-      );
-
-    } catch (
-      error
-    ) {
-
-      console.warn(
-        '[Image Background Removal] Downscale skipped, using original file:',
-        error
-      );
-
-
-      return file;
-
-    } finally {
-
-      revokeUrl(
-        objectUrl
-      );
-
-    }
-
-  }
-
-
-  // ============================================================
-  // LOAD LIBRARY
-  // ============================================================
-
-  async function loadLibrary() {
-
-    if (
-      removeBackgroundFn
-    ) {
-
-      return removeBackgroundFn;
-
-    }
-
-
-    if (
-      libraryPromise
-    ) {
-
-      return libraryPromise;
-
-    }
-
-
-    libraryPromise =
-      import(
-        /* webpackIgnore: true */
-        LIB_URL
-      )
-        .then(
-          module => {
-
-            const fn =
-              module &&
-              typeof module.removeBackground ===
-                'function'
-                ? module.removeBackground
-                : module &&
-                  typeof module.default ===
-                    'function'
-                  ? module.default
-                  : null;
-
-
-            if (
-              typeof fn !==
-                'function'
-            ) {
-
-              throw new Error(
-                'BACKGROUND_FUNCTION_NOT_FOUND'
-              );
-
-            }
-
-
-            removeBackgroundFn =
-              fn;
-
-
-            return fn;
-
-          }
-        )
-        .catch(
-          error => {
-
-            console.error(
-              '[Image Background Removal] Library load failed:',
-              error
-            );
-
-
-            removeBackgroundFn =
-              null;
-
-
-            libraryPromise =
-              null;
-
-
-            throw new Error(
-              'BACKGROUND_LIBRARY_LOAD_FAILED'
-            );
-
-          }
-        );
-
-
-    return libraryPromise;
-
-  }
-
-
-  // ============================================================
-  // ACQUIRE LIBRARY
-  // ============================================================
-
-  async function acquireLibrary() {
-
-    const fn =
-      await loadLibrary();
-
-
-    libraryUsers++;
-
-
-    return fn;
-
-  }
-
-
-  // ============================================================
-  // RELEASE LIBRARY USER
-  // ============================================================
-
-  function releaseLibraryUser() {
-
-    libraryUsers =
-      Math.max(
-        0,
-        libraryUsers -
-          1
-      );
-
-  }
-
-
-  // ============================================================
-  // DEVICE CAPABILITY
-  // ============================================================
-
-  function canTryWebGPU() {
-
-    if (
-      !PREFER_GPU ||
-      gpuKnownBad
-    ) {
-
-      return false;
-
-    }
-
-
-    if (
-      typeof navigator ===
-        'undefined'
-    ) {
-
-      return false;
-
-    }
-
-
-    if (
-      !navigator.gpu ||
-      typeof navigator.gpu.requestAdapter !==
+        typeof requestAnimationFrame ===
         'function'
-    ) {
-
-      return false;
-
-    }
-
-
-    return true;
-
+      ) {
+        requestAnimationFrame(resolve);
+      } else {
+        setTimeout(resolve, 0);
+      }
+    });
   }
 
-
   // ============================================================
-  // WEBGPU PROBE
+  // URL
   // ============================================================
 
-  async function probeWebGPU() {
-
-    if (
-      !canTryWebGPU()
-    ) {
-
-      return false;
-
+  function revokeUrl(url) {
+    if (!url) {
+      return;
     }
-
 
     try {
-
-      const adapter =
-        await navigator.gpu.requestAdapter();
-
-
-      if (
-        !adapter
-      ) {
-
-        return false;
-
-      }
-
-
-      /*
-       * Only test the basic adapter.
-       *
-       * Do NOT call requestAdapterInfo().
-       *
-       * Some browser/runtime combinations
-       * do not expose that function.
-       */
-      return true;
-
-    } catch (
-      error
-    ) {
-
-      console.warn(
-        '[Image Background Removal] WebGPU probe failed:',
-        error
-      );
-
-
-      return false;
-
-    }
-
+      URL.revokeObjectURL(url);
+    } catch (_) {}
   }
 
-
   // ============================================================
-  // BUILD CONFIG
+  // FILE KEY
   // ============================================================
 
-  async function buildConfig(
-    useGpu
-  ) {
-
-    const config = {
-
-      debug:
-        false,
-
-      model:
-        MODEL,
-
-      output: {
-
-        format:
-          OUTPUT_FORMAT,
-
-        type:
-          'foreground',
-
-        quality:
-          1
-
-      },
-
-      /*
-       * Route both GPU and CPU/WASM inference through a worker so
-       * the main thread (and therefore the UI) never blocks on a
-       * slow removal.
-       */
-      proxyToWorker:
-        PROXY_TO_WORKER
-
-    };
-
-
-    /*
-     * Explicitly select GPU only after capability probe.
-     */
-    if (
-      useGpu
-    ) {
-
-      config.device =
-        'gpu';
-
-    } else {
-
-      /*
-       * Explicit CPU path
-       *
-       * Keep CPU as fallback only.
-       */
-      config.device =
-        'cpu';
-
+  function getFileKey(file) {
+    if (!file) {
+      return '';
     }
 
-
-    /*
-     * Dynamically generated progress callback
-     * is attached by BgJob.process().
-     */
-
-    return config;
-
+    return [
+      file.name,
+      file.size,
+      file.lastModified,
+      file.type
+    ].join('|');
   }
 
+  function hasDuplicateFile(file) {
+    const key =
+      getFileKey(file);
 
-  // ============================================================
-  // ERROR CLASSIFICATION
-  // ============================================================
-
-  function isLikelyWebGPUError(
-    error
-  ) {
-
-    if (
-      !error
-    ) {
-
-      return false;
-
-    }
-
-
-    const text =
-      String(
-        error.message ||
-        error
-      )
-        .toLowerCase();
-
-
-    return (
-
-      text.includes(
-        'webgpu'
-      ) ||
-
-      text.includes(
-        'requestadapter'
-      ) ||
-
-      text.includes(
-        'requestadapterinfo'
-      ) ||
-
-      text.includes(
-        'no available backend'
-      ) ||
-
-      text.includes(
-        'failed to create session'
-      )
-
+    return jobs.some(job =>
+      job &&
+      !job.disposed &&
+      getFileKey(job.file) === key
     );
-
   }
 
-
   // ============================================================
-  // ERROR → I18N KEY
+  // ERROR
   // ============================================================
 
-  function getErrorKey(
-    error
-  ) {
-
+  function getErrorKey(error) {
     const code =
       error &&
-      typeof error.message ===
-        'string'
+      typeof error.message === 'string'
         ? error.message
         : '';
-
 
     if (
       code ===
       'BACKGROUND_FUNCTION_NOT_FOUND'
     ) {
-
       return 'errors.backgroundFunctionNotFound';
-
     }
-
 
     if (
       code ===
       'BACKGROUND_LIBRARY_LOAD_FAILED'
     ) {
-
       return 'errors.backgroundLibraryLoadFailed';
-
     }
-
 
     if (
       code ===
       'BACKGROUND_EMPTY_RESULT'
     ) {
-
       return 'image.backgroundRemovalFailed';
-
     }
 
-
     return 'image.backgroundRemovalFailed';
-
   }
 
+  // ============================================================
+  // WORKER SCRIPT
+  // ============================================================
+
+  function createWorkerSource() {
+    return `
+      'use strict';
+
+      const LIB_URL =
+        ${JSON.stringify(LIB_URL)};
+
+      const MODEL =
+        ${JSON.stringify(MODEL)};
+
+      const OUTPUT_FORMAT =
+        ${JSON.stringify(OUTPUT_FORMAT)};
+
+      const MAX_INPUT_DIMENSION =
+        ${MAX_INPUT_DIMENSION};
+
+      const RESIZE_OUTPUT_QUALITY =
+        ${RESIZE_OUTPUT_QUALITY};
+
+      let removeBackgroundFn = null;
+
+      let libraryPromise = null;
+
+      let currentJobId = null;
+
+      let cancelledJobs = new Set();
+
+      function post(type, payload = {}) {
+        self.postMessage({
+          type,
+          ...payload
+        });
+      }
+
+      function isCancelled(jobId) {
+        return (
+          !jobId ||
+          cancelledJobs.has(jobId)
+        );
+      }
+
+      function cancelJob(jobId) {
+        if (!jobId) {
+          return;
+        }
+
+        cancelledJobs.add(jobId);
+      }
+
+      async function loadLibrary() {
+        if (removeBackgroundFn) {
+          return removeBackgroundFn;
+        }
+
+        if (libraryPromise) {
+          return libraryPromise;
+        }
+
+        libraryPromise =
+          import(LIB_URL)
+            .then(module => {
+
+              const fn =
+                module &&
+                typeof module.removeBackground ===
+                  'function'
+                  ? module.removeBackground
+                  : module &&
+                    typeof module.default ===
+                      'function'
+                    ? module.default
+                    : null;
+
+              if (
+                typeof fn !==
+                'function'
+              ) {
+                throw new Error(
+                  'BACKGROUND_FUNCTION_NOT_FOUND'
+                );
+              }
+
+              removeBackgroundFn = fn;
+
+              return fn;
+            })
+            .catch(error => {
+
+              console.error(
+                '[BG Worker] Library load failed:',
+                error
+              );
+
+              removeBackgroundFn = null;
+              libraryPromise = null;
+
+              throw new Error(
+                'BACKGROUND_LIBRARY_LOAD_FAILED'
+              );
+            });
+
+        return libraryPromise;
+      }
+
+      function supportsWebGPU() {
+        return (
+          typeof navigator !== 'undefined' &&
+          !!navigator.gpu &&
+          typeof navigator.gpu.requestAdapter ===
+            'function'
+        );
+      }
+
+      async function probeWebGPU() {
+        if (!supportsWebGPU()) {
+          return false;
+        }
+
+        try {
+          const adapter =
+            await navigator.gpu.requestAdapter();
+
+          return !!adapter;
+        } catch (error) {
+
+          console.warn(
+            '[BG Worker] WebGPU probe failed:',
+            error
+          );
+
+          return false;
+        }
+      }
+
+      async function resizeIfNeeded(file, jobId) {
+
+        if (isCancelled(jobId)) {
+          throw new Error(
+            'BACKGROUND_CANCELLED'
+          );
+        }
+
+        /*
+         * Workers normally expose createImageBitmap.
+         * If unsupported, return the original file.
+         */
+        if (
+          typeof createImageBitmap !==
+          'function'
+        ) {
+          return file;
+        }
+
+        if (
+          typeof OffscreenCanvas ===
+          'undefined'
+        ) {
+          return file;
+        }
+
+        let bitmap = null;
+
+        try {
+
+          bitmap =
+            await createImageBitmap(file);
+
+          if (
+            isCancelled(jobId)
+          ) {
+            return file;
+          }
+
+          const width =
+            bitmap.width;
+
+          const height =
+            bitmap.height;
+
+          const longSide =
+            Math.max(
+              width,
+              height
+            );
+
+          if (
+            !width ||
+            !height ||
+            longSide <=
+              MAX_INPUT_DIMENSION
+          ) {
+            return file;
+          }
+
+          const scale =
+            MAX_INPUT_DIMENSION /
+            longSide;
+
+          const targetWidth =
+            Math.max(
+              1,
+              Math.round(
+                width * scale
+              )
+            );
+
+          const targetHeight =
+            Math.max(
+              1,
+              Math.round(
+                height * scale
+              )
+            );
+
+          const canvas =
+            new OffscreenCanvas(
+              targetWidth,
+              targetHeight
+            );
+
+          const ctx =
+            canvas.getContext(
+              '2d',
+              {
+                alpha: true
+              }
+            );
+
+          if (!ctx) {
+            return file;
+          }
+
+          ctx.imageSmoothingEnabled = true;
+
+          ctx.imageSmoothingQuality = 'high';
+
+          ctx.drawImage(
+            bitmap,
+            0,
+            0,
+            targetWidth,
+            targetHeight
+          );
+
+          /*
+           * Preserve PNG if source is PNG.
+           * JPEG is used for other formats because it keeps the
+           * temporary inference input substantially smaller.
+           */
+          const type =
+            file.type === 'image/png'
+              ? 'image/png'
+              : 'image/jpeg';
+
+          const blob =
+            await canvas.convertToBlob({
+              type,
+              quality:
+                RESIZE_OUTPUT_QUALITY
+            });
+
+          if (!blob) {
+            return file;
+          }
+
+          return new File(
+            [blob],
+            file.name,
+            {
+              type,
+              lastModified:
+                file.lastModified
+            }
+          );
+
+        } catch (error) {
+
+          console.warn(
+            '[BG Worker] Resize skipped:',
+            error
+          );
+
+          return file;
+
+        } finally {
+
+          if (bitmap) {
+            try {
+              bitmap.close();
+            } catch (_) {}
+          }
+        }
+      }
+
+      async function runRemoval(
+        file,
+        jobId
+      ) {
+
+        if (isCancelled(jobId)) {
+          throw new Error(
+            'BACKGROUND_CANCELLED'
+          );
+        }
+
+        const removeBackground =
+          await loadLibrary();
+
+        if (isCancelled(jobId)) {
+          throw new Error(
+            'BACKGROUND_CANCELLED'
+          );
+        }
+
+        post('progress', {
+          jobId,
+          key: 'prepare',
+          current: 0,
+          total: 100
+        });
+
+        const inputFile =
+          await resizeIfNeeded(
+            file,
+            jobId
+          );
+
+        if (isCancelled(jobId)) {
+          throw new Error(
+            'BACKGROUND_CANCELLED'
+          );
+        }
+
+        /*
+         * ----------------------------------------
+         * GPU
+         * ----------------------------------------
+         */
+
+        let blob = null;
+
+        if (
+          !isCancelled(jobId) &&
+          !self.__GPU_BAD__ &&
+          await probeWebGPU()
+        ) {
+
+          try {
+
+            post('mode', {
+              jobId,
+              mode: 'gpu'
+            });
+
+            const gpuConfig = {
+
+              debug: false,
+
+              model: MODEL,
+
+              device: 'gpu',
+
+              output: {
+                format:
+                  OUTPUT_FORMAT,
+
+                type:
+                  'foreground',
+
+                quality:
+                  1
+              },
+
+              progress:
+                (
+                  key,
+                  current,
+                  total
+                ) => {
+
+                  if (
+                    isCancelled(jobId)
+                  ) {
+                    return;
+                  }
+
+                  post('progress', {
+                    jobId,
+                    key,
+                    current,
+                    total
+                  });
+                }
+            };
+
+            blob =
+              await removeBackground(
+                inputFile,
+                gpuConfig
+              );
+
+          } catch (gpuError) {
+
+            console.warn(
+              '[BG Worker] GPU failed. Falling back to CPU:',
+              gpuError
+            );
+
+            self.__GPU_BAD__ = true;
+
+            blob = null;
+
+            post('gpuFallback', {
+              jobId
+            });
+          }
+        }
+
+        /*
+         * ----------------------------------------
+         * CPU / WASM
+         * ----------------------------------------
+         */
+
+        if (
+          !blob &&
+          !isCancelled(jobId)
+        ) {
+
+          post('mode', {
+            jobId,
+            mode: 'cpu'
+          });
+
+          const cpuConfig = {
+
+            debug: false,
+
+            model: MODEL,
+
+            device: 'cpu',
+
+            output: {
+              format:
+                OUTPUT_FORMAT,
+
+              type:
+                'foreground',
+
+              quality:
+                1
+            },
+
+            progress:
+              (
+                key,
+                current,
+                total
+              ) => {
+
+                if (
+                  isCancelled(jobId)
+                ) {
+                  return;
+                }
+
+                post('progress', {
+                  jobId,
+                  key,
+                  current,
+                  total
+                });
+              }
+          };
+
+          blob =
+            await removeBackground(
+              inputFile,
+              cpuConfig
+            );
+        }
+
+        if (isCancelled(jobId)) {
+          throw new Error(
+            'BACKGROUND_CANCELLED'
+          );
+        }
+
+        if (!blob) {
+          throw new Error(
+            'BACKGROUND_EMPTY_RESULT'
+          );
+        }
+
+        if (
+          typeof blob.size === 'number' &&
+          blob.size <= 0
+        ) {
+          throw new Error(
+            'BACKGROUND_EMPTY_RESULT'
+          );
+        }
+
+        post('progress', {
+          jobId,
+          key: 'complete',
+          current: 100,
+          total: 100
+        });
+
+        /*
+         * ArrayBuffer transfer is used instead of passing Blob
+         * directly. This makes ownership transfer explicit and
+         * avoids unnecessary structured-clone copies.
+         */
+        const buffer =
+          await blob.arrayBuffer();
+
+        if (isCancelled(jobId)) {
+          throw new Error(
+            'BACKGROUND_CANCELLED'
+          );
+        }
+
+        post(
+          'result',
+          {
+            jobId,
+            buffer,
+            mime:
+              blob.type ||
+              OUTPUT_FORMAT
+          }
+        );
+      }
+
+      self.onmessage = async event => {
+
+        const data =
+          event && event.data
+            ? event.data
+            : null;
+
+        if (!data) {
+          return;
+        }
+
+        /*
+         * ----------------------------------------
+         * CANCEL
+         * ----------------------------------------
+         */
+
+        if (data.type === 'cancel') {
+
+          cancelJob(
+            data.jobId
+          );
+
+          return;
+        }
+
+        /*
+         * ----------------------------------------
+         * PROCESS
+         * ----------------------------------------
+         */
+
+        if (
+          data.type !== 'process' ||
+          !data.file ||
+          !data.jobId
+        ) {
+          return;
+        }
+
+        const jobId =
+          data.jobId;
+
+        currentJobId =
+          jobId;
+
+        /*
+         * Re-enable this ID in case the worker has
+         * reused internal state.
+         */
+        cancelledJobs.delete(
+          jobId
+        );
+
+        try {
+
+          await runRemoval(
+            data.file,
+            jobId
+          );
+
+          post('done', {
+            jobId
+          });
+
+        } catch (error) {
+
+          console.error(
+            '[BG Worker] Processing failed:',
+            error
+          );
+
+          post('error', {
+            jobId,
+            message:
+              error &&
+              error.message
+                ? error.message
+                : String(error)
+          });
+
+        } finally {
+
+          cancelledJobs.delete(
+            jobId
+          );
+
+          if (
+            currentJobId ===
+            jobId
+          ) {
+            currentJobId = null;
+          }
+        }
+      };
+
+      post('ready');
+    `;
+  }
 
   // ============================================================
-  // JOB
+  // WORKER CLEANUP
+  // ============================================================
+
+  function clearWorkerIdleTimer() {
+    if (workerIdleTimer) {
+      clearTimeout(
+        workerIdleTimer
+      );
+
+      workerIdleTimer = null;
+    }
+  }
+
+  function scheduleWorkerIdleCleanup() {
+    clearWorkerIdleTimer();
+
+    workerIdleTimer =
+      setTimeout(
+        () => {
+
+          if (
+            pendingWorkerRequests.size ===
+            0
+          ) {
+            destroyWorker();
+          }
+
+        },
+        WORKER_IDLE_TIMEOUT
+      );
+  }
+
+  // ============================================================
+  // WORKER DESTROY
+  // ============================================================
+
+  function rejectAllWorkerRequests(
+    message
+  ) {
+
+    pendingWorkerRequests.forEach(
+      request => {
+
+        if (
+          request &&
+          typeof request.reject ===
+            'function'
+        ) {
+          request.reject(
+            new Error(
+              message ||
+              'BACKGROUND_WORKER_TERMINATED'
+            )
+          );
+        }
+
+      }
+    );
+
+    pendingWorkerRequests.clear();
+  }
+
+  function destroyWorker(
+    message = 'BACKGROUND_WORKER_TERMINATED'
+  ) {
+
+    clearWorkerIdleTimer();
+
+    rejectAllWorkerRequests(
+      message
+    );
+
+    if (worker) {
+
+      try {
+        worker.terminate();
+      } catch (_) {}
+
+      worker = null;
+    }
+
+    if (workerBlobUrl) {
+
+      revokeUrl(
+        workerBlobUrl
+      );
+
+      workerBlobUrl = null;
+    }
+  }
+
+  // ============================================================
+  // WORKER CREATE
+  // ============================================================
+
+  function ensureWorker() {
+
+    if (worker) {
+      return worker;
+    }
+
+    const source =
+      createWorkerSource();
+
+    const blob =
+      new Blob(
+        [source],
+        {
+          type:
+            'text/javascript'
+        }
+      );
+
+    workerBlobUrl =
+      URL.createObjectURL(
+        blob
+      );
+
+    const generation =
+      ++workerGeneration;
+
+    worker =
+      new Worker(
+        workerBlobUrl,
+        {
+          type:
+            'module'
+        }
+      );
+
+    worker.__generation =
+      generation;
+
+    worker.onmessage =
+      event => {
+
+        handleWorkerMessage(
+          event
+        );
+
+      };
+
+    worker.onerror =
+      error => {
+
+        console.error(
+          '[Image Background Removal] Worker error:',
+          error
+        );
+
+        const current =
+          worker;
+
+        if (
+          current === worker
+        ) {
+          worker = null;
+        }
+
+        rejectAllWorkerRequests(
+          'BACKGROUND_WORKER_FAILED'
+        );
+
+        try {
+          current.terminate();
+        } catch (_) {}
+
+        if (workerBlobUrl) {
+
+          revokeUrl(
+            workerBlobUrl
+          );
+
+          workerBlobUrl = null;
+        }
+      };
+
+    worker.onmessageerror =
+      error => {
+
+        console.error(
+          '[Image Background Removal] Worker message error:',
+          error
+        );
+
+        rejectAllWorkerRequests(
+          'BACKGROUND_WORKER_MESSAGE_FAILED'
+        );
+      };
+
+    return worker;
+  }
+
+  // ============================================================
+  // WORKER MESSAGE
+  // ============================================================
+
+  function handleWorkerMessage(
+    event
+  ) {
+
+    const data =
+      event && event.data
+        ? event.data
+        : null;
+
+    if (!data) {
+      return;
+    }
+
+    // Worker initialized.
+    if (
+      data.type === 'ready'
+    ) {
+      return;
+    }
+
+    const jobId =
+      data.jobId;
+
+    if (!jobId) {
+      return;
+    }
+
+    const pending =
+      pendingWorkerRequests.get(
+        jobId
+      );
+
+    if (!pending) {
+      return;
+    }
+
+    // ------------------------------
+    // Progress
+    // ------------------------------
+
+    if (
+      data.type === 'progress'
+    ) {
+
+      const job =
+        pending.job;
+
+      if (
+        job &&
+        !job.disposed &&
+        job.isProcessing
+      ) {
+
+        const current =
+          Number(
+            data.current
+          );
+
+        const total =
+          Number(
+            data.total
+          );
+
+        if (
+          Number.isFinite(current) &&
+          Number.isFinite(total) &&
+          total > 0
+        ) {
+
+          const pct =
+            Math.max(
+              0,
+              Math.min(
+                100,
+                Math.round(
+                  (
+                    current /
+                    total
+                  ) *
+                  100
+                )
+              )
+            );
+
+          job.setProgress(
+            pct
+          );
+
+          job.setProgressText(
+            data.key,
+            pct
+          );
+        }
+      }
+
+      return;
+    }
+
+    // ------------------------------
+    // Mode
+    // ------------------------------
+
+    if (
+      data.type === 'mode'
+    ) {
+
+      const job =
+        pending.job;
+
+      if (
+        job &&
+        !job.disposed
+      ) {
+
+        job.processingMode =
+          data.mode;
+
+        if (
+          job.statusEl
+        ) {
+
+          job.statusEl.textContent =
+            t(
+              'image.preparingModel'
+            );
+        }
+      }
+
+      return;
+    }
+
+    // ------------------------------
+    // GPU fallback
+    // ------------------------------
+
+    if (
+      data.type ===
+      'gpuFallback'
+    ) {
+
+      const job =
+        pending.job;
+
+      if (
+        job &&
+        !job.disposed &&
+        job.statusEl
+      ) {
+
+        job.statusEl.textContent =
+          t(
+            'image.preparingModel'
+          );
+      }
+
+      return;
+    }
+
+    // ------------------------------
+    // Result
+    // ------------------------------
+
+    if (
+      data.type ===
+      'result'
+    ) {
+
+      try {
+
+        const blob =
+          new Blob(
+            [data.buffer],
+            {
+              type:
+                data.mime ||
+                OUTPUT_FORMAT
+            }
+          );
+
+        pending.resolve(
+          blob
+        );
+
+      } catch (error) {
+
+        pending.reject(
+          error
+        );
+      }
+
+      pendingWorkerRequests.delete(
+        jobId
+      );
+
+      return;
+    }
+
+    // ------------------------------
+    // Done
+    // ------------------------------
+
+    if (
+      data.type === 'done'
+    ) {
+      scheduleWorkerIdleCleanup();
+      return;
+    }
+
+    // ------------------------------
+    // Error
+    // ------------------------------
+
+    if (
+      data.type ===
+      'error'
+    ) {
+
+      pending.reject(
+        new Error(
+          data.message ||
+          'BACKGROUND_WORKER_PROCESS_FAILED'
+        )
+      );
+
+      pendingWorkerRequests.delete(
+        jobId
+      );
+
+      scheduleWorkerIdleCleanup();
+
+      return;
+    }
+  }
+
+  // ============================================================
+  // WORKER PROCESS
+  // ============================================================
+
+  function processInWorker(
+    job,
+    file
+  ) {
+
+    return new Promise(
+      (
+        resolve,
+        reject
+      ) => {
+
+        const currentWorker =
+          ensureWorker();
+
+        const jobId =
+          job.workerJobId;
+
+        pendingWorkerRequests.set(
+          jobId,
+          {
+            resolve,
+            reject,
+            job
+          }
+        );
+
+        clearWorkerIdleTimer();
+
+        try {
+
+          currentWorker.postMessage(
+            {
+              type:
+                'process',
+
+              jobId,
+
+              file
+            }
+          );
+
+        } catch (error) {
+
+          pendingWorkerRequests.delete(
+            jobId
+          );
+
+          reject(
+            error
+          );
+        }
+      }
+    );
+  }
+
+  // ============================================================
+  // CANCEL WORKER JOB
+  // ============================================================
+
+  function cancelWorkerJob(
+    job
+  ) {
+
+    if (
+      !job ||
+      !job.workerJobId
+    ) {
+      return;
+    }
+
+    const currentWorker =
+      worker;
+
+    if (
+      !currentWorker
+    ) {
+      return;
+    }
+
+    try {
+
+      currentWorker.postMessage(
+        {
+          type:
+            'cancel',
+
+          jobId:
+            job.workerJobId
+        }
+      );
+
+    } catch (_) {}
+
+    /*
+     * The library itself does not expose a reliable synchronous
+     * inference cancellation API.
+     *
+     * Terminating the worker is therefore the hard-stop mechanism.
+     *
+     * This is deliberate:
+     *
+     * remove job
+     *   ↓
+     * worker stops
+     *   ↓
+     * main UI remains responsive
+     *
+     * The next job automatically creates another Worker.
+     */
+    setTimeout(
+      () => {
+
+        if (
+          pendingWorkerRequests.has(
+            job.workerJobId
+          )
+        ) {
+
+          destroyWorker(
+            'BACKGROUND_CANCELLED'
+          );
+        }
+
+      },
+      50
+    );
+  }
+
+  // ============================================================
+  // IMAGE JOB
   // ============================================================
 
   class BgJob {
 
-    constructor(
-      file
-    ) {
+    constructor(file) {
 
       this.id =
         'bg-' +
         (++jobSeq);
 
+      this.workerJobId =
+        this.id;
 
       this.file =
         file;
 
-
       this.resultBlob =
         null;
-
 
       this.resultUrl =
         null;
 
-
       this.objectUrl =
         null;
-
 
       this.isProcessing =
         false;
 
-
       this.disposed =
         false;
-
 
       this.hasError =
         false;
 
-
       this.errorKey =
         null;
-
 
       this.errorParams =
         null;
 
-
       this.processingMode =
         null;
-
 
       this.el =
         jobTemplate
@@ -1053,91 +1535,72 @@
             true
           );
 
-
       this.buildDom();
-
     }
 
-
-    // ========================================================
-    // BUILD DOM
-    // ========================================================
+    // ==========================================================
+    // DOM
+    // ==========================================================
 
     buildDom() {
 
       const el =
         this.el;
 
-
       this.objectUrl =
         URL.createObjectURL(
           this.file
         );
-
 
       this.beforeImg =
         el.querySelector(
           '.js-before img'
         );
 
-
       this.afterWrap =
         el.querySelector(
           '.js-after'
         );
-
 
       this.afterImg =
         el.querySelector(
           '.js-after img'
         );
 
-
       this.statusEl =
         el.querySelector(
           '.js-status'
         );
-
 
       this.progressFill =
         el.querySelector(
           '.js-progress'
         );
 
-
       this.processBtn =
         el.querySelector(
           '.js-remove-bg-btn'
         );
-
 
       this.downloadBtn =
         el.querySelector(
           '.js-download-btn'
         );
 
-
       const filenameEl =
         el.querySelector(
           '.js-filename'
         );
-
 
       const sizeEl =
         el.querySelector(
           '.js-origsize'
         );
 
-
       const dimEl =
         el.querySelector(
           '.js-origdim'
         );
-
-
-      // ------------------------------------------------------
-      // Validate
-      // ------------------------------------------------------
 
       if (
         !this.beforeImg ||
@@ -1147,28 +1610,20 @@
         this.disposed =
           true;
 
-
         this.revokeObjectUrl();
 
-
         return;
-
       }
 
-
-      // ------------------------------------------------------
+      // --------------------------------------------------------
       // File info
-      // ------------------------------------------------------
+      // --------------------------------------------------------
 
-      if (
-        filenameEl
-      ) {
+      if (filenameEl) {
 
         filenameEl.textContent =
           this.file.name;
-
       }
-
 
       if (
         sizeEl &&
@@ -1181,37 +1636,29 @@
           U.formatBytes(
             this.file.size
           );
-
       }
 
-
-      if (
-        dimEl
-      ) {
+      if (dimEl) {
 
         dimEl.textContent =
           t(
             'image.reading'
           );
-
       }
 
-
-      // ------------------------------------------------------
-      // Processing state
-      // ------------------------------------------------------
+      // --------------------------------------------------------
+      // State
+      // --------------------------------------------------------
 
       this.el.dataset.processing =
         'false';
 
-
-      // ------------------------------------------------------
-      // Before image
-      // ------------------------------------------------------
+      // --------------------------------------------------------
+      // Before preview
+      // --------------------------------------------------------
 
       this.beforeImg.src =
         this.objectUrl;
-
 
       this.beforeImg.onload =
         () => {
@@ -1219,23 +1666,15 @@
           if (
             this.disposed
           ) {
-
             return;
-
           }
 
-
-          if (
-            dimEl
-          ) {
+          if (dimEl) {
 
             dimEl.textContent =
               `${this.beforeImg.naturalWidth}×${this.beforeImg.naturalHeight}`;
-
           }
-
         };
-
 
       this.beforeImg.onerror =
         () => {
@@ -1243,58 +1682,43 @@
           if (
             this.disposed
           ) {
-
             return;
-
           }
-
 
           this.setError(
             'image.openFailed'
           );
 
-
-          if (
-            dimEl
-          ) {
+          if (dimEl) {
 
             dimEl.textContent =
               t(
                 'image.readFailed'
               );
-
           }
-
         };
 
-
-      // ------------------------------------------------------
+      // --------------------------------------------------------
       // Process
-      // ------------------------------------------------------
+      // --------------------------------------------------------
 
       this.processBtn.addEventListener(
         'click',
         () => {
-
           this.process();
-
         }
       );
 
-
-      // ------------------------------------------------------
+      // --------------------------------------------------------
       // Remove
-      // ------------------------------------------------------
+      // --------------------------------------------------------
 
       const removeJobBtn =
         el.querySelector(
           '.js-remove-job-btn'
         );
 
-
-      if (
-        removeJobBtn
-      ) {
+      if (removeJobBtn) {
 
         removeJobBtn.addEventListener(
           'click',
@@ -1302,49 +1726,35 @@
 
             this.dispose();
 
-
             el.remove();
-
 
             const idx =
               jobs.indexOf(
                 this
               );
 
-
-            if (
-              idx >=
-              0
-            ) {
-
+            if (idx >= 0) {
               jobs.splice(
                 idx,
                 1
               );
-
             }
 
-
             updateBulkUI();
-
           }
         );
-
       }
 
-
-      // ------------------------------------------------------
-      // Initial UI
-      // ------------------------------------------------------
+      // --------------------------------------------------------
+      // UI
+      // --------------------------------------------------------
 
       this.updateLanguageUI();
-
     }
 
-
-    // ========================================================
-    // LANGUAGE UI
-    // ========================================================
+    // ==========================================================
+    // LANGUAGE
+    // ==========================================================
 
     updateLanguageUI() {
 
@@ -1352,28 +1762,15 @@
         this.disposed ||
         !this.statusEl
       ) {
-
         return;
-
       }
 
-
-      /*
-       * During processing, dynamic progress
-       * controls the status text.
-       */
       if (
         this.isProcessing
       ) {
-
         return;
-
       }
 
-
-      /*
-       * Success
-       */
       if (
         this.resultBlob
       ) {
@@ -1389,25 +1786,17 @@
             }
           );
 
-
         this.statusEl.classList.remove(
           'is-error'
         );
-
 
         this.statusEl.classList.add(
           'is-ready'
         );
 
-
         return;
-
       }
 
-
-      /*
-       * Error
-       */
       if (
         this.hasError
       ) {
@@ -1422,45 +1811,33 @@
               this.errorParams ||
                 undefined
             );
-
         }
-
 
         this.statusEl.classList.remove(
           'is-ready'
         );
 
-
         this.statusEl.classList.add(
           'is-error'
         );
 
-
         return;
-
       }
 
-
-      /*
-       * Waiting
-       */
       this.statusEl.textContent =
         t(
           'image.waitingBackground'
         );
 
-
       this.statusEl.classList.remove(
         'is-ready',
         'is-error'
       );
-
     }
 
-
-    // ========================================================
-    // SET ERROR
-    // ========================================================
+    // ==========================================================
+    // ERROR
+    // ==========================================================
 
     setError(
       key,
@@ -1470,27 +1847,19 @@
       if (
         this.disposed
       ) {
-
         return;
-
       }
-
 
       this.hasError =
         true;
 
-
       this.errorKey =
         key;
-
 
       this.errorParams =
         params;
 
-
-      if (
-        this.statusEl
-      ) {
+      if (this.statusEl) {
 
         this.statusEl.textContent =
           t(
@@ -1499,60 +1868,45 @@
               undefined
           );
 
-
         this.statusEl.classList.remove(
           'is-ready'
         );
 
-
         this.statusEl.classList.add(
           'is-error'
         );
-
       }
-
     }
 
-
-    // ========================================================
+    // ==========================================================
     // PROGRESS
-    // ========================================================
+    // ==========================================================
 
-    setProgress(
-      pct
-    ) {
+    setProgress(pct) {
 
       if (
         this.disposed ||
         !this.progressFill
       ) {
-
         return;
-
       }
-
 
       const value =
         Math.max(
           0,
           Math.min(
             100,
-            Number(
-              pct
-            ) || 0
+            Number(pct) || 0
           )
         );
 
-
       this.progressFill.style.width =
         `${value}%`;
-
     }
 
-
-    // ========================================================
+    // ==========================================================
     // PROGRESS TEXT
-    // ========================================================
+    // ==========================================================
 
     setProgressText(
       key,
@@ -1563,30 +1917,20 @@
         this.disposed ||
         !this.statusEl
       ) {
-
         return;
-
       }
 
-
       const raw =
-        typeof key ===
-          'string'
+        typeof key === 'string'
           ? key.toLowerCase()
           : '';
 
-
       const isLoading =
-        raw.includes(
-          'fetch'
-        ) ||
-        raw.includes(
-          'load'
-        ) ||
-        raw.includes(
-          'download'
-        );
-
+        raw.includes('fetch') ||
+        raw.includes('load') ||
+        raw.includes('download') ||
+        raw.includes('prepare') ||
+        raw.includes('decode');
 
       this.statusEl.textContent =
         t(
@@ -1598,188 +1942,46 @@
               pct
           }
         );
-
     }
 
-
-    // ========================================================
-    // RESET RESULT
-    // ========================================================
+    // ==========================================================
+    // CLEAR RESULT
+    // ==========================================================
 
     clearResult() {
 
-      if (
-        this.resultUrl
-      ) {
+      if (this.resultUrl) {
 
         revokeUrl(
           this.resultUrl
         );
 
-
         this.resultUrl =
           null;
-
       }
-
 
       this.resultBlob =
         null;
 
-
-      if (
-        this.downloadBtn
-      ) {
+      if (this.downloadBtn) {
 
         this.downloadBtn.removeAttribute(
           'href'
         );
 
-
         this.downloadBtn.removeAttribute(
           'download'
         );
 
-
         this.downloadBtn.classList.add(
           'hidden'
         );
-
       }
-
     }
 
-
-    // ========================================================
-    // PROCESS GPU
-    // ========================================================
-
-    async processWithMode(
-      removeBackground,
-      mode,
-      inputFile
-    ) {
-
-      if (
-        this.disposed
-      ) {
-
-        return null;
-
-      }
-
-
-      const useGpu =
-        mode ===
-        'gpu';
-
-
-      const config =
-        await buildConfig(
-          useGpu
-        );
-
-
-      config.progress =
-        (
-          key,
-          current,
-          total
-        ) => {
-
-          if (
-            this.disposed ||
-            !this.isProcessing
-          ) {
-
-            return;
-
-          }
-
-
-          const currentNumber =
-            Number(
-              current
-            );
-
-
-          const totalNumber =
-            Number(
-              total
-            );
-
-
-          if (
-            !Number.isFinite(
-              currentNumber
-            ) ||
-            !Number.isFinite(
-              totalNumber
-            ) ||
-            totalNumber <=
-              0
-          ) {
-
-            return;
-
-          }
-
-
-          const pct =
-            Math.max(
-              0,
-              Math.min(
-                100,
-                Math.round(
-                  (
-                    currentNumber /
-                    totalNumber
-                  ) *
-                  100
-                )
-              )
-            );
-
-
-          this.setProgress(
-            pct
-          );
-
-
-          this.setProgressText(
-            key,
-            pct
-          );
-
-        };
-
-
-      /*
-       * Show mode to user in a useful way.
-       */
-      if (
-        this.statusEl
-      ) {
-
-        this.statusEl.textContent =
-          t(
-            'image.preparingModel'
-          );
-
-      }
-
-
-      return removeBackground(
-        inputFile,
-        config
-      );
-
-    }
-
-
-    // ========================================================
+    // ==========================================================
     // PROCESS
-    // ========================================================
+    // ==========================================================
 
     async process() {
 
@@ -1788,320 +1990,124 @@
         this.resultBlob ||
         this.isProcessing
       ) {
-
         return;
-
       }
 
-
-      if (
-        !this.file
-      ) {
-
+      if (!this.file) {
         return;
-
       }
 
-
-      /*
-       * Reset error state
-       */
       this.hasError =
         false;
-
 
       this.errorKey =
         null;
 
-
       this.errorParams =
         null;
-
 
       this.isProcessing =
         true;
 
-
       this.el.dataset.processing =
         'true';
 
-
-      if (
-        this.processBtn
-      ) {
-
+      if (this.processBtn) {
         this.processBtn.disabled =
           true;
-
       }
-
 
       this.setProgress(
         0
       );
 
-
       this.clearResult();
 
-
-      if (
-        this.statusEl
-      ) {
+      if (this.statusEl) {
 
         this.statusEl.classList.remove(
           'is-ready',
           'is-error'
         );
 
-
         this.statusEl.textContent =
           t(
             'image.preparingModel'
           );
-
       }
-
-
-      let acquired =
-        false;
-
 
       try {
 
-        // ----------------------------------------------------
-        // Acquire library
-        // ----------------------------------------------------
-
-        const removeBackground =
-          await acquireLibrary();
-
-
-        acquired =
-          true;
-
+        await yieldToUI();
 
         if (
           this.disposed
         ) {
-
           return;
-
         }
 
+        /*
+         * ======================================================
+         * WORKER INFERENCE
+         * ======================================================
+         */
 
-        await yieldToUI();
-
-
-        // ----------------------------------------------------
-        // Downscale oversized source images before inference.
-        // This is the single biggest lever on wall-clock speed
-        // for typical phone/camera photos.
-        // ----------------------------------------------------
-
-        const inputFile =
-          await downscaleIfNeeded(
+        const blob =
+          await processInWorker(
+            this,
             this.file
           );
 
-
         if (
           this.disposed
         ) {
-
           return;
-
         }
 
-
-        await yieldToUI();
-
-
-        // ----------------------------------------------------
-        // Try WebGPU first
-        // ----------------------------------------------------
-
-        let blob =
-          null;
-
-
-        if (
-          await probeWebGPU()
-        ) {
-
-          this.processingMode =
-            'gpu';
-
-
-          try {
-
-            blob =
-              await this.processWithMode(
-                removeBackground,
-                'gpu',
-                inputFile
-              );
-
-          } catch (
-            gpuError
-          ) {
-
-            console.warn(
-              '[Image Background Removal] WebGPU failed. Falling back to CPU/WASM.',
-              gpuError
-            );
-
-
-            /*
-             * Prevent repeated failures
-             * during the same page session.
-             */
-            if (
-              isLikelyWebGPUError(
-                gpuError
-              )
-            ) {
-
-              gpuKnownBad =
-                true;
-
-            }
-
-
-            blob =
-              null;
-
-
-            /*
-             * A failed GPU attempt may have left the progress bar
-             * partway through. Reset it so the CPU fallback starts
-             * from a clean, honest 0% instead of a stale value.
-             */
-            this.setProgress(
-              0
-            );
-
-          }
-
-        }
-
-
-        // ----------------------------------------------------
-        // CPU/WASM fallback
-        // ----------------------------------------------------
-
-        if (
-          !blob
-        ) {
-
-          if (
-            this.disposed
-          ) {
-
-            return;
-
-          }
-
-
-          this.processingMode =
-            'cpu';
-
-
-          await yieldToUI();
-
-
-          blob =
-            await this.processWithMode(
-              removeBackground,
-              'cpu',
-              inputFile
-            );
-
-        }
-
-
-        // ----------------------------------------------------
-        // Validate result
-        // ----------------------------------------------------
-
-        if (
-          this.disposed
-        ) {
-
-          return;
-
-        }
-
-
-        if (
-          !blob
-        ) {
-
+        if (!blob) {
           throw new Error(
             'BACKGROUND_EMPTY_RESULT'
           );
-
         }
-
 
         if (
           typeof blob.size ===
             'number' &&
-          blob.size <=
-            0
+          blob.size <= 0
         ) {
-
           throw new Error(
             'BACKGROUND_EMPTY_RESULT'
           );
-
         }
-
-
-        // ----------------------------------------------------
-        // Result URL
-        // ----------------------------------------------------
-
-        this.clearResult();
-
 
         this.resultBlob =
           blob;
-
 
         this.resultUrl =
           URL.createObjectURL(
             blob
           );
 
-
-        // ----------------------------------------------------
+        // ------------------------------------------------------
         // Preview
-        // ----------------------------------------------------
+        // ------------------------------------------------------
 
-        if (
-          this.afterImg
-        ) {
+        if (this.afterImg) {
 
           this.afterImg.src =
             this.resultUrl;
-
         }
 
-
-        if (
-          this.afterWrap
-        ) {
+        if (this.afterWrap) {
 
           this.afterWrap.classList.remove(
             'hidden'
           );
-
         }
 
-
-        // ----------------------------------------------------
+        // ------------------------------------------------------
         // Download
-        // ----------------------------------------------------
+        // ------------------------------------------------------
 
         if (
           this.downloadBtn
@@ -2110,32 +2116,25 @@
           this.downloadBtn.href =
             this.resultUrl;
 
-
           this.downloadBtn.download =
             `${U.baseName(
               this.file.name
             )}-nobg.${OUTPUT_EXTENSION}`;
 
-
           this.downloadBtn.classList.remove(
             'hidden'
           );
-
         }
 
-
-        // ----------------------------------------------------
+        // ------------------------------------------------------
         // Success
-        // ----------------------------------------------------
+        // ------------------------------------------------------
 
         this.setProgress(
           100
         );
 
-
-        if (
-          this.statusEl
-        ) {
+        if (this.statusEl) {
 
           this.statusEl.textContent =
             t(
@@ -2148,87 +2147,89 @@
               }
             );
 
-
           this.statusEl.classList.remove(
             'is-error'
           );
 
-
           this.statusEl.classList.add(
             'is-ready'
           );
-
         }
 
-
-      } catch (
-        error
-      ) {
+      } catch (error) {
 
         console.error(
           '[Image Background Removal] Error:',
           error
         );
 
-
         if (
           this.disposed
         ) {
-
           return;
-
         }
 
-
         /*
-         * If both GPU and CPU paths fail,
-         * display a stable translated message.
+         * Cancel is intentionally silent.
          */
+        if (
+          error &&
+          error.message ===
+            'BACKGROUND_CANCELLED'
+        ) {
+          return;
+        }
+
+        if (
+          error &&
+          error.message ===
+            'BACKGROUND_WORKER_TERMINATED'
+        ) {
+          return;
+        }
+
+        if (
+          error &&
+          error.message ===
+            'BACKGROUND_WORKER_FAILED'
+        ) {
+
+          this.setError(
+            'image.backgroundRemovalFailed'
+          );
+
+          this.setProgress(
+            0
+          );
+
+          return;
+        }
+
         const key =
           getErrorKey(
             error
           );
 
-
         this.setError(
           key
         );
-
 
         this.setProgress(
           0
         );
 
-
         this.clearResult();
 
-
       } finally {
-
-        if (
-          acquired
-        ) {
-
-          releaseLibraryUser();
-
-
-          acquired =
-            false;
-
-        }
-
 
         this.isProcessing =
           false;
 
-
         this.processingMode =
           null;
 
-
         this.el.dataset.processing =
           'false';
-
 
         if (
           !this.disposed &&
@@ -2237,20 +2238,15 @@
 
           this.processBtn.disabled =
             false;
-
         }
 
-
         await yieldToUI();
-
       }
-
     }
 
-
-    // ========================================================
-    // REVOKE OBJECT URL
-    // ========================================================
+    // ==========================================================
+    // REVOKE
+    // ==========================================================
 
     revokeObjectUrl() {
 
@@ -2262,78 +2258,61 @@
           this.objectUrl
         );
 
-
         this.objectUrl =
           null;
-
       }
-
     }
 
-
-    // ========================================================
+    // ==========================================================
     // DISPOSE
-    // ========================================================
+    // ==========================================================
 
     dispose() {
 
       if (
         this.disposed
       ) {
-
         return;
-
       }
 
-
-      /*
-       * Invalidate all async continuations.
-       */
       this.disposed =
         true;
-
 
       this.isProcessing =
         false;
 
-
       this.el.dataset.processing =
         'false';
 
+      /*
+       * Stop current Worker job immediately.
+       */
+      cancelWorkerJob(
+        this
+      );
 
       this.revokeObjectUrl();
 
-
-      if (
-        this.resultUrl
-      ) {
+      if (this.resultUrl) {
 
         revokeUrl(
           this.resultUrl
         );
 
-
         this.resultUrl =
           null;
-
       }
-
 
       this.resultBlob =
         null;
 
-
       this.errorKey =
         null;
 
-
       this.errorParams =
         null;
-
     }
-
   }
-
 
   // ============================================================
   // BULK UI
@@ -2348,12 +2327,10 @@
           !job.disposed
       );
 
-
     countEl.textContent =
       String(
         activeJobs.length
       );
-
 
     bulkbar.classList.toggle(
       'hidden',
@@ -2361,23 +2338,17 @@
         0
     );
 
-
     const hasReady =
       activeJobs.some(
         job =>
           !!job.resultBlob
       );
 
-
     downloadZipBtn.classList.toggle(
       'hidden',
       !hasReady
     );
 
-
-    /*
-     * Do not overwrite dynamic processing text.
-     */
     activeJobs.forEach(
       job => {
 
@@ -2386,22 +2357,16 @@
         ) {
 
           job.updateLanguageUI();
-
         }
-
       }
     );
-
   }
-
 
   // ============================================================
   // ADD FILES
   // ============================================================
 
-  function addFiles(
-    fileList
-  ) {
+  function addFiles(fileList) {
 
     Array.from(
       fileList || []
@@ -2423,44 +2388,32 @@
               file
             )
           ) {
-
             return;
-
           }
-
 
           const job =
             new BgJob(
               file
             );
 
-
           if (
             job.disposed
           ) {
-
             return;
-
           }
-
 
           jobs.push(
             job
           );
 
-
           jobsEl.appendChild(
             job.el
           );
-
         }
       );
 
-
     updateBulkUI();
-
   }
-
 
   // ============================================================
   // CLEAR ALL
@@ -2473,31 +2426,28 @@
       jobs.forEach(
         job => {
 
-          if (
-            job
-          ) {
-
+          if (job) {
             job.dispose();
-
           }
-
         }
       );
-
 
       jobs.length =
         0;
 
-
       jobsEl.innerHTML =
         '';
 
+      /*
+       * Hard cleanup.
+       */
+      destroyWorker(
+        'BACKGROUND_CANCELLED'
+      );
 
       updateBulkUI();
-
     }
   );
-
 
   // ============================================================
   // PROCESS ALL
@@ -2510,11 +2460,8 @@
       if (
         processAllBtn.disabled
       ) {
-
         return;
-
       }
-
 
       const queue =
         jobs.filter(
@@ -2524,27 +2471,20 @@
             !job.resultBlob
         );
 
-
       if (
         !queue.length
       ) {
-
         return;
-
       }
-
 
       processAllBtn.disabled =
         true;
 
-
       const total =
         queue.length;
 
-
       let done =
         0;
-
 
       const renderBatchLabel =
         () =>
@@ -2553,8 +2493,7 @@
             {
               current:
                 Math.min(
-                  done +
-                    1,
+                  done + 1,
                   total
                 ),
 
@@ -2562,22 +2501,22 @@
             }
           );
 
-
       processAllBtn.textContent =
         renderBatchLabel();
-
 
       try {
 
         /*
-         * Sequential queue.
+         * IMPORTANT:
          *
-         * This is deliberate:
-         * ISNet can consume substantial memory.
+         * One image at a time.
+         *
+         * The Worker remains alive between jobs,
+         * so the model does not have to initialize
+         * from scratch on every image.
          */
         for (
-          const job of
-          queue
+          const job of queue
         ) {
 
           if (
@@ -2588,24 +2527,17 @@
 
             done++;
 
-
             continue;
-
           }
-
 
           processAllBtn.textContent =
             renderBatchLabel();
 
-
           await job.process();
-
 
           done++;
 
-
           await yieldToUI();
-
         }
 
       } finally {
@@ -2613,20 +2545,26 @@
         processAllBtn.disabled =
           false;
 
-
         processAllBtn.textContent =
           t(
             'image.removeBackgroundAll'
           );
 
-
         updateBulkUI();
 
+        /*
+         * Keep worker alive for the next job/session,
+         * but allow the idle timer to eventually clean it up.
+         */
+        if (
+          worker &&
+          pendingWorkerRequests.size === 0
+        ) {
+          scheduleWorkerIdleCleanup();
+        }
       }
-
     }
   );
-
 
   // ============================================================
   // DOWNLOAD ZIP
@@ -2639,11 +2577,8 @@
       if (
         downloadZipBtn.disabled
       ) {
-
         return;
-
       }
-
 
       const ready =
         jobs.filter(
@@ -2653,25 +2588,19 @@
             !!job.resultBlob
         );
 
-
       if (
         !ready.length
       ) {
-
         return;
-
       }
-
 
       downloadZipBtn.disabled =
         true;
-
 
       downloadZipBtn.textContent =
         t(
           'image.compressingZip'
         );
-
 
       try {
 
@@ -2683,17 +2612,13 @@
           throw new Error(
             'JSZIP_NOT_AVAILABLE'
           );
-
         }
-
 
         const zip =
           new JSZip();
 
-
         const usedNames =
           new Set();
-
 
         ready.forEach(
           job => {
@@ -2702,25 +2627,19 @@
               job.disposed ||
               !job.resultBlob
             ) {
-
               return;
-
             }
-
 
             const base =
               U.baseName(
                 job.file.name
               );
 
-
             let filename =
               `${base}-nobg.png`;
 
-
             let counter =
               2;
-
 
             while (
               usedNames.has(
@@ -2730,23 +2649,18 @@
 
               filename =
                 `${base}-nobg-${counter++}.png`;
-
             }
-
 
             usedNames.add(
               filename
             );
 
-
             zip.file(
               filename,
               job.resultBlob
             );
-
           }
         );
-
 
         const content =
           await zip.generateAsync(
@@ -2759,16 +2673,12 @@
             }
           );
 
-
         U.downloadBlob(
           content,
           'no-background.zip'
         );
 
-
-      } catch (
-        error
-      ) {
+      } catch (error) {
 
         console.error(
           '[Image Background Removal] ZIP failed:',
@@ -2780,20 +2690,15 @@
         downloadZipBtn.disabled =
           false;
 
-
         downloadZipBtn.textContent =
           t(
             'image.downloadZip'
           );
 
-
         updateBulkUI();
-
       }
-
     }
   );
-
 
   // ============================================================
   // DROPZONE
@@ -2810,9 +2715,7 @@
       fileInput,
       addFiles
     );
-
   }
-
 
   // ============================================================
   // CLEAR CACHE
@@ -2830,33 +2733,29 @@
         jobs.forEach(
           job => {
 
-            if (
-              job
-            ) {
-
+            if (job) {
               job.dispose();
-
             }
-
           }
         );
-
 
         jobs.length =
           0;
 
-
         jobsEl.innerHTML =
           '';
 
+        /*
+         * Destroy worker as part of cache cleanup.
+         */
+        destroyWorker(
+          'BACKGROUND_CACHE_CLEARED'
+        );
 
         updateBulkUI();
-
       }
     );
-
   }
-
 
   // ============================================================
   // LANGUAGE CHANGE
@@ -2874,9 +2773,7 @@
           t(
             'image.removeBackgroundAll'
           );
-
       }
-
 
       if (
         !downloadZipBtn.disabled
@@ -2886,9 +2783,7 @@
           t(
             'image.downloadZip'
           );
-
       }
-
 
       jobs.forEach(
         job => {
@@ -2899,15 +2794,11 @@
           ) {
 
             job.updateLanguageUI();
-
           }
-
         }
       );
-
     }
   );
-
 
   // ============================================================
   // INITIAL UI
