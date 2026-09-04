@@ -7,15 +7,12 @@
   // GLOBALS
   // ============================================================
 
-  const U =
-    window.Utils;
-
-  const I18n =
-    window.I18n || null;
+  const U = window.Utils;
+  const I18n = window.I18n || null;
 
 
   // ============================================================
-  // TRANSLATION HELPER
+  // TRANSLATION
   // ============================================================
 
   function t(
@@ -93,7 +90,7 @@
 
 
   // ============================================================
-  // SAFETY CHECK
+  // SAFETY
   // ============================================================
 
   if (
@@ -109,7 +106,7 @@
   ) {
 
     console.warn(
-      '[BiRefNet] Required elements not found.'
+      '[Background Removal] Required elements not found.'
     );
 
     return;
@@ -123,8 +120,6 @@
 
   /*
    * Transformers.js
-   *
-   * Loaded dynamically from jsDelivr.
    */
   const TRANSFORMERS_VERSION =
     '3.8.1';
@@ -135,44 +130,38 @@
 
 
   /*
-   * Official ONNX-community BiRefNet model.
+   * Apache-2.0 licensed ISNet general-use ONNX model.
+   *
+   * This model is specifically packaged for Transformers.js.
    */
   const MODEL_ID =
-    'onnx-community/BiRefNet-ONNX';
+    'Ko033/isnet-general-use-onnx';
 
 
   /*
-   * GPU uses FP16 because the repository provides:
-   *
-   * onnx/model_fp16.onnx
-   *
-   * at roughly 490 MB.
-   */
-  const GPU_DTYPE =
-    'fp16';
-
-
-  /*
-   * WASM fallback uses FP32 because the repository provides:
-   *
-   * onnx/model.onnx
-   *
-   * at roughly 973 MB.
-   */
-  const CPU_DTYPE =
-    'fp32';
-
-
-  /*
-   * Prefer GPU.
+   * Prefer WebGPU.
    */
   const PREFER_WEBGPU =
     true;
 
 
   /*
-   * Final output format.
+   * Q8 keeps the browser-side CPU fallback considerably lighter.
+   *
+   * Transformers.js will select the quantized ONNX weights
+   * provided by the model repository.
    */
+  const WASM_DTYPE =
+    'q8';
+
+
+  /*
+   * WebGPU can use FP16 when available.
+   */
+  const WEBGPU_DTYPE =
+    'fp16';
+
+
   const OUTPUT_FORMAT =
     'image/png';
 
@@ -182,17 +171,15 @@
 
 
   /*
-   * Model input is handled by the model processor.
-   *
-   * We DO NOT resize the user's final output.
+   * Model works internally at its configured inference size.
+   * Final output uses the ORIGINAL image dimensions.
    */
   const MODEL_INPUT_SIZE =
     1024;
 
 
   /*
-   * Prevent browser canvas allocations that are unreasonable
-   * for typical desktop/mobile hardware.
+   * Browser safety.
    */
   const MAX_OUTPUT_DIMENSION =
     8192;
@@ -202,29 +189,23 @@
     60000000;
 
 
-  // ============================================================
-  // ALPHA REFINEMENT
-  // ============================================================
-
   /*
-   * Keep the threshold conservative.
-   *
-   * The goal is to avoid destroying small product details.
+   * Conservative alpha refinement.
    */
   const ALPHA_LOW =
-    0.045;
+    0.035;
 
 
   const ALPHA_HIGH =
-    0.955;
+    0.965;
 
 
   const EDGE_GAMMA =
-    0.96;
+    0.97;
 
 
   // ============================================================
-  // MEMORY / MODEL STATE
+  // STATE
   // ============================================================
 
   let jobSeq =
@@ -243,19 +224,11 @@
     null;
 
 
-  let processorPromise =
-    null;
-
-
   let modelMode =
     null;
 
 
   let webgpuKnownBad =
-    false;
-
-
-  let modelLoading =
     false;
 
 
@@ -314,7 +287,7 @@
 
 
   // ============================================================
-  // SAFE UI YIELD
+  // UI YIELD
   // ============================================================
 
   async function yieldToUI() {
@@ -361,7 +334,7 @@
 
 
   // ============================================================
-  // URL HELPERS
+  // URL
   // ============================================================
 
   function revokeUrl(
@@ -392,7 +365,7 @@
   // IMAGE LOADING
   // ============================================================
 
-  async function loadHTMLImage(
+  async function loadImage(
     file
   ) {
 
@@ -415,25 +388,19 @@
 
 
           img.onload =
-            () => {
-
+            () =>
               resolve(
                 img
               );
 
-            };
-
 
           img.onerror =
-            () => {
-
+            () =>
               reject(
                 new Error(
                   'IMAGE_DECODE_FAILED'
                 )
               );
-
-            };
 
 
           img.src =
@@ -477,17 +444,23 @@
           module => {
 
             if (
-              !module ||
-              typeof module.AutoModel !==
-                'function' ||
-              typeof module.AutoProcessor !==
-                'function' ||
-              typeof module.RawImage !==
-                'function'
+              !module
             ) {
 
               throw new Error(
                 'TRANSFORMERS_LOAD_FAILED'
+              );
+
+            }
+
+
+            if (
+              typeof module.pipeline !==
+                'function'
+            ) {
+
+              throw new Error(
+                'TRANSFORMERS_PIPELINE_NOT_FOUND'
               );
 
             }
@@ -501,7 +474,7 @@
           error => {
 
             console.error(
-              '[BiRefNet] Transformers.js load failed:',
+              '[Background Removal] Transformers.js failed:',
               error
             );
 
@@ -524,7 +497,7 @@
 
 
   // ============================================================
-  // WEBGPU CHECK
+  // WEBGPU
   // ============================================================
 
   async function canUseWebGPU() {
@@ -566,23 +539,14 @@
         await navigator.gpu.requestAdapter();
 
 
-      if (
-        !adapter
-      ) {
-
-        return false;
-
-      }
-
-
-      return true;
+      return !!adapter;
 
     } catch (
       error
     ) {
 
       console.warn(
-        '[BiRefNet] WebGPU probe failed:',
+        '[Background Removal] WebGPU unavailable:',
         error
       );
 
@@ -598,7 +562,7 @@
   // MODEL PROGRESS
   // ============================================================
 
-  function updateModelProgress(
+  function updateProgress(
     job,
     info
   ) {
@@ -708,157 +672,113 @@
 
 
   // ============================================================
-  // RESET MODEL
+  // LOAD MODEL
   // ============================================================
 
-  function resetModel() {
-
-    modelPromise =
-      null;
-
-
-    processorPromise =
-      null;
-
-  }
-
-
-  // ============================================================
-  // LOAD BirefNet
-  // ============================================================
-
-  async function loadBiRefNet(
+  async function loadModel(
     mode,
     job
   ) {
 
     const {
-      AutoModel,
-      AutoProcessor
+      pipeline
     } =
       await loadTransformers();
 
 
     /*
-     * Reuse already-loaded model when possible.
+     * Reuse existing model.
      */
     if (
       modelPromise &&
-      processorPromise &&
       modelMode === mode
     ) {
 
-      return {
-
-        model:
-          await modelPromise,
-
-        processor:
-          await processorPromise
-
-      };
+      return modelPromise;
 
     }
 
 
     /*
-     * Engine changed:
-     *
-     * GPU → WASM
-     * or
-     * WASM → GPU
-     *
-     * therefore reload model.
+     * Engine changed.
      */
-    resetModel();
+    modelPromise =
+      null;
 
 
     modelMode =
       mode;
 
 
-    const progressCallback =
+    const progress_callback =
       info =>
-        updateModelProgress(
+        updateProgress(
           job,
           info
         );
 
 
-    modelLoading =
-      true;
+    const options =
+      {
+
+        progress_callback
+
+      };
+
+
+    /*
+     * WebGPU:
+     *
+     * use the model's FP16 weights.
+     */
+    if (
+      mode ===
+      'gpu'
+    ) {
+
+      options.device =
+        'webgpu';
+
+      options.dtype =
+        WEBGPU_DTYPE;
+
+    } else {
+
+      /*
+       * WASM:
+       *
+       * use quantized weights.
+       */
+      options.device =
+        'wasm';
+
+      options.dtype =
+        WASM_DTYPE;
+
+    }
+
+
+    modelPromise =
+      pipeline(
+        'background-removal',
+        MODEL_ID,
+        options
+      );
 
 
     try {
 
-      /*
-       * --------------------------------------------------------
-       * MODEL
-       * --------------------------------------------------------
-       */
+      return await modelPromise;
 
-      const modelOptions =
-        {
-
-          dtype:
-            mode === 'gpu'
-              ? GPU_DTYPE
-              : CPU_DTYPE,
-
-          device:
-            mode === 'gpu'
-              ? 'webgpu'
-              : 'wasm',
-
-          progress_callback:
-            progressCallback
-
-        };
-
+    } catch (
+      error
+    ) {
 
       modelPromise =
-        AutoModel.from_pretrained(
-          MODEL_ID,
-          modelOptions
-        );
+        null;
 
 
-      /*
-       * --------------------------------------------------------
-       * PROCESSOR
-       * --------------------------------------------------------
-       */
-
-      processorPromise =
-        AutoProcessor.from_pretrained(
-          MODEL_ID,
-          {
-            progress_callback:
-              progressCallback
-          }
-        );
-
-
-      const model =
-        await modelPromise;
-
-
-      const processor =
-        await processorPromise;
-
-
-      return {
-
-        model,
-
-        processor
-
-      };
-
-    } finally {
-
-      modelLoading =
-        false;
+      throw error;
 
     }
 
@@ -866,7 +786,7 @@
 
 
   // ============================================================
-  // CLAMP
+  // ALPHA
   // ============================================================
 
   function clamp01(
@@ -885,29 +805,6 @@
 
   }
 
-
-  function clampByte(
-    value
-  ) {
-
-    return Math.max(
-      0,
-      Math.min(
-        255,
-        Math.round(
-          Number(
-            value
-          ) || 0
-        )
-      )
-    );
-
-  }
-
-
-  // ============================================================
-  // ALPHA REFINEMENT
-  // ============================================================
 
   function refineAlpha(
     value
@@ -951,7 +848,7 @@
 
 
     /*
-     * Smooth transition.
+     * Smoothstep.
      */
     alpha =
       alpha *
@@ -964,7 +861,7 @@
 
 
     /*
-     * Very mild gamma correction.
+     * Very mild gamma adjustment.
      */
     alpha =
       Math.pow(
@@ -981,7 +878,7 @@
 
 
   // ============================================================
-  // CREATE SOURCE CANVAS
+  // SOURCE CANVAS
   // ============================================================
 
   async function createSourceCanvas(
@@ -989,7 +886,7 @@
   ) {
 
     const img =
-      await loadHTMLImage(
+      await loadImage(
         file
       );
 
@@ -1079,14 +976,6 @@
       'high';
 
 
-    ctx.clearRect(
-      0,
-      0,
-      width,
-      height
-    );
-
-
     ctx.drawImage(
       img,
       0,
@@ -1100,135 +989,204 @@
 
 
   // ============================================================
-  // MASK NORMALIZATION
+  // CONVERT MASK TO CANVAS
   // ============================================================
 
-  function normalizeMask(
-    rawMask
+  async function createMaskCanvas(
+    maskOutput,
+    width,
+    height
   ) {
 
+    /*
+     * Transformers.js background-removal pipelines can return
+     * a RawImage-like output.
+     *
+     * We deliberately support both:
+     *
+     * 1. RawImage
+     * 2. Canvas/ImageBitmap-like objects
+     */
     if (
-      !rawMask
+      !maskOutput
     ) {
 
       throw new Error(
-        'MASK_DATA_MISSING'
+        'MASK_EMPTY'
       );
 
     }
 
 
     /*
-     * RawImage exposes:
-     *
-     * data
-     * width
-     * height
-     * channels
+     * RawImage path.
      */
-    const width =
-      Number(
-        rawMask.width
-      );
-
-
-    const height =
-      Number(
-        rawMask.height
-      );
-
-
-    const channels =
-      Number(
-        rawMask.channels
-      );
-
-
-    const data =
-      rawMask.data;
-
-
     if (
-      !width ||
-      !height ||
-      !data
+      typeof maskOutput.toCanvas ===
+        'function'
     ) {
 
-      throw new Error(
-        'MASK_DATA_INVALID'
-      );
+      const canvas =
+        maskOutput.toCanvas();
+
+
+      if (
+        canvas
+      ) {
+
+        if (
+          canvas.width ===
+            width &&
+          canvas.height ===
+            height
+        ) {
+
+          return canvas;
+
+        }
+
+
+        const resized =
+          document.createElement(
+            'canvas'
+          );
+
+
+        resized.width =
+          width;
+
+
+        resized.height =
+          height;
+
+
+        const ctx =
+          resized.getContext(
+            '2d',
+            {
+              willReadFrequently:
+                true
+            }
+          );
+
+
+        if (
+          !ctx
+        ) {
+
+          throw new Error(
+            'MASK_CANVAS_CONTEXT_FAILED'
+          );
+
+        }
+
+
+        ctx.imageSmoothingEnabled =
+          true;
+
+
+        ctx.imageSmoothingQuality =
+          'high';
+
+
+        ctx.drawImage(
+          canvas,
+          0,
+          0,
+          width,
+          height
+        );
+
+
+        return resized;
+
+      }
 
     }
 
 
+    /*
+     * Fallback: draw any drawable image-like object.
+     */
     if (
-      channels !==
-      1
+      typeof maskOutput.width ===
+        'number' ||
+      typeof maskOutput.height ===
+        'number'
     ) {
 
-      /*
-       * BiRefNet should produce a single-channel matte.
-       *
-       * Fail explicitly rather than silently producing a bad mask.
-       */
-      throw new Error(
-        'MASK_CHANNELS_INVALID'
+      const canvas =
+        document.createElement(
+          'canvas'
+        );
+
+
+      canvas.width =
+        width;
+
+
+      canvas.height =
+        height;
+
+
+      const ctx =
+        canvas.getContext(
+          '2d',
+          {
+            willReadFrequently:
+              true
+          }
+        );
+
+
+      if (
+        !ctx
+      ) {
+
+        throw new Error(
+          'MASK_CANVAS_CONTEXT_FAILED'
+        );
+
+      }
+
+
+      ctx.imageSmoothingEnabled =
+        true;
+
+
+      ctx.imageSmoothingQuality =
+        'high';
+
+
+      ctx.drawImage(
+        maskOutput,
+        0,
+        0,
+        width,
+        height
       );
+
+
+      return canvas;
 
     }
 
 
-    return {
-
-      width,
-
-      height,
-
-      data
-
-    };
+    throw new Error(
+      'MASK_FORMAT_UNSUPPORTED'
+    );
 
   }
 
 
   // ============================================================
-  // COMPOSITE
+  // APPLY MASK
   // ============================================================
 
-  async function compositeMask(
-    file,
-    mask
+  async function applyMask(
+    sourceCanvas,
+    maskOutput
   ) {
-
-    const sourceCanvas =
-      await createSourceCanvas(
-        file
-      );
-
-
-    const sourceCtx =
-      sourceCanvas.getContext(
-        '2d',
-        {
-          alpha:
-            true,
-
-          willReadFrequently:
-            true
-        }
-      );
-
-
-    if (
-      !sourceCtx
-    ) {
-
-      throw new Error(
-        'CANVAS_CONTEXT_FAILED'
-      );
-
-    }
-
 
     const width =
       sourceCanvas.width;
@@ -1238,56 +1196,47 @@
       sourceCanvas.height;
 
 
-    const maskInfo =
-      normalizeMask(
-        mask
-      );
-
-
-    /*
-     * The model gives us a 1024-class matte.
-     *
-     * Resize that matte to the original image dimensions.
-     */
-    const {
-      RawImage
-    } =
-      await loadTransformers();
-
-
-    const rawMask =
-      new RawImage(
-        maskInfo.data,
-        maskInfo.width,
-        maskInfo.height,
-        1
-      );
-
-
-    const resizedMask =
-      await rawMask.resize(
+    const maskCanvas =
+      await createMaskCanvas(
+        maskOutput,
         width,
-        height,
+        height
+      );
+
+
+    const sourceCtx =
+      sourceCanvas.getContext(
+        '2d',
         {
-          resample:
-            3
+          willReadFrequently:
+            true
+        }
+      );
+
+
+    const maskCtx =
+      maskCanvas.getContext(
+        '2d',
+        {
+          willReadFrequently:
+            true
         }
       );
 
 
     if (
-      !resizedMask ||
-      !resizedMask.data
+      !sourceCtx ||
+      !maskCtx
     ) {
 
       throw new Error(
-        'MASK_RESIZE_FAILED'
+        'CANVAS_CONTEXT_FAILED'
       );
 
     }
 
 
-    const sourceImageData =
+    const sourceData =
       sourceCtx.getImageData(
         0,
         0,
@@ -1296,69 +1245,80 @@
       );
 
 
-    const outputImageData =
-      sourceCtx.createImageData(
+    const maskData =
+      maskCtx.getImageData(
+        0,
+        0,
         width,
         height
       );
 
 
     const src =
-      sourceImageData.data;
+      sourceData.data;
 
 
-    const dst =
-      outputImageData.data;
-
-
-    const alphaData =
-      resizedMask.data;
-
-
-    if (
-      alphaData.length <
-        width *
-        height
-    ) {
-
-      throw new Error(
-        'MASK_SIZE_INVALID'
-      );
-
-    }
+    const mask =
+      maskData.data;
 
 
     /*
-     * Final alpha composition.
+     * Use luminance from the mask.
      *
-     * RGB remains untouched.
-     *
-     * This is deliberate:
-     * aggressive RGB decontamination can damage metallic products,
-     * black tools, chromed tools and colored edges.
+     * If the returned image has alpha, prefer alpha.
      */
+    const output =
+      sourceCtx.createImageData(
+        width,
+        height
+      );
+
+
+    const dst =
+      output.data;
+
+
     for (
-      let p = 0,
-      i = 0;
-      p <
-        width *
-        height;
-      p++,
+      let i = 0;
+      i <
+        dst.length;
       i += 4
     ) {
 
-      const alphaRaw =
+      const maskAlpha =
+        mask[i + 3];
+
+
+      const luminance =
         (
-          Number(
-            alphaData[p]
-          ) || 0
-        ) /
-        255;
+          mask[i] *
+          0.299
+        ) +
+        (
+          mask[i + 1] *
+          0.587
+        ) +
+        (
+          mask[i + 2] *
+          0.114
+        );
+
+
+      /*
+       * If mask alpha is fully meaningful, use it.
+       * Otherwise use grayscale mask.
+       */
+      const raw =
+        maskAlpha > 0
+          ? maskAlpha /
+            255
+          : luminance /
+            255;
 
 
       const alpha =
         refineAlpha(
-          alphaRaw
+          raw
         );
 
 
@@ -1384,7 +1344,7 @@
 
 
     sourceCtx.putImageData(
-      outputImageData,
+      output,
       0,
       0
     );
@@ -1396,305 +1356,50 @@
 
 
   // ============================================================
-  // CANVAS → PNG
+  // PNG
   // ============================================================
 
   async function canvasToPNG(
     canvas
   ) {
 
-    return await new Promise(
-      (
-        resolve,
-        reject
-      ) => {
+    const blob =
+      await new Promise(
+        (
+          resolve,
+          reject
+        ) => {
 
-        canvas.toBlob(
-          blob => {
+          canvas.toBlob(
+            result => {
 
-            if (
-              !blob ||
-              blob.size <=
-                0
-            ) {
+              if (
+                !result
+              ) {
 
-              reject(
-                new Error(
-                  'PNG_EXPORT_FAILED'
-                )
+                reject(
+                  new Error(
+                    'PNG_EXPORT_FAILED'
+                  )
+                );
+
+                return;
+
+              }
+
+
+              resolve(
+                result
               );
 
-              return;
+            },
 
-            }
+            OUTPUT_FORMAT,
 
+            1
+          );
 
-            resolve(
-              blob
-            );
-
-          },
-
-          OUTPUT_FORMAT,
-
-          1
-        );
-
-      }
-    );
-
-  }
-
-
-  // ============================================================
-  // RUN BirefNet
-  // ============================================================
-
-  async function runBiRefNet(
-    file,
-    job
-  ) {
-
-    const {
-      RawImage
-    } =
-      await loadTransformers();
-
-
-    /*
-     * Load original image.
-     *
-     * It stays at original resolution.
-     */
-    const image =
-      await RawImage.fromBlob(
-        file
-      );
-
-
-    if (
-      !image ||
-      !image.width ||
-      !image.height
-    ) {
-
-      throw new Error(
-        'IMAGE_DIMENSIONS_INVALID'
-      );
-
-    }
-
-
-    /*
-     * Inform the user that model is loading.
-     */
-    if (
-      job.statusEl
-    ) {
-
-      job.statusEl.textContent =
-        t(
-          'image.loadingModelProgress',
-          {
-            percent:
-              0
-          }
-        );
-
-    }
-
-
-    const {
-      model,
-      processor
-    } =
-      await loadBiRefNet(
-        modelMode,
-        job
-      );
-
-
-    if (
-      job.disposed
-    ) {
-
-      return null;
-
-    }
-
-
-    await yieldToUI();
-
-
-    /*
-     * ----------------------------------------------------------
-     * PREPROCESS
-     * ----------------------------------------------------------
-     *
-     * The repository's preprocessor config specifies 1024x1024.
-     * We let AutoProcessor handle this transformation.
-     */
-    if (
-      job.statusEl
-    ) {
-
-      job.statusEl.textContent =
-        t(
-          'image.removingBackgroundProgress',
-          {
-            percent:
-              0
-          }
-        );
-
-    }
-
-
-    const {
-      pixel_values
-    } =
-      await processor(
-        image
-      );
-
-
-    if (
-      job.disposed
-    ) {
-
-      return null;
-
-    }
-
-
-    await yieldToUI();
-
-
-    /*
-     * ----------------------------------------------------------
-     * INFERENCE
-     * ----------------------------------------------------------
-     */
-
-    const outputs =
-      await model(
-        {
-          input_image:
-            pixel_values
         }
-      );
-
-
-    if (
-      job.disposed
-    ) {
-
-      return null;
-
-    }
-
-
-    if (
-      !outputs ||
-      !outputs.output_image ||
-      !outputs.output_image[0]
-    ) {
-
-      throw new Error(
-        'BACKGROUND_EMPTY_RESULT'
-      );
-
-    }
-
-
-    /*
-     * ----------------------------------------------------------
-     * LOGITS → MASK
-     * ----------------------------------------------------------
-     *
-     * This follows the official model example:
-     *
-     * output_image[0]
-     *   .sigmoid()
-     *   .mul(255)
-     *   .to('uint8')
-     */
-    const maskTensor =
-      outputs
-        .output_image[0]
-        .sigmoid()
-        .mul(
-          255
-        )
-        .to(
-          'uint8'
-        );
-
-
-    if (
-      job.disposed
-    ) {
-
-      return null;
-
-    }
-
-
-    /*
-     * Convert tensor → RawImage.
-     */
-    const maskImage =
-      RawImage.fromTensor(
-        maskTensor
-      );
-
-
-    if (
-      !maskImage
-    ) {
-
-      throw new Error(
-        'MASK_DATA_MISSING'
-      );
-
-    }
-
-
-    await yieldToUI();
-
-
-    /*
-     * ----------------------------------------------------------
-     * COMPOSITE ON ORIGINAL RESOLUTION
-     * ----------------------------------------------------------
-     */
-    const outputCanvas =
-      await compositeMask(
-        file,
-        maskImage
-      );
-
-
-    if (
-      job.disposed
-    ) {
-
-      return null;
-
-    }
-
-
-    await yieldToUI();
-
-
-    /*
-     * ----------------------------------------------------------
-     * EXPORT
-     * ----------------------------------------------------------
-     */
-    const blob =
-      await canvasToPNG(
-        outputCanvas
       );
 
 
@@ -1717,7 +1422,166 @@
 
 
   // ============================================================
-  // WEBGPU ERROR DETECTION
+  // AI PROCESS
+  // ============================================================
+
+  async function processImage(
+    file,
+    job
+  ) {
+
+    const {
+      RawImage
+    } =
+      await loadTransformers();
+
+
+    const segmenter =
+      await loadModel(
+        modelMode,
+        job
+      );
+
+
+    if (
+      job.disposed
+    ) {
+
+      return null;
+
+    }
+
+
+    const image =
+      await RawImage.fromBlob(
+        file
+      );
+
+
+    if (
+      !image ||
+      !image.width ||
+      !image.height
+    ) {
+
+      throw new Error(
+        'IMAGE_DIMENSIONS_INVALID'
+      );
+
+    }
+
+
+    if (
+      job.statusEl
+    ) {
+
+      job.statusEl.textContent =
+        t(
+          'image.removingBackgroundProgress',
+          {
+            percent:
+              0
+          }
+        );
+
+    }
+
+
+    await yieldToUI();
+
+
+    /*
+     * The model repository supports the Transformers.js
+     * background-removal pipeline directly.
+     */
+    const output =
+      await segmenter(
+        image
+      );
+
+
+    if (
+      job.disposed
+    ) {
+
+      return null;
+
+    }
+
+
+    if (
+      !output
+    ) {
+
+      throw new Error(
+        'BACKGROUND_EMPTY_RESULT'
+      );
+
+    }
+
+
+    /*
+     * Pipeline normally returns an array.
+     */
+    const maskOutput =
+      Array.isArray(
+        output
+      )
+        ? output[0]
+        : output;
+
+
+    if (
+      !maskOutput
+    ) {
+
+      throw new Error(
+        'MASK_EMPTY'
+      );
+
+    }
+
+
+    await yieldToUI();
+
+
+    /*
+     * Final composition uses ORIGINAL dimensions.
+     */
+    const sourceCanvas =
+      await createSourceCanvas(
+        file
+      );
+
+
+    if (
+      job.disposed
+    ) {
+
+      return null;
+
+    }
+
+
+    const outputCanvas =
+      await applyMask(
+        sourceCanvas,
+        maskOutput
+      );
+
+
+    await yieldToUI();
+
+
+    return await canvasToPNG(
+      outputCanvas
+    );
+
+  }
+
+
+  // ============================================================
+  // ERROR CLASSIFICATION
   // ============================================================
 
   function isLikelyWebGPUError(
@@ -1760,7 +1624,11 @@
       ) ||
 
       text.includes(
-        'failed to create session'
+        'out of memory'
+      ) ||
+
+      text.includes(
+        'onnxruntime'
       ) ||
 
       text.includes(
@@ -1788,39 +1656,27 @@
         : '';
 
 
-    switch (
-      code
+    if (
+      code ===
+      'TRANSFORMERS_LOAD_FAILED'
     ) {
 
-      case
-        'TRANSFORMERS_LOAD_FAILED':
-
-        return 'errors.backgroundLibraryLoadFailed';
-
-
-      case
-        'IMAGE_DECODE_FAILED':
-
-        return 'image.openFailed';
-
-
-      case
-        'BACKGROUND_EMPTY_RESULT':
-
-        return 'image.backgroundRemovalFailed';
-
-
-      case
-        'IMAGE_TOO_LARGE':
-
-        return 'image.backgroundRemovalFailed';
-
-
-      default:
-
-        return 'image.backgroundRemovalFailed';
+      return 'errors.backgroundLibraryLoadFailed';
 
     }
+
+
+    if (
+      code ===
+      'IMAGE_DECODE_FAILED'
+    ) {
+
+      return 'image.openFailed';
+
+    }
+
+
+    return 'image.backgroundRemovalFailed';
 
   }
 
@@ -1895,7 +1751,7 @@
 
 
     // ========================================================
-    // BUILD DOM
+    // DOM
     // ========================================================
 
     buildDom() {
@@ -2022,10 +1878,6 @@
           );
 
       }
-
-
-      this.el.dataset.processing =
-        'false';
 
 
       this.beforeImg.src =
@@ -2157,15 +2009,7 @@
 
       if (
         this.disposed ||
-        !this.statusEl
-      ) {
-
-        return;
-
-      }
-
-
-      if (
+        !this.statusEl ||
         this.isProcessing
       ) {
 
@@ -2480,17 +2324,14 @@
       try {
 
         /*
-         * ------------------------------------------------------
-         * Select engine
-         * ------------------------------------------------------
+         * Detect WebGPU.
          */
-
-        const gpuAvailable =
+        const gpu =
           await canUseWebGPU();
 
 
         modelMode =
-          gpuAvailable
+          gpu
             ? 'gpu'
             : 'cpu';
 
@@ -2504,15 +2345,12 @@
 
 
         /*
-         * ------------------------------------------------------
-         * Primary attempt
-         * ------------------------------------------------------
+         * Primary engine.
          */
-
         try {
 
           blob =
-            await runBiRefNet(
+            await processImage(
               this.file,
               this
             );
@@ -2522,11 +2360,8 @@
         ) {
 
           /*
-           * ----------------------------------------------------
-           * GPU → WASM fallback
-           * ----------------------------------------------------
+           * WebGPU fallback.
            */
-
           if (
             modelMode ===
               'gpu' &&
@@ -2536,7 +2371,7 @@
           ) {
 
             console.warn(
-              '[BiRefNet] WebGPU failed. Falling back to WASM:',
+              '[Background Removal] WebGPU failed. Falling back to WASM.',
               primaryError
             );
 
@@ -2545,7 +2380,8 @@
               true;
 
 
-            resetModel();
+            modelPromise =
+              null;
 
 
             modelMode =
@@ -2577,7 +2413,7 @@
 
 
             blob =
-              await runBiRefNet(
+              await processImage(
                 this.file,
                 this
               );
@@ -2613,12 +2449,6 @@
         }
 
 
-        /*
-         * ------------------------------------------------------
-         * RESULT
-         * ------------------------------------------------------
-         */
-
         this.resultBlob =
           blob;
 
@@ -2650,12 +2480,6 @@
         }
 
 
-        /*
-         * ------------------------------------------------------
-         * DOWNLOAD
-         * ------------------------------------------------------
-         */
-
         if (
           this.downloadBtn
         ) {
@@ -2667,7 +2491,7 @@
           this.downloadBtn.download =
             `${U.baseName(
               this.file.name
-            )}-nobg.png`;
+            )}-nobg.${OUTPUT_EXTENSION}`;
 
 
           this.downloadBtn.classList.remove(
@@ -2714,7 +2538,7 @@
       ) {
 
         console.error(
-          '[BiRefNet] Processing failed:',
+          '[Background Removal] Failed:',
           error
         );
 
@@ -3079,6 +2903,7 @@
                 ),
 
               total
+
             }
           );
 
@@ -3091,8 +2916,6 @@
 
         /*
          * Sequential processing.
-         *
-         * One image at a time keeps GPU/WASM memory under control.
          */
         for (
           const job of
@@ -3288,7 +3111,7 @@
       ) {
 
         console.error(
-          '[BiRefNet] ZIP failed:',
+          '[Background Removal] ZIP failed:',
           error
         );
 
