@@ -1,3984 +1,2201 @@
-<!DOCTYPE html>
-
-<html lang="th">
-
-<head>
-
-  <meta charset="UTF-8">
-
-<meta
-name="viewport"
-content="width=device-width, initial-scale=1.0"
-
->
-
-  <!-- ============================================================
-       FAVICON
-       ============================================================ -->
-
-  <link
-    rel="icon"
-    type="image/png"
-    sizes="32x32"
-    href="./favicon.png"
-  >
-
-  <link
-    rel="icon"
-    type="image/png"
-    sizes="16x16"
-    href="./favicon.png"
-  >
-
-  <link
-    rel="shortcut icon"
-    type="image/png"
-    href="./favicon.png"
-  >
-
-  <link
-    rel="apple-touch-icon"
-    sizes="180x180"
-    href="./favicon.png"
-  >
-
-  <!-- ============================================================
-       TITLE
-       ============================================================ -->
-
-  <title data-i18n="page.title">
-    Workshop Utility BY KITTO
-  </title>
-
-  <!-- ============================================================
-       PRECONNECT
-       ============================================================ -->
-
-  <link
-    rel="preconnect"
-    href="https://fonts.googleapis.com"
-  >
-
-  <link
-    rel="preconnect"
-    href="https://fonts.gstatic.com"
-    crossorigin
-  >
-
-  <link
-    rel="preconnect"
-    href="https://raw.githubusercontent.com"
-    crossorigin
-  >
-
-  <link
-    rel="preconnect"
-    href="https://cdnjs.cloudflare.com"
-    crossorigin
-  >
-
-  <link
-    rel="preconnect"
-    href="https://cdn.jsdelivr.net"
-    crossorigin
-  >
-
-  <!-- ============================================================
-       FONTS
-       ============================================================ -->
-
-  <link
-    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-    rel="stylesheet"
-  >
-
-  <!-- ============================================================
-       MAIN CSS
-       ============================================================ -->
-
-  <link
-    rel="stylesheet"
-    href="css/style.css"
-  >
-
-</head>
-
-<body>
-
-<div class="sheet">
-
-  <!-- ============================================================
-       HEADER
-       ============================================================ -->
-
-  <header class="topbar">
-
-<div class="topbar-row">
-
-  <div class="eyebrow">
-    WORKSHOP UTILITY BY KITTO
-  </div>
-
-  <!-- ========================================================
-       LANGUAGE SELECTOR
-       ======================================================== -->
-
-  <div class="language-switcher">
-
-    <label
-      class="language-label"
-      for="language-select"
-      data-i18n-aria-label="common.language"
-    >
-
-      <span aria-hidden="true">
-        🌐
-      </span>
-
-    </label>
-
-    <select
-      id="language-select"
-      class="mono-select"
-      aria-label="Language"
-      data-i18n-aria-label="common.language"
-    >
-
-      <option
-        value="th"
-        data-i18n="language.th"
-      >
-        ไทย
-      </option>
-
-      <option
-        value="en"
-        data-i18n="language.en"
-      >
-        English
-      </option>
-
-      <option
-        value="de"
-        data-i18n="language.de"
-      >
-        Deutsch
-      </option>
-
-      <option
-        value="ja"
-        data-i18n="language.ja"
-      >
-        日本語
-      </option>
-
-      <option
-        value="ko"
-        data-i18n="language.ko"
-      >
-        한국어
-      </option>
-
-      <option
-        value="zh-CN"
-        data-i18n="language.zhCN"
-      >
-        简体中文
-      </option>
-
-      <option
-        value="zh-TW"
-        data-i18n="language.zhTW"
-      >
-        繁體中文
-      </option>
-
-    </select>
-
-  </div>
-
-</div>
-
-<h1 data-i18n="page.heading">
-  ชุดเครื่องมือจัดการไฟล์
-</h1>
-
-<p
-  class="sub"
-  data-i18n="page.subtitle"
->
-  แปลงและแก้ไขรูปภาพ/PDF ทั้งหมดในเบราว์เซอร์ของคุณ
-  ไม่มีการอัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์ใดๆ
-</p>
-
-  </header>
-
-  <!-- ============================================================
-       CATEGORY SWITCHER
-       ============================================================ -->
-
-  <nav
-    class="cat-bar"
-    id="catBar"
-  >
-
-<!-- ==========================================================
-     IMAGE
-     ========================================================== -->
-
-<button
-  class="cat-btn is-active"
-  data-cat="image"
-  type="button"
->
-
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.6"
-    aria-hidden="true"
-  >
-
-    <rect
-      x="3"
-      y="3"
-      width="18"
-      height="18"
-      rx="1.5"
-    />
-
-    <circle
-      cx="8.5"
-      cy="8.5"
-      r="1.5"
-    />
-
-    <path
-      d="M21 15l-5-5-9 9"
-    />
-
-  </svg>
-
-  <span data-i18n="common.image">
-    รูปภาพ
-  </span>
-
-</button>
-
-<!-- ==========================================================
-     PDF
-     ========================================================== -->
-
-<button
-  class="cat-btn"
-  data-cat="pdf"
-  type="button"
->
-
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.6"
-    aria-hidden="true"
-  >
-
-    <path
-      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-    />
-
-    <path
-      d="M14 2v6h6"
-    />
-
-  </svg>
-
-  <span data-i18n="common.pdf">
-    PDF
-  </span>
-
-</button>
-
-<!-- ==========================================================
-     NOTEPAD
-     ========================================================== -->
-
-<button
-  class="cat-btn"
-  id="open-notepad"
-  type="button"
-  title="เปิด Online Notepad"
-  data-i18n-title="page.notepadTitle"
->
-
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.6"
-    aria-hidden="true"
-  >
-
-    <path
-      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-    />
-
-    <path
-      d="M14 2v6h6"
-    />
-
-    <path
-      d="M8 13h8"
-    />
-
-    <path
-      d="M8 17h6"
-    />
-
-    <path
-      d="M8 9h4"
-    />
-
-  </svg>
-
-  <span data-i18n="common.notepad">
-    Notepad
-  </span>
-
-</button>
-
-<!-- ==========================================================
-     FILE CONVERTER
-     ========================================================== -->
-
-<button
-  class="cat-btn"
-  id="open-file-converter"
-  type="button"
-  title="เปิด File Converter"
-  data-i18n-title="page.fileConverterTitle"
->
-
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.6"
-    aria-hidden="true"
-  >
-
-    <path
-      d="M7 7h10"
-    />
-
-    <path
-      d="M14 4l3 3-3 3"
-    />
-
-    <path
-      d="M17 17H7"
-    />
-
-    <path
-      d="M10 14l-3 3 3 3"
-    />
-
-  </svg>
-
-  <span data-i18n="page.fileConverter">
-    File Converter
-  </span>
-
-</button>
-
-  </nav>
-
-  <!-- ============================================================
-       IMAGE TOOL CHIPS
-       ============================================================ -->
-
-  <nav
-    class="tool-chips"
-    data-cat-group="image"
-  >
-
-<button
-  class="tool-chip is-active"
-  data-tool="img-convert"
-  type="button"
->
-  <span data-i18n="image.convertTitle">
-    แปลงนามสกุล &amp; ปรับขนาด
-  </span>
-</button>
-
-<button
-  class="tool-chip"
-  data-tool="img-crop"
-  type="button"
->
-  <span data-i18n="image.cropTitle">
-    ครอบตัดรูปภาพ
-  </span>
-</button>
-
-<button
-  class="tool-chip"
-  data-tool="img-bgremove"
-  type="button"
->
-  <span data-i18n="image.bgRemoveTitle">
-    ลบพื้นหลัง
-  </span>
-</button>
-
-<button
-  class="tool-chip"
-  data-tool="img-compress"
-  type="button"
->
-  <span data-i18n="image.compressTitle">
-    ลดขนาดรูปภาพ
-  </span>
-</button>
-
-  </nav>
-
-  <!-- ============================================================
-       PDF TOOL CHIPS
-       ============================================================ -->
-
-  <nav
-    class="tool-chips hidden"
-    data-cat-group="pdf"
-  >
-
-<button
-  class="tool-chip is-active"
-  data-tool="pdf-from-images"
-  type="button"
->
-  <span data-i18n="pdf.fromImagesTitle">
-    รวมรูปเป็น PDF
-  </span>
-</button>
-
-<button
-  class="tool-chip"
-  data-tool="pdf-to-images"
-  type="button"
->
-  <span data-i18n="pdf.toImagesTitle">
-    PDF → รูปภาพ
-  </span>
-</button>
-
-<button
-  class="tool-chip"
-  data-tool="pdf-pages"
-  type="button"
->
-  <span data-i18n="pdf.pagesTitle">
-    จัดการหน้า PDF
-  </span>
-</button>
-
-<button
-  class="tool-chip"
-  data-tool="pdf-merge"
-  type="button"
->
-  <span data-i18n="pdf.mergeTitle">
-    รวมไฟล์ PDF
-  </span>
-</button>
-
-<button
-  class="tool-chip"
-  data-tool="pdf-watermark"
-  type="button"
->
-  <span data-i18n="pdf.watermarkTitle">
-    ใส่ลายน้ำ
-  </span>
-</button>
-
-<button
-  class="tool-chip"
-  data-tool="pdf-pagenumbers"
-  type="button"
->
-  <span data-i18n="pdf.pageNumbersTitle">
-    ใส่เลขหน้า
-  </span>
-</button>
-
-  </nav>
-
-  <!-- ============================================================
-       MAIN PANELS
-       ============================================================ -->
-
-  <main class="panels">
-
-<!-- ==========================================================
-     IMAGE: CONVERT
-     ========================================================== -->
-
-<section
-  class="tool-panel"
-  id="panel-img-convert"
-  data-cat="image"
->
-
-  <p
-    class="panel-hint"
-    data-i18n="image.convertHint"
-  >
-    แปลงนามสกุลไฟล์ (PNG / JPG / WEBP)
-    ปรับขนาด คุณภาพ หมุน และพลิกรูปภาพ — ทำได้หลายไฟล์พร้อมกัน
-  </p>
-
-  <section
-    class="dropzone"
-    id="dz-img-convert"
-    tabindex="0"
-    role="button"
-    aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์"
-    data-i18n-aria-label="dropzone.image"
-  >
-
-    <span class="mark tl"></span>
-    <span class="mark tr"></span>
-    <span class="mark bl"></span>
-    <span class="mark br"></span>
-
-    <div class="dz-inner">
-
-      <svg
-        class="dz-icon"
-        width="40"
-        height="40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.4"
-        aria-hidden="true"
-      >
-
-        <rect
-          x="3"
-          y="3"
-          width="18"
-          height="18"
-          rx="1.5"
-        />
-
-        <circle
-          cx="8.5"
-          cy="8.5"
-          r="1.5"
-        />
-
-        <path
-          d="M21 15l-5-5-9 9"
-        />
-
-      </svg>
-
-      <div
-        class="dz-title"
-        data-i18n="image.dropImage"
-      >
-        วางรูปภาพที่นี่
-      </div>
-
-      <div
-        class="dz-note"
-        data-i18n="image.supportedImages"
-      >
-        หรือคลิกเพื่อเลือกไฟล์ —
-        รองรับหลายไฟล์ (JPG · PNG · WEBP · GIF · BMP)
-      </div>
-
-    </div>
-
-    <input
-      type="file"
-      id="input-img-convert"
-      accept="image/*"
-      multiple
-      hidden
-    >
-
-  </section>
-
-  <section
-    class="bulkbar hidden"
-    id="bulk-img-convert"
-  >
-
-    <div class="bulk-left">
-
-      <span
-        class="count-label"
-        data-i18n="image.task"
-      >
-        งาน:
-      </span>
-
-      <span
-        class="count"
-        id="count-img-convert"
-      >
-        0
-      </span>
-
-      <span
-        class="count-label"
-        data-i18n="common.items"
-      >
-        รายการ
-      </span>
-
-    </div>
-
-    <div class="bulk-right">
-
-      <label class="field-inline">
-
-        <span data-i18n="image.allFormats">
-          นามสกุลทั้งหมด
-        </span>
-
-        <select
-          id="bulkFormat-img-convert"
-          class="mono-select"
-        >
-
-          <option
-            value=""
-            data-i18n="image.choosePerFile"
-          >
-            — เลือกทีละไฟล์ —
-          </option>
-
-          <option value="image/png">
-            PNG
-          </option>
-
-          <option value="image/jpeg">
-            JPG
-          </option>
-
-          <option value="image/webp">
-            WEBP
-          </option>
-
-        </select>
-
-      </label>
-
-      <button
-        class="btn btn-ghost"
-        id="clearAll-img-convert"
-        type="button"
-      >
-        <span data-i18n="common.clear">
-          ล้างทั้งหมด
-        </span>
-      </button>
-
-      <button
-        class="btn btn-primary"
-        id="convertAll-img-convert"
-        type="button"
-      >
-        <span data-i18n="image.convertAll">
-          แปลงทั้งหมด
-        </span>
-      </button>
-
-      <button
-        class="btn btn-accent hidden"
-        id="downloadZip-img-convert"
-        type="button"
-      >
-        <span data-i18n="image.downloadZip">
-          ดาวน์โหลดทั้งหมด (.zip)
-        </span>
-      </button>
-
-    </div>
-
-  </section>
-
-  <section
-    class="jobs"
-    id="jobs-img-convert"
-  ></section>
-
-  <template id="tpl-img-convert">
-
-    <article class="ticket">
-
-      <div class="ticket-perf"></div>
-
-      <div class="ticket-body">
-
-        <div class="ticket-thumb">
-
-          <img alt="">
-
-        </div>
-
-        <div class="ticket-spec">
-
-          <div class="spec-row spec-name">
-
-            <span
-              class="spec-label"
-              data-i18n="common.file"
-            >
-              ไฟล์
-            </span>
-
-            <span
-              class="spec-value js-filename mono"
-            >
-              —
-            </span>
-
-          </div>
-
-          <div class="spec-row">
-
-            <span
-              class="spec-label"
-              data-i18n="common.original"
-            >
-              ต้นฉบับ
-            </span>
-
-            <span class="spec-value mono">
-
-              <span class="js-origdim">
-                —
-              </span>
-
-              px ·
-
-              <span class="js-origsize">
-                —
-              </span>
-
-              ·
-
-              <span class="js-origext">
-                —
-              </span>
-
-            </span>
-
-          </div>
-
-          <div class="spec-divider"></div>
-
-          <div class="control-row">
-
-            <span
-              class="spec-label"
-              data-i18n="image.convertTo"
-            >
-              แปลงเป็น
-            </span>
-
-            <div class="seg-group js-format-group">
-
-              <button
-                type="button"
-                class="seg-btn is-active"
-                data-format="image/png"
-              >
-                PNG
-              </button>
-
-              <button
-                type="button"
-                class="seg-btn"
-                data-format="image/jpeg"
-              >
-                JPG
-              </button>
-
-              <button
-                type="button"
-                class="seg-btn"
-                data-format="image/webp"
-              >
-                WEBP
-              </button>
-
-            </div>
-
-          </div>
-
-          <div class="control-row">
-
-            <span
-              class="spec-label"
-              data-i18n="image.dimensions"
-            >
-              ขนาด (px)
-            </span>
-
-            <div class="dim-group">
-
-              <input
-                type="number"
-                class="dim-input js-width"
-                min="1"
-                placeholder="กว้าง"
-                data-i18n-placeholder="common.width"
-              >
-
-              <button
-                type="button"
-                class="lock-btn js-lock is-locked"
-                title="ล็อกสัดส่วนภาพ"
-                aria-label="ล็อกสัดส่วนภาพ"
-                data-i18n-title="image.lockAspect"
-                data-i18n-aria-label="image.lockAspect"
-              >
-
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-                >
-
-                  <rect
-                    x="5"
-                    y="11"
-                    width="14"
-                    height="9"
-                    rx="1.5"
-                  />
-
-                  <path
-                    d="M8 11V7a4 4 0 0 1 8 0v4"
-                  />
-
-                </svg>
-
-              </button>
-
-              <input
-                type="number"
-                class="dim-input js-height"
-                min="1"
-                placeholder="สูง"
-                data-i18n-placeholder="common.height"
-              >
-
-            </div>
-
-          </div>
-
-          <div class="control-row">
-
-            <span
-              class="spec-label"
-              data-i18n="image.rotateFlip"
-            >
-              หมุน/พลิก
-            </span>
-
-            <div class="seg-group js-rotate-group">
-
-              <button
-                type="button"
-                class="seg-btn"
-                data-action="rotate-left"
-                title="หมุนซ้าย 90°"
-                data-i18n-title="image.rotateLeft"
-              >
-                ⟲
-              </button>
-
-              <button
-                type="button"
-                class="seg-btn"
-                data-action="rotate-right"
-                title="หมุนขวา 90°"
-                data-i18n-title="image.rotateRight"
-              >
-                ⟳
-              </button>
-
-              <button
-                type="button"
-                class="seg-btn"
-                data-action="flip-h"
-                title="พลิกแนวนอน"
-                data-i18n-title="image.flipHorizontal"
-              >
-                ⇋
-              </button>
-
-              <button
-                type="button"
-                class="seg-btn"
-                data-action="flip-v"
-                title="พลิกแนวตั้ง"
-                data-i18n-title="image.flipVertical"
-              >
-                ⇵
-              </button>
-
-            </div>
-
-          </div>
-
-          <div class="control-row js-quality-row">
-
-            <span
-              class="spec-label"
-              data-i18n="common.quality"
-            >
-              คุณภาพ
-            </span>
-
-            <div class="quality-group">
-
-              <input
-                type="range"
-                class="js-quality"
-                min="0.3"
-                max="1"
-                step="0.01"
-                value="0.9"
-              >
-
-              <span class="mono js-quality-val">
-                90%
-              </span>
-
-            </div>
-
-          </div>
-
-          <div class="ticket-footer">
-
-            <span
-              class="status js-status mono"
-              data-i18n="image.waitingConvert"
-            >
-              รอแปลง
-            </span>
-
-            <div class="ticket-actions">
-
-              <button
-                type="button"
-                class="btn btn-small btn-primary js-convert-btn"
-              >
-                <span data-i18n="image.convertTo">
-                  แปลง
-                </span>
-              </button>
-
-              <a
-                class="btn btn-small btn-accent js-download-btn hidden"
-                download
-              >
-                <span data-i18n="common.download">
-                  ดาวน์โหลด
-                </span>
-              </a>
-
-              <button
-                type="button"
-                class="btn btn-small btn-ghost js-remove-btn"
-                title="ลบ"
-                aria-label="ลบรายการนี้"
-                data-i18n-title="common.delete"
-                data-i18n-aria-label="common.delete"
-              >
-                ✕
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </article>
-
-  </template>
-
-</section>
-
-<!-- ==========================================================
-     IMAGE: CROP
-     ========================================================== -->
-
-<section
-  class="tool-panel hidden"
-  id="panel-img-crop"
-  data-cat="image"
->
-
-  <p
-    class="panel-hint"
-    data-i18n="image.cropHint"
-  >
-    ลากเลือกพื้นที่ที่ต้องการบนรูปภาพเพื่อครอบตัด
-    ปรับกรอบได้อย่างอิสระ แล้วดาวน์โหลดผลลัพธ์
-  </p>
-
-  <section
-    class="dropzone"
-    id="dz-img-crop"
-    tabindex="0"
-    role="button"
-    aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์"
-    data-i18n-aria-label="dropzone.image"
-  >
-
-    <span class="mark tl"></span>
-    <span class="mark tr"></span>
-    <span class="mark bl"></span>
-    <span class="mark br"></span>
-
-    <div class="dz-inner">
-
-      <svg
-        class="dz-icon"
-        width="40"
-        height="40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.4"
-        aria-hidden="true"
-      >
-
-        <path
-          d="M6 2v14a2 2 0 0 0 2 2h14"
-        />
-
-        <path
-          d="M18 22V8a2 2 0 0 0-2-2H2"
-        />
-
-      </svg>
-
-      <div
-        class="dz-title"
-        data-i18n="image.dropImage"
-      >
-        วางรูปภาพที่นี่
-      </div>
-
-      <div
-        class="dz-note"
-        data-i18n="image.addMultiple"
-      >
-        หรือคลิกเพื่อเลือกไฟล์ —
-        เพิ่มได้หลายรูป แต่ละรูปครอบตัดแยกกัน
-      </div>
-
-    </div>
-
-    <input
-      type="file"
-      id="input-img-crop"
-      accept="image/*"
-      multiple
-      hidden
-    >
-
-  </section>
-
-  <section
-    class="jobs"
-    id="jobs-img-crop"
-  ></section>
-
-  <template id="tpl-img-crop">
-
-    <article class="ticket ticket-wide">
-
-      <div class="ticket-perf"></div>
-
-      <div class="ticket-body ticket-body-crop">
-
-        <div class="crop-stage js-crop-stage">
-
-          <img
-            class="crop-img js-crop-img"
-            alt=""
-            draggable="false"
-          />
-
-          <div
-            class="crop-box js-crop-box"
-          >
-
-            <span
-              class="crop-handle nw"
-              data-dir="nw"
-            ></span>
-
-            <span
-              class="crop-handle ne"
-              data-dir="ne"
-            ></span>
-
-            <span
-              class="crop-handle sw"
-              data-dir="sw"
-            ></span>
-
-            <span
-              class="crop-handle se"
-              data-dir="se"
-            ></span>
-
-          </div>
-
-        </div>
-
-        <div class="ticket-spec">
-
-          <div class="spec-row spec-name">
-
-            <span
-              class="spec-label"
-              data-i18n="common.file"
-            >
-              ไฟล์
-            </span>
-
-            <span
-              class="spec-value js-filename mono"
-            >
-              —
-            </span>
-
-          </div>
-
-          <div class="spec-row">
-
-            <span
-              class="spec-label"
-              data-i18n="common.original"
-            >
-              ต้นฉบับ
-            </span>
-
-            <span
-              class="spec-value mono js-origdim"
-            >
-              —
-            </span>
-
-          </div>
-
-          <div class="spec-row">
-
-            <span class="spec-label">
-
-              <span data-i18n="image.crop">
-                พื้นที่ตัด
-              </span>
-
-            </span>
-
-            <span
-              class="spec-value mono js-cropdim"
-            >
-              —
-            </span>
-
-          </div>
-
-          <div class="spec-divider"></div>
-
-          <div class="control-row">
-
-            <span
-              class="spec-label"
-              data-i18n="image.aspectRatio"
-            >
-              อัตราส่วน
-            </span>
-
-            <div class="seg-group js-ratio-group">
-
-              <button
-                type="button"
-                class="seg-btn is-active"
-                data-ratio="free"
-              >
-                <span data-i18n="image.free">
-                  อิสระ
-                </span>
-              </button>
-
-              <button
-                type="button"
-                class="seg-btn"
-                data-ratio="1:1"
-              >
-                1:1
-              </button>
-
-              <button
-                type="button"
-                class="seg-btn"
-                data-ratio="4:3"
-              >
-                4:3
-              </button>
-
-              <button
-                type="button"
-                class="seg-btn"
-                data-ratio="16:9"
-              >
-                16:9
-              </button>
-
-            </div>
-
-          </div>
-
-          <div class="control-row">
-
-            <span
-              class="spec-label"
-              data-i18n="image.saveFormat"
-            >
-              บันทึกเป็น
-            </span>
-
-            <div class="seg-group js-format-group">
-
-              <button
-                type="button"
-                class="seg-btn is-active"
-                data-format="image/png"
-              >
-                PNG
-              </button>
-
-              <button
-                type="button"
-                class="seg-btn"
-                data-format="image/jpeg"
-              >
-                JPG
-              </button>
-
-            </div>
-
-          </div>
-
-          <div class="ticket-footer">
-
-            <span
-              class="status js-status mono"
-              data-i18n="image.waitingCrop"
-            >
-              ลากกรอบเพื่อครอบตัด
-            </span>
-
-            <div class="ticket-actions">
-
-              <button
-                type="button"
-                class="btn btn-small btn-primary js-crop-btn"
-              >
-                <span data-i18n="image.crop">
-                  ตัด
-                </span>
-              </button>
-
-              <a
-                class="btn btn-small btn-accent js-download-btn hidden"
-                download
-              >
-                <span data-i18n="common.download">
-                  ดาวน์โหลด
-                </span>
-              </a>
-
-              <button
-                type="button"
-                class="btn btn-small btn-ghost js-remove-btn"
-                title="ลบ"
-                data-i18n-title="common.delete"
-              >
-                ✕
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </article>
-
-  </template>
-
-</section>
-
-<!-- ==========================================================
-     IMAGE: BACKGROUND REMOVAL
-     ========================================================== -->
-
-<section
-  class="tool-panel hidden"
-  id="panel-img-bgremove"
-  data-cat="image"
->
-
-  <p
-    class="panel-hint"
-    data-i18n="image.bgRemoveHint"
-  >
-    ลบพื้นหลังรูปภาพอัตโนมัติด้วย AI —
-    ประมวลผลในเบราว์เซอร์ทั้งหมด
-    ไม่มีการอัปโหลดรูปขึ้นเซิร์ฟเวอร์
-  </p>
-
-  <div class="model-note">
-
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.6"
-      aria-hidden="true"
-    >
-
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-      />
-
-      <path
-        d="M12 16v-4"
-      />
-
-      <path
-        d="M12 8h.01"
-      />
-
-    </svg>
-
-    <span data-i18n="image.modelFirstUse">
-      ครั้งแรกที่ใช้งานจะโหลดโมเดล AI ขนาดประมาณ 40MB
-      (ครั้งเดียว เบราว์เซอร์จะแคชไว้ให้ครั้งถัดไปเร็วขึ้น)
-      และใช้เวลาประมวลผลต่อรูปสักครู่ขึ้นอยู่กับสเปกเครื่อง
-    </span>
-
-  </div>
-
-  <section
-    class="dropzone"
-    id="dz-img-bgremove"
-    tabindex="0"
-    role="button"
-    aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์"
-    data-i18n-aria-label="dropzone.image"
-  >
-
-    <span class="mark tl"></span>
-    <span class="mark tr"></span>
-    <span class="mark bl"></span>
-    <span class="mark br"></span>
-
-    <div class="dz-inner">
-
-      <svg
-        class="dz-icon"
-        width="40"
-        height="40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.4"
-        aria-hidden="true"
-      >
-
-        <path
-          d="M3 3l18 18"
-        />
-
-        <path
-          d="M10.5 4.5H19a2 2 0 0 1 2 2v11.5"
-        />
-
-        <path
-          d="M4 7v11a2 2 0 0 0 2 2h11.5"
-        />
-
-        <circle
-          cx="9"
-          cy="10"
-          r="1.5"
-        />
-
-      </svg>
-
-      <div
-        class="dz-title"
-        data-i18n="image.dropImage"
-      >
-        วางรูปภาพที่นี่
-      </div>
-
-      <div
-        class="dz-note"
-        data-i18n="image.outputTransparent"
-      >
-        หรือคลิกเพื่อเลือกไฟล์ —
-        เพิ่มได้หลายรูป ผลลัพธ์เป็น PNG พื้นหลังโปร่งใส
-      </div>
-
-    </div>
-
-    <input
-      type="file"
-      id="input-img-bgremove"
-      accept="image/*"
-      multiple
-      hidden
-    >
-
-  </section>
-
-  <section
-    class="bulkbar hidden"
-    id="bulk-img-bgremove"
-  >
-
-    <div class="bulk-left">
-
-      <span
-        class="count-label"
-        data-i18n="image.task"
-      >
-        งาน:
-      </span>
-
-      <span
-        class="count"
-        id="count-img-bgremove"
-      >
-        0
-      </span>
-
-      <span
-        class="count-label"
-        data-i18n="common.items"
-      >
-        รายการ
-      </span>
-
-    </div>
-
-    <div class="bulk-right">
-
-      <button
-        class="btn btn-ghost"
-        id="clearAll-img-bgremove"
-        type="button"
-      >
-        <span data-i18n="common.clear">
-          ล้างทั้งหมด
-        </span>
-      </button>
-
-      <button
-        class="btn btn-primary"
-        id="processAll-img-bgremove"
-        type="button"
-      >
-        <span data-i18n="image.removeBackgroundAll">
-          ลบพื้นหลังทั้งหมด
-        </span>
-      </button>
-
-      <button
-        class="btn btn-accent hidden"
-        id="downloadZip-img-bgremove"
-        type="button"
-      >
-        <span data-i18n="image.downloadZip">
-          ดาวน์โหลดทั้งหมด (.zip)
-        </span>
-      </button>
-
-    </div>
-
-  </section>
-
-  <section
-    class="jobs"
-    id="jobs-img-bgremove"
-  ></section>
-
-  <template id="tpl-img-bgremove">
-
-    <article class="ticket">
-
-      <div class="ticket-perf"></div>
-
-      <div class="ticket-body ticket-body-bg">
-
-        <div class="thumb-pair">
-
-          <div class="ticket-thumb js-before">
-
-            <img alt="">
-
-          </div>
-
-          <svg
-            class="thumb-arrow"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-          >
-
-            <path
-              d="M5 12h14"
-            />
-
-            <path
-              d="M13 6l6 6-6 6"
-            />
-
-          </svg>
-
-          <div class="ticket-thumb js-after hidden">
-
-            <img alt="">
-
-          </div>
-
-        </div>
-
-        <div class="ticket-spec">
-
-          <div class="spec-row spec-name">
-
-            <span
-              class="spec-label"
-              data-i18n="common.file"
-            >
-              ไฟล์
-            </span>
-
-            <span
-              class="spec-value js-filename mono"
-            >
-              —
-            </span>
-
-          </div>
-
-          <div class="spec-row">
-
-            <span
-              class="spec-label"
-              data-i18n="common.original"
-            >
-              ต้นฉบับ
-            </span>
-
-            <span
-              class="spec-value mono js-origsize"
-            >
-              —
-            </span>
-
-          </div>
-
-          <div class="spec-divider"></div>
-
-          <div class="progress-track">
-
-            <div
-              class="progress-fill js-progress"
-            ></div>
-
-          </div>
-
-          <div class="ticket-footer">
-
-            <span
-              class="status js-status mono"
-              data-i18n="image.waitingBackground"
-            >
-              รอลบพื้นหลัง
-            </span>
-
-            <div class="ticket-actions">
-
-              <button
-                type="button"
-                class="btn btn-small btn-primary js-remove-bg-btn"
-              >
-                <span data-i18n="image.removeBackground">
-                  ลบพื้นหลัง
-                </span>
-              </button>
-
-              <a
-                class="btn btn-small btn-accent js-download-btn hidden"
-                download
-              >
-                <span data-i18n="common.download">
-                  ดาวน์โหลด
-                </span>
-              </a>
-
-              <button
-                type="button"
-                class="btn btn-small btn-ghost js-remove-job-btn"
-                title="ลบ"
-                data-i18n-title="common.delete"
-              >
-                ✕
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </article>
-
-  </template>
-
-</section>
-
-<!-- ==========================================================
-     IMAGE: COMPRESS
-     ========================================================== -->
-
-<section
-  class="tool-panel hidden"
-  id="panel-img-compress"
-  data-cat="image"
->
-
-  <p
-    class="panel-hint"
-    data-i18n="image.compressHint"
-  >
-    ลดขนาดไฟล์รูปภาพโดยปรับคุณภาพและขนาดภาพ
-    ประมวลผลทั้งหมดในเบราว์เซอร์ของคุณ
-  </p>
-
-  <section
-    class="dropzone"
-    id="dz-img-compress"
-    tabindex="0"
-    role="button"
-    aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์"
-    data-i18n-aria-label="dropzone.image"
-  >
-
-    <span class="mark tl"></span>
-    <span class="mark tr"></span>
-    <span class="mark bl"></span>
-    <span class="mark br"></span>
-
-    <div class="dz-inner">
-
-      <svg
-        class="dz-icon"
-        width="40"
-        height="40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.4"
-        aria-hidden="true"
-      >
-
-        <rect
-          x="3"
-          y="3"
-          width="18"
-          height="18"
-          rx="1.5"
-        />
-
-        <circle
-          cx="8.5"
-          cy="8.5"
-          r="1.5"
-        />
-
-        <path
-          d="M21 15l-5-5-9 9"
-        />
-
-      </svg>
-
-      <div
-        class="dz-title"
-        data-i18n="image.dropImage"
-      >
-        วางรูปภาพที่นี่
-      </div>
-
-      <div
-        class="dz-note"
-        data-i18n="image.compressSupported"
-      >
-        หรือคลิกเพื่อเลือกไฟล์ —
-        รองรับ JPG · PNG · WEBP และหลายไฟล์พร้อมกัน
-      </div>
-
-    </div>
-
-    <input
-      type="file"
-      id="input-img-compress"
-      accept="image/jpeg,image/png,image/webp"
-      multiple
-      hidden
-    >
-
-  </section>
-
-  <section
-    class="bulkbar hidden"
-    id="bulk-img-compress"
-  >
-
-    <div class="bulk-left">
-
-      <span
-        class="count-label"
-        data-i18n="image.task"
-      >
-        งาน:
-      </span>
-
-      <span
-        class="count"
-        id="count-img-compress"
-      >
-        0
-      </span>
-
-      <span
-        class="count-label"
-        data-i18n="common.items"
-      >
-        รายการ
-      </span>
-
-    </div>
-
-    <div class="bulk-right">
-
-      <label class="field-inline">
-
-        <span data-i18n="common.quality">
-          คุณภาพ
-        </span>
-
-        <select
-          id="quality-img-compress"
-          class="mono-select"
-        >
-
-          <option value="0.95">
-            95%
-          </option>
-
-          <option
-            value="0.85"
-            selected
-          >
-            85%
-          </option>
-
-          <option value="0.75">
-            75%
-          </option>
-
-          <option value="0.65">
-            65%
-          </option>
-
-          <option value="0.50">
-            50%
-          </option>
-
-        </select>
-
-      </label>
-
-      <label class="field-inline">
-
-        <span data-i18n="common.height">
-          สูงสุดด้านยาว
-        </span>
-
-        <select
-          id="maxsize-img-compress"
-          class="mono-select"
-        >
-
-          <option
-            value="0"
-            data-i18n="common.unlimited"
-          >
-            ไม่จำกัด
-          </option>
-
-          <option value="4096">
-            4096 px
-          </option>
-
-          <option
-            value="2560"
-            selected
-          >
-            2560 px
-          </option>
-
-          <option value="1920">
-            1920 px
-          </option>
-
-          <option value="1280">
-            1280 px
-          </option>
-
-        </select>
-
-      </label>
-
-      <label class="field-inline">
-
-        <span data-i18n="common.format">
-          รูปแบบ
-        </span>
-
-        <select
-          id="format-img-compress"
-          class="mono-select"
-        >
-
-          <option
-            value="image/jpeg"
-            selected
-          >
-            JPG
-          </option>
-
-          <option value="image/webp">
-            WEBP
-          </option>
-
-          <option value="image/png">
-            PNG
-          </option>
-
-        </select>
-
-      </label>
-
-      <button
-        class="btn btn-ghost"
-        id="clearAll-img-compress"
-        type="button"
-      >
-        <span data-i18n="common.clear">
-          ล้างทั้งหมด
-        </span>
-      </button>
-
-      <button
-        class="btn btn-primary"
-        id="compressAll-img-compress"
-        type="button"
-      >
-        <span data-i18n="image.compressAll">
-          ลดขนาดทั้งหมด
-        </span>
-      </button>
-
-      <button
-        class="btn btn-accent hidden"
-        id="downloadZip-img-compress"
-        type="button"
-      >
-        <span data-i18n="image.downloadZip">
-          ดาวน์โหลดทั้งหมด (.zip)
-        </span>
-      </button>
-
-    </div>
-
-  </section>
-
-  <section
-    class="jobs"
-    id="jobs-img-compress"
-  ></section>
-
-  <template id="tpl-img-compress">
-
-    <article class="ticket">
-
-      <div class="ticket-perf"></div>
-
-      <div class="ticket-body">
-
-        <div class="ticket-thumb">
-
-          <img
-            class="js-preview"
-            alt=""
-          >
-
-        </div>
-
-        <div class="ticket-spec">
-
-          <div class="spec-row spec-name">
-
-            <span
-              class="spec-label"
-              data-i18n="common.file"
-            >
-              ไฟล์
-            </span>
-
-            <span
-              class="spec-value js-filename mono"
-            >
-              —
-            </span>
-
-          </div>
-
-          <div class="spec-row">
-
-            <span
-              class="spec-label"
-              data-i18n="common.original"
-            >
-              ต้นฉบับ
-            </span>
-
-            <span class="spec-value mono">
-
-              <span class="js-origdim">
-                —
-              </span>
-
-              ·
-
-              <span class="js-origsize">
-                —
-              </span>
-
-            </span>
-
-          </div>
-
-          <div class="spec-divider"></div>
-
-          <div class="spec-row">
-
-            <span
-              class="spec-label"
-              data-i18n="image.afterCompress"
-            >
-              หลังลด
-            </span>
-
-            <span class="spec-value mono">
-
-              <span class="js-newdim">
-                —
-              </span>
-
-              ·
-
-              <span class="js-newsize">
-                —
-              </span>
-
-            </span>
-
-          </div>
-
-          <div class="control-row">
-
-            <span
-              class="spec-label"
-              data-i18n="image.savings"
-            >
-              ลดไป
-            </span>
-
-            <span
-              class="spec-value mono js-saving"
-            >
-              —
-            </span>
-
-          </div>
-
-          <div class="progress-track">
-
-            <div
-              class="progress-fill js-progress"
-            ></div>
-
-          </div>
-
-          <div class="ticket-footer">
-
-            <span
-              class="status js-status mono"
-              data-i18n="image.waitingCompress"
-            >
-              รอลดขนาด
-            </span>
-
-            <div class="ticket-actions">
-
-              <button
-                type="button"
-                class="btn btn-small btn-primary js-compress-btn"
-              >
-                <span data-i18n="image.compress">
-                  ลดขนาด
-                </span>
-              </button>
-
-              <a
-                class="btn btn-small btn-accent js-download-btn hidden"
-                download
-              >
-                <span data-i18n="common.download">
-                  ดาวน์โหลด
-                </span>
-              </a>
-
-              <button
-                type="button"
-                class="btn btn-small btn-ghost js-remove-btn"
-                title="ลบ"
-                data-i18n-title="common.delete"
-              >
-                ✕
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </article>
-
-  </template>
-
-</section>
-
-<!-- ==========================================================
-     PDF: IMAGES -> PDF
-     ========================================================== -->
-
-<section
-  class="tool-panel hidden"
-  id="panel-pdf-from-images"
-  data-cat="pdf"
->
-
-  <p
-    class="panel-hint"
-    data-i18n="pdf.fromImagesHint"
-  >
-    รวมรูปภาพหลายไฟล์เป็น PDF เล่มเดียว
-    เรียงลำดับหน้าได้ตามใจ
-  </p>
-
-  <section
-    class="dropzone"
-    id="dz-pdf-from-images"
-    tabindex="0"
-    role="button"
-    aria-label="ลากไฟล์รูปภาพมาวางที่นี่"
-    data-i18n-aria-label="dropzone.imageOnly"
-  >
-
-    <span class="mark tl"></span>
-    <span class="mark tr"></span>
-    <span class="mark bl"></span>
-    <span class="mark br"></span>
-
-    <div class="dz-inner">
-
-      <svg
-        class="dz-icon"
-        width="40"
-        height="40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.4"
-        aria-hidden="true"
-      >
-
-        <rect
-          x="3"
-          y="3"
-          width="18"
-          height="18"
-          rx="1.5"
-        />
-
-        <circle
-          cx="8.5"
-          cy="8.5"
-          r="1.5"
-        />
-
-        <path
-          d="M21 15l-5-5-9 9"
-        />
-
-      </svg>
-
-      <div
-        class="dz-title"
-        data-i18n="image.dropImage"
-      >
-        วางรูปภาพที่นี่
-      </div>
-
-      <div
-        class="dz-note"
-        data-i18n="pdf.imagesToPdfOrder"
-      >
-        เพิ่มได้หลายไฟล์ —
-        ลำดับที่เพิ่มจะเป็นลำดับหน้าใน PDF
-        (ปรับได้ทีหลัง)
-      </div>
-
-    </div>
-
-    <input
-      type="file"
-      id="input-pdf-from-images"
-      accept="image/*"
-      multiple
-      hidden
-    >
-
-  </section>
-
-  <section
-    class="bulkbar hidden"
-    id="bulk-pdf-from-images"
-  >
-
-    <div class="bulk-left">
-
-      <span
-        class="count-label"
-        data-i18n="common.images"
-      >
-        รูป:
-      </span>
-
-      <span
-        class="count"
-        id="count-pdf-from-images"
-      >
-        0
-      </span>
-
-      <span
-        class="count-label"
-        data-i18n="common.files"
-      >
-        ไฟล์
-      </span>
-
-    </div>
-
-    <div class="bulk-right">
-
-      <label class="field-inline">
-
-        <span data-i18n="pdf.pageSize">
-          ขนาดหน้า
-        </span>
-
-        <select
-          id="pagesize-pdf-from-images"
-          class="mono-select"
-        >
-
-          <option
-            value="fit"
-            selected
-            data-i18n="pdf.fitToImage"
-          >
-            พอดีกับรูปภาพ
-          </option>
-
-          <option value="a4">
-            A4
-          </option>
-
-          <option value="letter">
-            Letter
-          </option>
-
-        </select>
-
-      </label>
-
-      <button
-        class="btn btn-ghost"
-        id="clearAll-pdf-from-images"
-        type="button"
-      >
-        <span data-i18n="common.clear">
-          ล้างทั้งหมด
-        </span>
-      </button>
-
-      <button
-        class="btn btn-primary"
-        id="build-pdf-from-images"
-        type="button"
-      >
-        <span data-i18n="pdf.buildPdf">
-          สร้าง PDF
-        </span>
-      </button>
-
-    </div>
-
-  </section>
-
-  <ul
-    class="filelist"
-    id="list-pdf-from-images"
-  ></ul>
-
-  <div
-    class="result-strip hidden"
-    id="result-pdf-from-images"
-  >
-
-    <span
-      class="status is-ready mono"
-      id="resultStatus-pdf-from-images"
-      data-i18n="pdf.createdSuccess"
-    >
-      สร้าง PDF สำเร็จ
-    </span>
-
-    <a
-      class="btn btn-accent"
-      id="resultDownload-pdf-from-images"
-      download
-    >
-      <span data-i18n="pdf.downloadPdf">
-        ดาวน์โหลด PDF
-      </span>
-    </a>
-
-  </div>
-
-  <template id="tpl-file-row">
-
-    <li class="file-row">
-
-      <span class="file-thumb">
-
-        <img alt="">
-
-      </span>
-
-      <span
-        class="file-name mono js-name"
-      >
-        —
-      </span>
-
-      <span
-        class="file-meta mono js-meta"
-      >
-        —
-      </span>
-
-      <span class="file-actions">
-
-        <button
-          type="button"
-          class="icon-btn js-move-up"
-          title="ย้ายขึ้น"
-          data-i18n-title="pdf.moveUp"
-        >
-          ↑
-        </button>
-
-        <button
-          type="button"
-          class="icon-btn js-move-down"
-          title="ย้ายลง"
-          data-i18n-title="pdf.moveDown"
-        >
-          ↓
-        </button>
-
-        <button
-          type="button"
-          class="icon-btn js-remove"
-          title="ลบ"
-          data-i18n-title="common.delete"
-        >
-          ✕
-        </button>
-
-      </span>
-
-    </li>
-
-  </template>
-
-</section>
-
-<!-- ==========================================================
-     PDF: PDF -> IMAGES
-     ========================================================== -->
-
-<section
-  class="tool-panel hidden"
-  id="panel-pdf-to-images"
-  data-cat="pdf"
->
-
-  <p
-    class="panel-hint"
-    data-i18n="pdf.toImagesHint"
-  >
-    แปลงทุกหน้าของไฟล์ PDF ให้เป็นไฟล์รูปภาพ
-    เลือกนามสกุลและความละเอียดได้
-  </p>
-
-  <section
-    class="dropzone"
-    id="dz-pdf-to-images"
-    tabindex="0"
-    role="button"
-    aria-label="ลากไฟล์ PDF มาวางที่นี่"
-    data-i18n-aria-label="dropzone.pdf"
-  >
-
-    <span class="mark tl"></span>
-    <span class="mark tr"></span>
-    <span class="mark bl"></span>
-    <span class="mark br"></span>
-
-    <div class="dz-inner">
-
-      <svg
-        class="dz-icon"
-        width="40"
-        height="40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.4"
-        aria-hidden="true"
-      >
-
-        <path
-          d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-        />
-
-        <path
-          d="M14 2v6h6"
-        />
-
-      </svg>
-
-      <div
-        class="dz-title"
-        data-i18n="pdf.dropPdf"
-      >
-        วางไฟล์ PDF ที่นี่
-      </div>
-
-      <div class="dz-note">
-
-        <span data-i18n="pdf.clickChoosePdf">
-          หรือคลิกเพื่อเลือกไฟล์ —
-        </span>
-
-        <span data-i18n="pdf.oneFile">
-          รองรับได้ทีละไฟล์
-        </span>
-
-      </div>
-
-    </div>
-
-    <input
-      type="file"
-      id="input-pdf-to-images"
-      accept="application/pdf"
-      hidden
-    >
-
-  </section>
-
-  <section
-    class="bulkbar hidden"
-    id="bulk-pdf-to-images"
-  >
-
-    <div class="bulk-left">
-
-      <span
-        class="count-label mono js-pdfname"
-      >
-        —
-      </span>
-
-    </div>
-
-    <div class="bulk-right">
-
-      <label class="field-inline">
-
-        <span data-i18n="pdf.imageFormat">
-          นามสกุล
-        </span>
-
-        <select
-          id="format-pdf-to-images"
-          class="mono-select"
-        >
-
-          <option value="image/png">
-            PNG
-          </option>
-
-          <option value="image/jpeg">
-            JPG
-          </option>
-
-        </select>
-
-      </label>
-
-      <label class="field-inline">
-
-        <span data-i18n="pdf.resolution">
-          ความละเอียด
-        </span>
-
-        <select
-          id="scale-pdf-to-images"
-          class="mono-select"
-        >
-
-          <option value="1">
-            1×
-          </option>
-
-          <option
-            value="2"
-            selected
-          >
-            2×
-          </option>
-
-          <option value="3">
-            3×
-          </option>
-
-        </select>
-
-      </label>
-
-      <button
-        class="btn btn-primary"
-        id="render-pdf-to-images"
-        type="button"
-      >
-        <span data-i18n="pdf.renderAllPages">
-          แปลงทุกหน้า
-        </span>
-      </button>
-
-      <button
-        class="btn btn-accent hidden"
-        id="downloadZip-pdf-to-images"
-        type="button"
-      >
-        <span data-i18n="common.downloadAll">
-          ดาวน์โหลดทั้งหมด (.zip)
-        </span>
-      </button>
-
-    </div>
-
-  </section>
-
-  <div
-    class="convert-progress hidden"
-    id="progress-pdf-to-images"
-  >
-
-    <div class="progress-track">
-
-      <div class="progress-fill js-progress"></div>
-
-    </div>
-
-    <span
-      class="mono js-progress-label"
-      data-i18n="pdf.pageProgress"
-    >
-      หน้า 0/0
-    </span>
-
-  </div>
-
-  <div
-    class="page-grid"
-    id="grid-pdf-to-images"
-  ></div>
-
-  <template id="tpl-page-thumb">
-
-    <article class="page-card">
-
-      <div class="page-thumb">
-
-        <img alt="">
-
-      </div>
-
-      <div class="page-foot">
-
-        <span
-          class="mono js-pagelabel"
-          data-i18n="common.page"
-        >
-          หน้า 1
-        </span>
-
-        <a
-          class="btn btn-small btn-accent js-download"
-          download
-        >
-          <span data-i18n="common.download">
-            ดาวน์โหลด
-          </span>
-        </a>
-
-      </div>
-
-    </article>
-
-  </template>
-
-</section>
-
-<!-- ==========================================================
-     PDF: PAGE MANAGER
-     ========================================================== -->
-
-<section
-  class="tool-panel hidden"
-  id="panel-pdf-pages"
-  data-cat="pdf"
->
-
-  <p
-    class="panel-hint"
-    data-i18n="pdf.pagesHint"
-  >
-    ลบหน้า เรียงลำดับใหม่
-    หรือแยกเฉพาะหน้าที่เลือกออกมาเป็น PDF ใหม่
-  </p>
-
-  <section
-    class="dropzone"
-    id="dz-pdf-pages"
-    tabindex="0"
-    role="button"
-    aria-label="ลากไฟล์ PDF มาวางที่นี่"
-    data-i18n-aria-label="dropzone.pdf"
-  >
-
-    <span class="mark tl"></span>
-    <span class="mark tr"></span>
-    <span class="mark bl"></span>
-    <span class="mark br"></span>
-
-    <div class="dz-inner">
-
-      <svg
-        class="dz-icon"
-        width="40"
-        height="40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.4"
-        aria-hidden="true"
-      >
-
-        <path
-          d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-        />
-
-        <path
-          d="M14 2v6h6"
-        />
-
-      </svg>
-
-      <div
-        class="dz-title"
-        data-i18n="pdf.dropPdf"
-      >
-        วางไฟล์ PDF ที่นี่
-      </div>
-
-      <div
-        class="dz-note"
-        data-i18n="pdf.oneFile"
-      >
-        หรือคลิกเพื่อเลือกไฟล์ — ทีละไฟล์
-      </div>
-
-    </div>
-
-    <input
-      type="file"
-      id="input-pdf-pages"
-      accept="application/pdf"
-      hidden
-    >
-
-  </section>
-
-  <section
-    class="bulkbar hidden"
-    id="bulk-pdf-pages"
-  >
-
-    <div class="bulk-left">
-
-      <span
-        class="count-label mono js-pdfname"
-      >
-        —
-      </span>
-
-      <span class="count-label">
-        ·
-      </span>
-
-      <span
-        class="count"
-        id="count-pdf-pages"
-      >
-        0
-      </span>
-
-      <span
-        class="count-label"
-        data-i18n="common.pages"
-      >
-        หน้า
-      </span>
-
-    </div>
-
-    <div class="bulk-right">
-
-      <label class="field-inline">
-
-        <input
-          type="checkbox"
-          id="selectAll-pdf-pages"
-        />
-
-        <span data-i18n="common.selectAll">
-          เลือกทั้งหมด
-        </span>
-
-      </label>
-
-      <button
-        class="btn btn-primary"
-        id="download-pdf-pages"
-        type="button"
-      >
-        <span data-i18n="pdf.downloadPdfOrdered">
-          ดาวน์โหลด PDF (ตามลำดับ/ลบแล้ว)
-        </span>
-      </button>
-
-      <button
-        class="btn btn-accent"
-        id="downloadSelected-pdf-pages"
-        type="button"
-      >
-        <span data-i18n="pdf.downloadSelected">
-          ดาวน์โหลดเฉพาะที่เลือก
-        </span>
-      </button>
-
-    </div>
-
-  </section>
-
-  <p
-    class="panel-note hidden"
-    id="note-pdf-pages"
-    data-i18n="pdf.manageInstructions"
-  >
-    ทำเครื่องหมาย ✕ เพื่อลบหน้าออกจากไฟล์หลัก
-    ใช้ ↑ ↓ เพื่อสลับลำดับ
-    และติ๊กช่องเพื่อเลือกหน้าสำหรับดาวน์โหลดแยก
-  </p>
-
-  <div
-    class="page-grid"
-    id="grid-pdf-pages"
-  ></div>
-
-  <template id="tpl-page-manage">
-
-    <article
-      class="page-card page-card-manage"
-    >
-
-      <label class="page-check">
-
-        <input
-          type="checkbox"
-          class="js-select"
-        >
-
-      </label>
-
-      <div class="page-thumb">
-
-        <img alt="">
-
-      </div>
-
-      <div class="page-foot">
-
-        <span
-          class="mono js-pagelabel"
-        >
-          หน้า 1
-        </span>
-
-        <span class="page-move-group">
-
-          <button
-            type="button"
-            class="icon-btn js-move-up"
-            title="ย้ายขึ้น"
-            data-i18n-title="pdf.moveUp"
-          >
-            ↑
-          </button>
-
-          <button
-            type="button"
-            class="icon-btn js-move-down"
-            title="ย้ายลง"
-            data-i18n-title="pdf.moveDown"
-          >
-            ↓
-          </button>
-
-          <button
-            type="button"
-            class="icon-btn js-delete"
-            title="ลบหน้านี้"
-            data-i18n-title="pdf.deleteThisPage"
-          >
-            ✕
-          </button>
-
-        </span>
-
-      </div>
-
-    </article>
-
-  </template>
-
-</section>
-
-<!-- ==========================================================
-     PDF: MERGE
-     ========================================================== -->
-
-<section
-  class="tool-panel hidden"
-  id="panel-pdf-merge"
-  data-cat="pdf"
->
-
-  <p
-    class="panel-hint"
-    data-i18n="pdf.mergeHint"
-  >
-    รวมไฟล์ PDF หลายไฟล์เป็นเล่มเดียว
-    เรียงลำดับไฟล์ได้ก่อนรวม
-  </p>
-
-  <section
-    class="dropzone"
-    id="dz-pdf-merge"
-    tabindex="0"
-    role="button"
-    aria-label="ลากไฟล์ PDF หลายไฟล์มาวางที่นี่"
-    data-i18n-aria-label="dropzone.pdfMultiple"
-  >
-
-    <span class="mark tl"></span>
-    <span class="mark tr"></span>
-    <span class="mark bl"></span>
-    <span class="mark br"></span>
-
-    <div class="dz-inner">
-
-      <svg
-        class="dz-icon"
-        width="40"
-        height="40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.4"
-        aria-hidden="true"
-      >
-
-        <path
-          d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-        />
-
-        <path
-          d="M14 2v6h6"
-        />
-
-      </svg>
-
-      <div
-        class="dz-title"
-        data-i18n="pdf.dropPdf"
-      >
-        วางไฟล์ PDF ที่นี่
-      </div>
-
-      <div class="dz-note">
-
-        <span data-i18n="pdf.multipleFiles">
-          เพิ่มได้หลายไฟล์ —
-        </span>
-
-        <span data-i18n="pdf.mergeOrder">
-          เรียงลำดับก่อนรวมได้ด้านล่าง
-        </span>
-
-      </div>
-
-    </div>
-
-    <input
-      type="file"
-      id="input-pdf-merge"
-      accept="application/pdf"
-      multiple
-      hidden
-    >
-
-  </section>
-
-  <section
-    class="bulkbar hidden"
-    id="bulk-pdf-merge"
-  >
-
-    <div class="bulk-left">
-
-      <span
-        class="count-label"
-        data-i18n="common.files"
-      >
-        ไฟล์:
-      </span>
-
-      <span
-        class="count"
-        id="count-pdf-merge"
-      >
-        0
-      </span>
-
-    </div>
-
-    <div class="bulk-right">
-
-      <button
-        class="btn btn-ghost"
-        id="clearAll-pdf-merge"
-        type="button"
-      >
-        <span data-i18n="common.clear">
-          ล้างทั้งหมด
-        </span>
-      </button>
-
-      <button
-        class="btn btn-primary"
-        id="build-pdf-merge"
-        type="button"
-      >
-        <span data-i18n="pdf.mergeFiles">
-          รวมไฟล์
-        </span>
-      </button>
-
-    </div>
-
-  </section>
-
-  <ul
-    class="filelist"
-    id="list-pdf-merge"
-  ></ul>
-
-  <div
-    class="result-strip hidden"
-    id="result-pdf-merge"
-  >
-
-    <span
-      class="status is-ready mono"
-      data-i18n="pdf.mergedSuccess"
-    >
-      รวมไฟล์สำเร็จ
-    </span>
-
-    <a
-      class="btn btn-accent"
-      id="resultDownload-pdf-merge"
-      download
-    >
-      <span data-i18n="pdf.downloadMergedPdf">
-        ดาวน์โหลด PDF ที่รวมแล้ว
-      </span>
-    </a>
-
-  </div>
-
-</section>
-
-<!-- ==========================================================
-     PDF: WATERMARK
-     ========================================================== -->
-
-<section
-  class="tool-panel hidden"
-  id="panel-pdf-watermark"
-  data-cat="pdf"
->
-
-  <p
-    class="panel-hint"
-    data-i18n="pdf.watermarkHint"
-  >
-    ใส่ลายน้ำข้อความหรือรูป PNG ทับทุกหน้าของ PDF
-    รองรับข้อความภาษาไทยและ PNG พื้นหลังโปร่งใส
-  </p>
-
-  <section
-    class="dropzone"
-    id="dz-pdf-watermark"
-    tabindex="0"
-    role="button"
-    aria-label="ลากไฟล์ PDF มาวางที่นี่"
-    data-i18n-aria-label="dropzone.pdf"
-  >
-
-    <span class="mark tl"></span>
-    <span class="mark tr"></span>
-    <span class="mark bl"></span>
-    <span class="mark br"></span>
-
-    <div class="dz-inner">
-
-      <svg
-        class="dz-icon"
-        width="40"
-        height="40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.4"
-        aria-hidden="true"
-      >
-
-        <path
-          d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-        />
-
-        <path
-          d="M14 2v6h6"
-        />
-
-      </svg>
-
-      <div
-        class="dz-title"
-        data-i18n="pdf.dropPdf"
-      >
-        วางไฟล์ PDF ที่นี่
-      </div>
-
-      <div
-        class="dz-note"
-        data-i18n="pdf.oneFile"
-      >
-        หรือคลิกเพื่อเลือกไฟล์ — ทีละไฟล์
-      </div>
-
-    </div>
-
-    <input
-      type="file"
-      id="input-pdf-watermark"
-      accept="application/pdf"
-      hidden
-    >
-
-  </section>
-
-  <section
-    class="form-card hidden"
-    id="form-pdf-watermark"
-  >
-
-    <div
-      class="mono js-pdfname"
-      style="margin-bottom:10px;"
-    >
-      —
-    </div>
-
-    <div class="form-grid">
-
-      <label class="form-field">
-
-        <span data-i18n="pdf.watermarkText">
-          ข้อความลายน้ำ
-        </span>
-
-        <input
-          type="text"
-          id="text-pdf-watermark"
-          value="ตัวอย่างเอกสาร"
-          placeholder="เว้นว่างได้ หากใช้รูปอย่างเดียว"
-          data-i18n-placeholder="pdf.watermarkImagePlaceholder"
-        />
-
-      </label>
-
-      <label class="form-field">
-
-        <span data-i18n="pdf.watermarkImage">
-          รูปลายน้ำ PNG
-        </span>
-
-        <input
-          type="file"
-          id="image-pdf-watermark"
-          accept="image/png"
-        />
-
-        <span
-          class="mono js-watermark-image-name"
-          style="font-size:12px; opacity:.65;"
-          data-i18n="pdf.noImageSelected"
-        >
-          ยังไม่ได้เลือกรูป
-        </span>
-
-      </label>
-
-      <label class="form-field">
-
-        <span data-i18n="pdf.fontSize">
-          ขนาดตัวอักษร
-        </span>
-
-        <input
-          type="number"
-          id="size-pdf-watermark"
-          value="48"
-          min="8"
-          max="200"
-        />
-
-      </label>
-
-      <label class="form-field">
-
-        <span data-i18n="pdf.watermarkImageSize">
-          ขนาดรูปลายน้ำ
-        </span>
-
-        <span class="quality-group">
-
-          <input
-            type="range"
-            id="image-size-pdf-watermark"
-            min="40"
-            max="600"
-            step="10"
-            value="180"
-          />
-
-          <span
-            class="mono js-image-size-val"
-          >
-            180
-          </span>
-
-        </span>
-
-      </label>
-
-      <label class="form-field">
-
-        <span data-i18n="pdf.opacity">
-          ความโปร่งใส
-        </span>
-
-        <span class="quality-group">
-
-          <input
-            type="range"
-            id="opacity-pdf-watermark"
-            min="0.05"
-            max="1"
-            step="0.05"
-            value="0.25"
-          />
-
-          <span class="mono js-opacity-val">
-            25%
-          </span>
-
-        </span>
-
-      </label>
-
-      <label class="form-field">
-
-        <span data-i18n="pdf.angle">
-          มุมหมุน (องศา)
-        </span>
-
-        <input
-          type="number"
-          id="angle-pdf-watermark"
-          value="45"
-          min="-90"
-          max="90"
-        />
-
-      </label>
-
-    </div>
-
-    <p
-      class="panel-note"
-      data-i18n="pdf.watermarkCombination"
-    >
-      สามารถใช้ข้อความอย่างเดียว,
-      ใช้ PNG อย่างเดียว
-      หรือใช้ข้อความและ PNG พร้อมกันได้
-    </p>
-
-    <div class="ticket-footer">
-
-      <span
-        class="status js-status mono"
-        data-i18n="pdf.readyWatermark"
-      >
-        พร้อมใส่ลายน้ำ
-      </span>
-
-      <div class="ticket-actions">
-
-        <button
-          class="btn btn-primary"
-          id="apply-pdf-watermark"
-          type="button"
-        >
-          <span data-i18n="pdf.applyWatermark">
-            ใส่ลายน้ำ
-          </span>
-        </button>
-
-        <a
-          class="btn btn-accent js-download-btn hidden"
-          id="download-pdf-watermark"
-          download
-        >
-          <span data-i18n="common.download">
-            ดาวน์โหลด PDF
-          </span>
-        </a>
-
-      </div>
-
-    </div>
-
-  </section>
-
-</section>
-
-<!-- ==========================================================
-     PDF: PAGE NUMBERS
-     ========================================================== -->
-
-<section
-  class="tool-panel hidden"
-  id="panel-pdf-pagenumbers"
-  data-cat="pdf"
->
-
-  <p
-    class="panel-hint"
-    data-i18n="pdf.pageNumbersHint"
-  >
-    ใส่เลขหน้าอัตโนมัติทุกหน้าของ PDF
-    เลือกตำแหน่งและรูปแบบข้อความได้
-  </p>
-
-  <section
-    class="dropzone"
-    id="dz-pdf-pagenumbers"
-    tabindex="0"
-    role="button"
-    aria-label="ลากไฟล์ PDF มาวางที่นี่"
-    data-i18n-aria-label="dropzone.pdf"
-  >
-
-    <span class="mark tl"></span>
-    <span class="mark tr"></span>
-    <span class="mark bl"></span>
-    <span class="mark br"></span>
-
-    <div class="dz-inner">
-
-      <svg
-        class="dz-icon"
-        width="40"
-        height="40"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.4"
-        aria-hidden="true"
-      >
-
-        <path
-          d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-        />
-
-        <path
-          d="M14 2v6h6"
-        />
-
-      </svg>
-
-      <div
-        class="dz-title"
-        data-i18n="pdf.dropPdf"
-      >
-        วางไฟล์ PDF ที่นี่
-      </div>
-
-      <div
-        class="dz-note"
-        data-i18n="pdf.oneFile"
-      >
-        หรือคลิกเพื่อเลือกไฟล์ — ทีละไฟล์
-      </div>
-
-    </div>
-
-    <input
-      type="file"
-      id="input-pdf-pagenumbers"
-      accept="application/pdf"
-      hidden
-    >
-
-  </section>
-
-  <section
-    class="form-card hidden"
-    id="form-pdf-pagenumbers"
-  >
-
-    <div
-      class="mono js-pdfname"
-      style="margin-bottom:10px;"
-    >
-      —
-    </div>
-
-    <div class="form-grid">
-
-      <label class="form-field">
-
-        <span data-i18n="pdf.pageNumberFormat">
-          รูปแบบข้อความ
-        </span>
-
-        <input
-          type="text"
-          id="template-pdf-pagenumbers"
-          value="{n} / {total}"
-        />
-
-      </label>
-
-      <label class="form-field">
-
-        <span data-i18n="pdf.startCountingAt">
-          เริ่มนับที่
-        </span>
-
-        <input
-          type="number"
-          id="start-pdf-pagenumbers"
-          value="1"
-        />
-
-      </label>
-
-      <label class="form-field">
-
-        <span data-i18n="pdf.position">
-          ตำแหน่ง
-        </span>
-
-        <select
-          id="position-pdf-pagenumbers"
-          class="mono-select"
-        >
-
-          <option
-            value="bottom-center"
-            selected
-            data-i18n="pdf.bottomCenter"
-          >
-            ล่างกึ่งกลาง
-          </option>
-
-          <option
-            value="bottom-right"
-            data-i18n="pdf.bottomRight"
-          >
-            ล่างขวา
-          </option>
-
-          <option
-            value="bottom-left"
-            data-i18n="pdf.bottomLeft"
-          >
-            ล่างซ้าย
-          </option>
-
-          <option
-            value="top-center"
-            data-i18n="pdf.topCenter"
-          >
-            บนกึ่งกลาง
-          </option>
-
-          <option
-            value="top-right"
-            data-i18n="pdf.topRight"
-          >
-            บนขวา
-          </option>
-
-        </select>
-
-      </label>
-
-      <label class="form-field">
-
-        <span data-i18n="pdf.fontSize">
-          ขนาดตัวอักษร
-        </span>
-
-        <input
-          type="number"
-          id="size-pdf-pagenumbers"
-          value="11"
-          min="6"
-          max="40"
-        />
-
-      </label>
-
-    </div>
-
-    <p class="panel-note">
-
-      <span data-i18n="pdf.pageNumberHelp">
-        ใช้
-        {n}
-        แทนเลขหน้า และ
-        {total}
-        แทนจำนวนหน้าทั้งหมด
-      </span>
-
-    </p>
-
-    <div class="ticket-footer">
-
-      <span
-        class="status js-status mono"
-        data-i18n="pdf.readyPageNumber"
-      >
-        พร้อมใส่เลขหน้า
-      </span>
-
-      <div class="ticket-actions">
-
-        <button
-          class="btn btn-primary"
-          id="apply-pdf-pagenumbers"
-          type="button"
-        >
-          <span data-i18n="pdf.applyPageNumber">
-            ใส่เลขหน้า
-          </span>
-        </button>
-
-        <a
-          class="btn btn-accent js-download-btn hidden"
-          id="download-pdf-pagenumbers"
-          download
-        >
-          <span data-i18n="common.download">
-            ดาวน์โหลด PDF
-          </span>
-        </a>
-
-      </div>
-
-    </div>
-
-  </section>
-
-</section>
-
-  </main>
-
-  <!-- ============================================================
-       FOOTER
-       ============================================================ -->
-
-  <footer class="foot">
-
-<span
-  class="mono"
-  data-i18n="page.footer"
->
-  ทำงานในเบราว์เซอร์ของคุณทั้งหมด —
-  ไม่มีไฟล์ถูกส่งออกไปที่ใด
-</span>
-
-  </footer>
-
-</div>
-
-<!-- ============================================================
-     LIBRARIES
-     ============================================================ -->
-
-<script
-  src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
-></script>
-
-<script
-  src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"
-></script>
-
-<script
-  src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
-></script>
-
-<!-- ============================================================
-     PDF.JS CONFIG
-     ============================================================ -->
-
-<script>
-
-  if (
-    window.pdfjsLib
+/* global window, document, URL, JSZip */
+
+/**
+ * ============================================================
+ * KITTO WORKSHOP UTILITY
+ * AI BACKGROUND REMOVAL
+ *
+ * Transformers.js
+ * Model:
+ *   Ko033/isnet-general-use-onnx
+ *
+ * Static only:
+ *   GitHub
+ *      ↓
+ *   Cloudflare Pages
+ *      ↓
+ *   Transformers.js
+ *      ↓
+ *   Hugging Face model
+ *      ↓
+ *   Browser WebGPU / WASM
+ *
+ * ไม่มี API key
+ * ไม่มี backend
+ * ไม่มีการอัปโหลดรูปไปประมวลผลบน server
+ * ============================================================
+ */
+
+(() => {
+  'use strict';
+
+  // ============================================================
+  // GLOBALS
+  // ============================================================
+
+  const U =
+    window.Utils;
+
+  const I18n =
+    window.I18n || null;
+
+
+  // ============================================================
+  // TRANSLATION HELPER
+  // ============================================================
+
+  function t(
+    key,
+    values
   ) {
-
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-
-  }
-
-  window.KittoCanvasFactory = {
-
-    create(
-      width,
-      height
+    if (
+      I18n &&
+      typeof I18n.t === 'function'
     ) {
-
-      if (
-        width <= 0 ||
-        height <= 0
-      ) {
-
-        throw new Error(
-          "Invalid canvas size"
-        );
-
-      }
-
-      const canvas =
-        document.createElement(
-          "canvas"
-        );
-
-      canvas.width =
-        Math.ceil(
-          width
-        );
-
-      canvas.height =
-        Math.ceil(
-          height
-        );
-
-      const context =
-        canvas.getContext(
-          "2d",
-          {
-            alpha:
-              true,
-
-            willReadFrequently:
-              true
-          }
-        );
-
-      if (!context) {
-
-        throw new Error(
-          "Unable to create 2D canvas context"
-        );
-
-      }
-
-      return {
-
-        canvas,
-
-        context
-
-      };
-
-    },
-
-    reset(
-      canvasAndContext,
-      width,
-      height
-    ) {
-
-      if (
-        !canvasAndContext ||
-        !canvasAndContext.canvas
-      ) {
-
-        throw new Error(
-          "Canvas is not specified"
-        );
-
-      }
-
-      const canvas =
-        canvasAndContext.canvas;
-
-      canvas.width =
-        Math.ceil(
-          width
-        );
-
-      canvas.height =
-        Math.ceil(
-          height
-        );
-
-      const context =
-        canvas.getContext(
-          "2d",
-          {
-            alpha:
-              true,
-
-            willReadFrequently:
-              true
-          }
-        );
-
-      if (!context) {
-
-        throw new Error(
-          "Unable to create 2D canvas context"
-        );
-
-      }
-
-      canvasAndContext.context =
-        context;
-
-    },
-
-    destroy(
-      canvasAndContext
-    ) {
-
-      if (
-        !canvasAndContext ||
-        !canvasAndContext.canvas
-      ) {
-
-        return;
-
-      }
-
-      canvasAndContext.canvas.width =
-        1;
-
-      canvasAndContext.canvas.height =
-        1;
-
-      canvasAndContext.canvas =
-        null;
-
-      canvasAndContext.context =
-        null;
-
+      return I18n.t(
+        key,
+        values
+      );
     }
 
-  };
+    return String(
+      key
+    );
+  }
 
-</script>
 
-<!-- ============================================================
-     APPLICATION SCRIPTS
-     ============================================================ -->
+  // ============================================================
+  // ELEMENTS
+  // ============================================================
 
-<script
-  src="js/i18n.js"
-></script>
+  const dropzone =
+    document.getElementById(
+      'dz-img-bgremove'
+    );
 
-<script
-  src="js/utils.js"
-></script>
+  const fileInput =
+    document.getElementById(
+      'input-img-bgremove'
+    );
 
-<script
-  src="js/pdf-worker-client.js"
-></script>
+  const bulkbar =
+    document.getElementById(
+      'bulk-img-bgremove'
+    );
 
-<script
-  src="js/app.js"
-></script>
+  const countEl =
+    document.getElementById(
+      'count-img-bgremove'
+    );
 
-<script
-  src="js/tool-image-convert.js"
-></script>
+  const clearAllBtn =
+    document.getElementById(
+      'clearAll-img-bgremove'
+    );
 
-<script
-  src="js/tool-image-crop.js"
-></script>
+  const processAllBtn =
+    document.getElementById(
+      'processAll-img-bgremove'
+    );
 
-<script
-  src="js/tool-image-bgremove.js"
-></script>
+  const downloadZipBtn =
+    document.getElementById(
+      'downloadZip-img-bgremove'
+    );
 
-<script
-  src="js/tool-image-compress.js"
-></script>
+  const jobsEl =
+    document.getElementById(
+      'jobs-img-bgremove'
+    );
 
-<script
-  src="js/tool-images-to-pdf.js"
-></script>
+  const jobTemplate =
+    document.getElementById(
+      'tpl-img-bgremove'
+    );
 
-<script
-  src="js/tool-pdf-to-images.js"
-></script>
 
-<script
-  src="js/tool-pdf-pages.js"
-></script>
+  // ============================================================
+  // SAFETY CHECK
+  // ============================================================
 
-<script
-  src="js/tool-pdf-merge.js"
-></script>
+  if (
+    !dropzone ||
+    !fileInput ||
+    !bulkbar ||
+    !countEl ||
+    !clearAllBtn ||
+    !processAllBtn ||
+    !downloadZipBtn ||
+    !jobsEl ||
+    !jobTemplate
+  ) {
+    return;
+  }
 
-<script
-  src="js/tool-pdf-watermark.js"
-></script>
 
-<script
-  src="js/tool-pdf-pagenumbers.js"
-></script>
+  // ============================================================
+  // CONFIG
+  // ============================================================
 
-<!-- ============================================================
-     LANGUAGE SELECTOR
-     ============================================================ -->
+  const TRANSFORMERS_URL =
+    'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
 
-<script>
+  const MODEL_ID =
+    'Ko033/isnet-general-use-onnx';
 
-  (() => {
+  /*
+   * ใช้ Q8 เพื่อลดขนาดโมเดลที่ดาวน์โหลด
+   *
+   * WebGPU:
+   *   ใช้ Q8 ถ้ารองรับ
+   *
+   * WASM:
+   *   ใช้ Q8 เช่นกัน
+   */
+  const MODEL_DTYPE =
+    'q8';
 
-    'use strict';
+  /*
+   * จำกัดขนาดภาพก่อน inference
+   *
+   * ไม่ลดภาพที่เล็กกว่า
+   * ภาพใหญ่กว่านี้จะถูก resize แบบรักษาสัดส่วน
+   *
+   * ช่วยลด RAM / เวลาใน browser
+   */
+  const MAX_IMAGE_SIZE =
+    1800;
 
-    const select =
-      document.getElementById(
-        'language-select'
-      );
+  /*
+   * ค่า soft alpha
+   *
+   * mask ของ pipeline อาจมาเป็น 0-255
+   * ถ้าเป็นค่ากลาง จะนำไปใช้เป็น alpha โดยตรง
+   */
+  const ALPHA_MIN =
+    0;
 
-    if (!select) {
+  const ALPHA_MAX =
+    255;
 
+
+  // ============================================================
+  // STATE
+  // ============================================================
+
+  let jobSeq =
+    0;
+
+  const jobs =
+    [];
+
+
+  // ============================================================
+  // TRANSFORMERS.JS STATE
+  // ============================================================
+
+  let transformersPromise =
+    null;
+
+  let segmenterPromise =
+    null;
+
+  let segmenter =
+    null;
+
+  let activeDevice =
+    null;
+
+
+  // ============================================================
+  // CACHE / WASM CONFIG
+  // ============================================================
+
+  function configureTransformersEnv(
+    env
+  ) {
+    if (!env) {
       return;
+    }
 
+    /*
+     * โมเดลจาก Hugging Face
+     */
+    try {
+      env.allowRemoteModels =
+        true;
+    } catch (_) {}
+
+    /*
+     * ใช้ browser Cache API
+     * เพื่อไม่ดาวน์โหลด model ซ้ำทุกครั้ง
+     */
+    try {
+      env.useBrowserCache =
+        true;
+    } catch (_) {}
+
+    /*
+     * cache WASM ด้วย
+     */
+    try {
+      env.useWasmCache =
+        true;
+    } catch (_) {}
+
+    /*
+     * ถ้า browser ไม่มี crossOriginIsolated
+     * อย่าให้ WASM พยายามใช้หลาย threads
+     *
+     * ป้องกัน warning:
+     * env.wasm.numThreads is set to 4...
+     */
+    try {
+      if (
+        env.backends &&
+        env.backends.onnx &&
+        env.backends.onnx.wasm
+      ) {
+        env.backends.onnx.wasm.numThreads =
+          1;
+      }
+    } catch (_) {}
+  }
+
+
+  // ============================================================
+  // LOAD TRANSFORMERS.JS
+  // ============================================================
+
+  async function loadTransformers() {
+    if (
+      transformersPromise
+    ) {
+      return transformersPromise;
+    }
+
+    transformersPromise =
+      import(
+        /* webpackIgnore: true */
+        TRANSFORMERS_URL
+      )
+        .then(
+          mod => {
+            if (
+              !mod ||
+              typeof mod.pipeline !== 'function'
+            ) {
+              throw new Error(
+                'Transformers.js pipeline not found'
+              );
+            }
+
+            configureTransformersEnv(
+              mod.env
+            );
+
+            return mod;
+          }
+        )
+        .catch(
+          err => {
+            transformersPromise =
+              null;
+
+            throw err;
+          }
+        );
+
+    return transformersPromise;
+  }
+
+
+  // ============================================================
+  // DEVICE DETECTION
+  // ============================================================
+
+  function canUseWebGPU() {
+    return (
+      typeof navigator !== 'undefined' &&
+      !!navigator.gpu
+    );
+  }
+
+
+  // ============================================================
+  // LOAD SEGMENTER
+  // ============================================================
+
+  async function loadSegmenter(
+    onProgress
+  ) {
+    if (
+      segmenter
+    ) {
+      return segmenter;
     }
 
     if (
-      window.I18n &&
-      typeof window.I18n.getLanguage ===
-        'function'
+      segmenterPromise
     ) {
-
-      const language =
-        window.I18n.getLanguage();
-
-      if (
-        language
-      ) {
-
-        select.value =
-          language;
-
-      }
-
+      return segmenterPromise;
     }
 
-    select.addEventListener(
-      'change',
-      () => {
+    segmenterPromise =
+      (async () => {
+        const mod =
+          await loadTransformers();
 
-        const language =
-          select.value;
-
+        /*
+         * พยายาม WebGPU ก่อน
+         */
         if (
-          window.I18n &&
-          typeof window.I18n.setLanguage ===
-            'function'
+          canUseWebGPU()
         ) {
+          try {
+            activeDevice =
+              'webgpu';
 
-          window.I18n.setLanguage(
-            language
+            const pipe =
+              await mod.pipeline(
+                'image-segmentation',
+                MODEL_ID,
+                {
+                  dtype:
+                    MODEL_DTYPE,
+
+                  device:
+                    'webgpu',
+
+                  progress_callback:
+                    info => {
+                      handleModelProgress(
+                        info,
+                        onProgress
+                      );
+                    }
+                }
+              );
+
+            segmenter =
+              pipe;
+
+            return segmenter;
+          } catch (
+            webgpuError
+          ) {
+            console.warn(
+              'WebGPU unavailable. Falling back to WASM:',
+              webgpuError
+            );
+
+            activeDevice =
+              null;
+
+            /*
+             * ป้องกัน pipeline WebGPU ค้าง
+             */
+            try {
+              if (
+                typeof segmenter?.dispose === 'function'
+              ) {
+                await segmenter.dispose();
+              }
+            } catch (_) {}
+
+            segmenter =
+              null;
+          }
+        }
+
+        /*
+         * WASM / CPU fallback
+         */
+        activeDevice =
+          'wasm';
+
+        const pipe =
+          await mod.pipeline(
+            'image-segmentation',
+            MODEL_ID,
+            {
+              dtype:
+                MODEL_DTYPE,
+
+              device:
+                'wasm',
+
+              progress_callback:
+                info => {
+                  handleModelProgress(
+                    info,
+                    onProgress
+                  );
+                }
+            }
           );
 
-        }
+        segmenter =
+          pipe;
 
-      }
-    );
+        return segmenter;
+      })()
+        .catch(
+          err => {
+            segmenterPromise =
+              null;
 
-    document.addEventListener(
-      'languagechange',
-      event => {
+            segmenter =
+              null;
 
-        const language =
-          event &&
-          event.detail &&
-          event.detail.language;
+            activeDevice =
+              null;
 
-        if (
-          !language
-        ) {
+            throw err;
+          }
+        );
 
-          return;
+    return segmenterPromise;
+  }
 
-        }
 
-        if (
-          select.value !==
-          language
-        ) {
+  // ============================================================
+  // MODEL PROGRESS
+  // ============================================================
 
-          select.value =
-            language;
-
-        }
-
-      }
-    );
-
-  })();
-
-</script>
-
-<!-- ============================================================
-     NOTEPAD NAVIGATION
-     ============================================================ -->
-
-<script>
-
-  (() => {
-
-    'use strict';
-
-    const openNotepad =
-      document.getElementById(
-        'open-notepad'
-      );
-
-    if (!openNotepad) {
-
+  function handleModelProgress(
+    info,
+    onProgress
+  ) {
+    if (
+      typeof onProgress !== 'function'
+    ) {
       return;
-
     }
 
-    openNotepad.addEventListener(
-      'click',
-      () => {
-
-        window.location.href =
-          'notepad.html';
-
-      }
-    );
-
-  })();
-
-</script>
-
-<!-- ============================================================
-     FILE CONVERTER NAVIGATION
-     ============================================================ -->
-
-<script>
-
-  (() => {
-
-    'use strict';
-
-    const openFileConverter =
-      document.getElementById(
-        'open-file-converter'
-      );
-
-    if (!openFileConverter) {
-
+    if (!info) {
       return;
-
     }
 
-    openFileConverter.addEventListener(
-      'click',
-      () => {
+    /*
+     * Transformers.js progress object
+     *
+     * ตัวอย่าง:
+     * {
+     *   status: "progress",
+     *   file: "...",
+     *   progress: 42
+     * }
+     */
 
-        window.location.href =
-          'file-converter.html';
+    let pct =
+      Number(
+        info.progress
+      );
 
-      }
+    if (
+      !Number.isFinite(
+        pct
+      )
+    ) {
+      pct =
+        0;
+    }
+
+    pct =
+      Math.max(
+        0,
+        Math.min(
+          100,
+          pct
+        )
+      );
+
+    const status =
+      typeof info.status === 'string'
+        ? info.status.toLowerCase()
+        : '';
+
+    /*
+     * loading / progress / init / ready
+     */
+    if (
+      status.includes('progress') ||
+      status.includes('download') ||
+      status.includes('init') ||
+      status.includes('ready')
+    ) {
+      onProgress(
+        pct
+      );
+    }
+  }
+
+
+  // ============================================================
+  // IMAGE LOADER
+  // ============================================================
+
+  async function loadImageFromFile(
+    file
+  ) {
+    const url =
+      URL.createObjectURL(
+        file
+      );
+
+    try {
+      const img =
+        await new Promise(
+          (
+            resolve,
+            reject
+          ) => {
+            const image =
+              new Image();
+
+            image.onload =
+              () => resolve(
+                image
+              );
+
+            image.onerror =
+              () => reject(
+                new Error(
+                  'Unable to decode image'
+                )
+              );
+
+            image.src =
+              url;
+          }
+        );
+
+      return {
+        image:
+          img,
+        width:
+          img.naturalWidth || img.width,
+        height:
+          img.naturalHeight || img.height
+      };
+    } finally {
+      try {
+        URL.revokeObjectURL(
+          url
+        );
+      } catch (_) {}
+    }
+  }
+
+
+  // ============================================================
+  // RESIZE IMAGE FOR AI
+  // ============================================================
+
+  function calculateFitSize(
+    width,
+    height,
+    maxSize
+  ) {
+    if (
+      width <= 0 ||
+      height <= 0
+    ) {
+      throw new Error(
+        'Invalid image dimensions'
+      );
+    }
+
+    if (
+      Math.max(
+        width,
+        height
+      ) <= maxSize
+    ) {
+      return {
+        width,
+        height
+      };
+    }
+
+    const ratio =
+      maxSize /
+      Math.max(
+        width,
+        height
+      );
+
+    return {
+      width:
+        Math.max(
+          1,
+          Math.round(
+            width *
+            ratio
+          )
+        ),
+
+      height:
+        Math.max(
+          1,
+          Math.round(
+            height *
+            ratio
+          )
+        )
+    };
+  }
+
+
+  // ============================================================
+  // CREATE CANVAS IMAGE
+  // ============================================================
+
+  async function createInputCanvas(
+    file
+  ) {
+    const {
+      image,
+      width,
+      height
+    } =
+      await loadImageFromFile(
+        file
+      );
+
+    const fitted =
+      calculateFitSize(
+        width,
+        height,
+        MAX_IMAGE_SIZE
+      );
+
+    const canvas =
+      document.createElement(
+        'canvas'
+      );
+
+    canvas.width =
+      fitted.width;
+
+    canvas.height =
+      fitted.height;
+
+    const ctx =
+      canvas.getContext(
+        '2d',
+        {
+          willReadFrequently:
+            true
+        }
+      );
+
+    if (!ctx) {
+      throw new Error(
+        'Canvas 2D context unavailable'
+      );
+    }
+
+    /*
+     * ป้องกันภาพเบลอเกินจำเป็น
+     */
+    ctx.imageSmoothingEnabled =
+      true;
+
+    ctx.imageSmoothingQuality =
+      'high';
+
+    ctx.drawImage(
+      image,
+      0,
+      0,
+      fitted.width,
+      fitted.height
     );
 
-  })();
+    return {
+      canvas,
+      width:
+        fitted.width,
+      height:
+        fitted.height
+    };
+  }
 
-</script>
 
-</body>
+  // ============================================================
+  // MASK HELPERS
+  // ============================================================
 
-</html>
+  function getMaskImage(
+    output
+  ) {
+    if (
+      !Array.isArray(
+        output
+      )
+    ) {
+      return null;
+    }
+
+    /*
+     * Image segmentation:
+     *
+     * [
+     *   {
+     *     label,
+     *     score,
+     *     mask: RawImage
+     *   }
+     * ]
+     */
+
+    for (
+      const item of output
+    ) {
+      if (
+        item &&
+        item.mask
+      ) {
+        return item.mask;
+      }
+    }
+
+    return null;
+  }
+
+
+  // ============================================================
+  // CONVERT RAW MASK TO ALPHA
+  // ============================================================
+
+  function normalizeMaskValue(
+    value
+  ) {
+    let alpha =
+      Number(
+        value
+      );
+
+    if (
+      !Number.isFinite(
+        alpha
+      )
+    ) {
+      return 0;
+    }
+
+    /*
+     * รองรับกรณี model คืนค่า 0-1
+     */
+    if (
+      alpha >= 0 &&
+      alpha <= 1
+    ) {
+      alpha *=
+        255;
+    }
+
+    return Math.max(
+      ALPHA_MIN,
+      Math.min(
+        ALPHA_MAX,
+        alpha
+      )
+    );
+  }
+
+
+  // ============================================================
+  // CREATE TRANSPARENT PNG
+  // ============================================================
+
+  async function createTransparentPng(
+    file,
+    maskRaw
+  ) {
+    const input =
+      await createInputCanvas(
+        file
+      );
+
+    const width =
+      input.width;
+
+    const height =
+      input.height;
+
+    /*
+     * สร้าง canvas สำหรับ output
+     */
+    const outputCanvas =
+      document.createElement(
+        'canvas'
+      );
+
+    outputCanvas.width =
+      width;
+
+    outputCanvas.height =
+      height;
+
+    const outputCtx =
+      outputCanvas.getContext(
+        '2d',
+        {
+          willReadFrequently:
+            true
+        }
+      );
+
+    if (!outputCtx) {
+      throw new Error(
+        'Output canvas unavailable'
+      );
+    }
+
+    /*
+     * วาดภาพต้นฉบับ
+     */
+    outputCtx.drawImage(
+      input.canvas,
+      0,
+      0
+    );
+
+    const imageData =
+      outputCtx.getImageData(
+        0,
+        0,
+        width,
+        height
+      );
+
+    const pixels =
+      imageData.data;
+
+    /*
+     * ========================================================
+     * MASK
+     * ========================================================
+     */
+
+    let mask =
+      maskRaw;
+
+    /*
+     * ถ้า mask ขนาดไม่เท่าภาพ
+     * resize ก่อน
+     */
+    if (
+      mask &&
+      (
+        mask.width !== width ||
+        mask.height !== height
+      )
+    ) {
+      if (
+        typeof mask.resize !== 'function'
+      ) {
+        throw new Error(
+          'Mask resize is unavailable'
+        );
+      }
+
+      mask =
+        await mask.resize(
+          width,
+          height,
+          {
+            resample:
+              'bilinear'
+          }
+        );
+    }
+
+    if (
+      !mask ||
+      !mask.data
+    ) {
+      throw new Error(
+        'AI mask is empty'
+      );
+    }
+
+    const maskData =
+      mask.data;
+
+    /*
+     * RawImage grayscale:
+     * 1 channel
+     *
+     * แต่ในบาง runtime อาจได้มากกว่า 1 channel
+     */
+    const maskChannels =
+      Number(
+        mask.channels
+      ) || 1;
+
+    /*
+     * จำนวน pixel
+     */
+    const totalPixels =
+      width *
+      height;
+
+    if (
+      maskData.length <
+      totalPixels
+    ) {
+      throw new Error(
+        'AI mask dimensions are invalid'
+      );
+    }
+
+    /*
+     * ========================================================
+     * APPLY ALPHA
+     * ========================================================
+     */
+
+    for (
+      let i = 0;
+      i < totalPixels;
+      i++
+    ) {
+      const pixelIndex =
+        i * 4;
+
+      const maskIndex =
+        i * maskChannels;
+
+      const rawMask =
+        maskData[
+          maskIndex
+        ];
+
+      pixels[
+        pixelIndex + 3
+      ] =
+        normalizeMaskValue(
+          rawMask
+        );
+    }
+
+    /*
+     * เขียน alpha กลับ
+     */
+    outputCtx.putImageData(
+      imageData,
+      0,
+      0
+    );
+
+    /*
+     * PNG
+     */
+    const blob =
+      await new Promise(
+        (
+          resolve,
+          reject
+        ) => {
+          outputCanvas.toBlob(
+            result => {
+              if (
+                result
+              ) {
+                resolve(
+                  result
+                );
+                return;
+              }
+
+              reject(
+                new Error(
+                  'Unable to create PNG'
+                )
+              );
+            },
+            'image/png'
+          );
+        }
+      );
+
+    return blob;
+  }
+
+
+  // ============================================================
+  // FALLBACK MASK METHOD
+  // ============================================================
+
+  /*
+   * บาง version / model อาจส่งผลลัพธ์มาในรูปแบบ
+   * ที่ไม่ตรงกับ segmentation output ปกติ
+   *
+   * ฟังก์ชันนี้ลองรองรับ object ที่มี .mask
+   */
+
+  function extractMaskFromOutput(
+    output
+  ) {
+    if (
+      output &&
+      output.mask
+    ) {
+      return output.mask;
+    }
+
+    if (
+      output &&
+      Array.isArray(
+        output
+      )
+    ) {
+      return getMaskImage(
+        output
+      );
+    }
+
+    return null;
+  }
+
+
+  // ============================================================
+  // BACKGROUND REMOVAL
+  // ============================================================
+
+  async function removeBackground(
+    file,
+    onProgress
+  ) {
+    const pipe =
+      await loadSegmenter(
+        onProgress
+      );
+
+    /*
+     * เริ่ม inference
+     */
+    onProgress(
+      70,
+      'inference'
+    );
+
+    /*
+     * ส่ง File เข้า pipeline โดยตรง
+     */
+    const output =
+      await pipe(
+        file
+      );
+
+    onProgress(
+      90,
+      'postprocess'
+    );
+
+    const mask =
+      extractMaskFromOutput(
+        output
+      );
+
+    if (
+      !mask
+    ) {
+      throw new Error(
+        'AI segmentation mask not found'
+      );
+    }
+
+    const blob =
+      await createTransparentPng(
+        file,
+        mask
+      );
+
+    onProgress(
+      100,
+      'done'
+    );
+
+    return blob;
+  }
+
+
+  // ============================================================
+  // JOB CLASS
+  // ============================================================
+
+  class BgJob {
+    constructor(
+      file
+    ) {
+      this.id =
+        'bg-' +
+        (++jobSeq);
+
+      this.file =
+        file;
+
+      this.resultBlob =
+        null;
+
+      this.resultUrl =
+        null;
+
+      this.objectUrl =
+        null;
+
+      this.isProcessing =
+        false;
+
+      this.errorKey =
+        null;
+
+      this.errorParams =
+        null;
+
+      this.el =
+        jobTemplate
+          .content
+          .firstElementChild
+          .cloneNode(
+            true
+          );
+
+      this.buildDom();
+    }
+
+
+    // ========================================================
+    // BUILD DOM
+    // ========================================================
+
+    buildDom() {
+      const el =
+        this.el;
+
+      /*
+       * Original object URL
+       */
+      this.objectUrl =
+        URL.createObjectURL(
+          this.file
+        );
+
+      this.beforeImg =
+        el.querySelector(
+          '.js-before img'
+        );
+
+      this.afterWrap =
+        el.querySelector(
+          '.js-after'
+        );
+
+      this.afterImg =
+        el.querySelector(
+          '.js-after img'
+        );
+
+      this.statusEl =
+        el.querySelector(
+          '.js-status'
+        );
+
+      this.progressFill =
+        el.querySelector(
+          '.js-progress'
+        );
+
+      this.processBtn =
+        el.querySelector(
+          '.js-remove-bg-btn'
+        );
+
+      this.downloadBtn =
+        el.querySelector(
+          '.js-download-btn'
+        );
+
+      const filenameEl =
+        el.querySelector(
+          '.js-filename'
+        );
+
+      const sizeEl =
+        el.querySelector(
+          '.js-origsize'
+        );
+
+
+      // ------------------------------------------------------
+      // File information
+      // ------------------------------------------------------
+
+      if (
+        filenameEl
+      ) {
+        filenameEl.textContent =
+          this.file.name;
+      }
+
+      if (
+        sizeEl
+      ) {
+        sizeEl.textContent =
+          U.formatBytes(
+            this.file.size
+          );
+      }
+
+
+      // ------------------------------------------------------
+      // Preview
+      // ------------------------------------------------------
+
+      if (
+        this.beforeImg
+      ) {
+        this.beforeImg.src =
+          this.objectUrl;
+      }
+
+
+      // ------------------------------------------------------
+      // State
+      // ------------------------------------------------------
+
+      el.dataset.processing =
+        'false';
+
+
+      // ------------------------------------------------------
+      // Process
+      // ------------------------------------------------------
+
+      if (
+        this.processBtn
+      ) {
+        this.processBtn.addEventListener(
+          'click',
+          () => {
+            this.process();
+          }
+        );
+      }
+
+
+      // ------------------------------------------------------
+      // Remove job
+      // ------------------------------------------------------
+
+      const removeJobBtn =
+        el.querySelector(
+          '.js-remove-job-btn'
+        );
+
+      if (
+        removeJobBtn
+      ) {
+        removeJobBtn.addEventListener(
+          'click',
+          () => {
+            this.dispose();
+
+            el.remove();
+
+            const idx =
+              jobs.indexOf(
+                this
+              );
+
+            if (
+              idx >= 0
+            ) {
+              jobs.splice(
+                idx,
+                1
+              );
+            }
+
+            updateBulkUI();
+          }
+        );
+      }
+
+
+      // ------------------------------------------------------
+      // Initial language
+      // ------------------------------------------------------
+
+      this.updateLanguageUI();
+    }
+
+
+    // ========================================================
+    // LANGUAGE UI
+    // ========================================================
+
+    updateLanguageUI() {
+      if (
+        !this.statusEl
+      ) {
+        return;
+      }
+
+      /*
+       * อย่าเขียน status ใหม่ระหว่าง process
+       */
+      if (
+        this.isProcessing
+      ) {
+        return;
+      }
+
+      /*
+       * READY
+       */
+      if (
+        this.resultBlob
+      ) {
+        this.statusEl.textContent =
+          t(
+            'image.readyDownload',
+            {
+              size:
+                U.formatBytes(
+                  this.resultBlob.size
+                )
+            }
+          );
+
+        this.statusEl.classList.remove(
+          'is-error'
+        );
+
+        this.statusEl.classList.add(
+          'is-ready'
+        );
+
+        return;
+      }
+
+      /*
+       * ERROR
+       */
+      if (
+        this.statusEl.classList.contains(
+          'is-error'
+        )
+      ) {
+        if (
+          this.errorKey
+        ) {
+          this.statusEl.textContent =
+            t(
+              this.errorKey,
+              this.errorParams ||
+                undefined
+            );
+        }
+
+        return;
+      }
+
+      /*
+       * WAITING
+       */
+      this.statusEl.textContent =
+        t(
+          'image.waitingBackground'
+        );
+
+      this.statusEl.classList.remove(
+        'is-ready'
+      );
+    }
+
+
+    // ========================================================
+    // PROGRESS
+    // ========================================================
+
+    setProgress(
+      pct
+    ) {
+      if (
+        !this.progressFill
+      ) {
+        return;
+      }
+
+      const value =
+        Math.max(
+          0,
+          Math.min(
+            100,
+            Number(
+              pct
+            ) || 0
+          )
+        );
+
+      this.progressFill.style.width =
+        value +
+        '%';
+    }
+
+
+    // ========================================================
+    // STATUS
+    // ========================================================
+
+    setStatus(
+      key,
+      params
+    ) {
+      if (
+        !this.statusEl
+      ) {
+        return;
+      }
+
+      this.statusEl.textContent =
+        t(
+          key,
+          params
+        );
+    }
+
+
+    // ========================================================
+    // PROCESS
+    // ========================================================
+
+    async process() {
+      if (
+        this.resultBlob ||
+        this.isProcessing
+      ) {
+        return;
+      }
+
+      if (
+        !this.file
+      ) {
+        return;
+      }
+
+      this.isProcessing =
+        true;
+
+      this.el.dataset.processing =
+        'true';
+
+      this.processBtn.disabled =
+        true;
+
+      this.statusEl.classList.remove(
+        'is-ready',
+        'is-error'
+      );
+
+      this.setProgress(
+        0
+      );
+
+      this.setStatus(
+        'image.preparingModel'
+      );
+
+      try {
+        /*
+         * ======================================================
+         * MODEL LOAD + INFERENCE
+         * ======================================================
+         */
+
+        const blob =
+          await removeBackground(
+            this.file,
+            (
+              pct,
+              stage
+            ) => {
+              /*
+               * Model download progress
+               */
+              if (
+                typeof pct === 'number'
+              ) {
+                this.setProgress(
+                  pct
+                );
+              }
+
+              /*
+               * Status
+               */
+              if (
+                stage ===
+                'inference'
+              ) {
+                this.setStatus(
+                  'image.removingBackgroundProgress',
+                  {
+                    percent:
+                      70
+                  }
+                );
+
+                return;
+              }
+
+              if (
+                stage ===
+                'postprocess'
+              ) {
+                this.setStatus(
+                  'image.removingBackgroundProgress',
+                  {
+                    percent:
+                      90
+                  }
+                );
+
+                return;
+              }
+
+              /*
+               * General progress callback
+               */
+              if (
+                typeof pct === 'number'
+              ) {
+                this.statusEl.textContent =
+                  t(
+                    'image.loadingModelProgress',
+                    {
+                      percent:
+                        Math.round(
+                          pct
+                        )
+                    }
+                  );
+              }
+            }
+          );
+
+
+        /*
+         * ======================================================
+         * OLD RESULT URL
+         * ======================================================
+         */
+
+        if (
+          this.resultUrl
+        ) {
+          try {
+            URL.revokeObjectURL(
+              this.resultUrl
+            );
+          } catch (_) {}
+
+          this.resultUrl =
+            null;
+        }
+
+
+        /*
+         * ======================================================
+         * STORE RESULT
+         * ======================================================
+         */
+
+        this.resultBlob =
+          blob;
+
+        this.resultUrl =
+          URL.createObjectURL(
+            blob
+          );
+
+
+        /*
+         * ======================================================
+         * AFTER PREVIEW
+         * ======================================================
+         */
+
+        if (
+          this.afterImg
+        ) {
+          this.afterImg.src =
+            this.resultUrl;
+        }
+
+        if (
+          this.afterWrap
+        ) {
+          this.afterWrap.classList.remove(
+            'hidden'
+          );
+        }
+
+
+        /*
+         * ======================================================
+         * DOWNLOAD
+         * ======================================================
+         */
+
+        if (
+          this.downloadBtn
+        ) {
+          this.downloadBtn.href =
+            this.resultUrl;
+
+          this.downloadBtn.download =
+            `${U.baseName(
+              this.file.name
+            )}-nobg.png`;
+
+          this.downloadBtn.classList.remove(
+            'hidden'
+          );
+        }
+
+
+        /*
+         * ======================================================
+         * READY
+         * ======================================================
+         */
+
+        this.setProgress(
+          100
+        );
+
+        this.statusEl.textContent =
+          t(
+            'image.readyDownload',
+            {
+              size:
+                U.formatBytes(
+                  blob.size
+                )
+            }
+          );
+
+        this.statusEl.classList.remove(
+          'is-error'
+        );
+
+        this.statusEl.classList.add(
+          'is-ready'
+        );
+
+
+      } catch (
+        err
+      ) {
+        console.error(
+          'Background removal error:',
+          err
+        );
+
+        this.errorKey =
+          'image.backgroundRemovalFailed';
+
+        this.errorParams =
+          {
+            message:
+              err?.message ||
+              String(
+                err
+              )
+          };
+
+        this.statusEl.textContent =
+          t(
+            this.errorKey,
+            this.errorParams
+          );
+
+        this.statusEl.classList.remove(
+          'is-ready'
+        );
+
+        this.statusEl.classList.add(
+          'is-error'
+        );
+
+        this.setProgress(
+          0
+        );
+
+
+      } finally {
+        this.isProcessing =
+          false;
+
+        this.el.dataset.processing =
+          'false';
+
+        this.processBtn.disabled =
+          false;
+
+        await U.yieldToUI();
+      }
+    }
+
+
+    // ========================================================
+    // DISPOSE
+    // ========================================================
+
+    dispose() {
+      this.isProcessing =
+        false;
+
+      if (
+        this.el
+      ) {
+        this.el.dataset.processing =
+          'false';
+      }
+
+      if (
+        this.objectUrl
+      ) {
+        try {
+          URL.revokeObjectURL(
+            this.objectUrl
+          );
+        } catch (_) {}
+
+        this.objectUrl =
+          null;
+      }
+
+      if (
+        this.resultUrl
+      ) {
+        try {
+          URL.revokeObjectURL(
+            this.resultUrl
+          );
+        } catch (_) {}
+
+        this.resultUrl =
+          null;
+      }
+
+      this.resultBlob =
+        null;
+    }
+  }
+
+
+  // ============================================================
+  // BULK UI
+  // ============================================================
+
+  function updateBulkUI() {
+    countEl.textContent =
+      String(
+        jobs.length
+      );
+
+    bulkbar.classList.toggle(
+      'hidden',
+      jobs.length === 0
+    );
+
+    downloadZipBtn.classList.toggle(
+      'hidden',
+      !jobs.some(
+        job =>
+          !!job.resultBlob
+      )
+    );
+
+    jobs.forEach(
+      job => {
+        job.updateLanguageUI();
+      }
+    );
+  }
+
+
+  // ============================================================
+  // ADD FILES
+  // ============================================================
+
+  function addFiles(
+    fileList
+  ) {
+    Array.from(
+      fileList
+    )
+      .filter(
+        file =>
+          file &&
+          typeof file.type === 'string' &&
+          file.type.startsWith(
+            'image/'
+          )
+      )
+      .forEach(
+        file => {
+          const job =
+            new BgJob(
+              file
+            );
+
+          jobs.push(
+            job
+          );
+
+          jobsEl.appendChild(
+            job.el
+          );
+        }
+      );
+
+    updateBulkUI();
+  }
+
+
+  // ============================================================
+  // CLEAR ALL
+  // ============================================================
+
+  clearAllBtn.addEventListener(
+    'click',
+    () => {
+      jobs.forEach(
+        job => {
+          job.dispose();
+        }
+      );
+
+      jobs.length =
+        0;
+
+      jobsEl.innerHTML =
+        '';
+
+      updateBulkUI();
+
+      if (
+        fileInput
+      ) {
+        fileInput.value =
+          '';
+      }
+    }
+  );
+
+
+  // ============================================================
+  // PROCESS ALL
+  // ============================================================
+
+  processAllBtn.addEventListener(
+    'click',
+    async () => {
+      if (
+        !jobs.length
+      ) {
+        return;
+      }
+
+      processAllBtn.disabled =
+        true;
+
+      processAllBtn.textContent =
+        t(
+          'image.removeBackgroundAllProcessing'
+        );
+
+      try {
+        /*
+         * ประมวลผลทีละไฟล์
+         *
+         * สำคัญ:
+         * ไม่ process พร้อมกันหลายตัว
+         * เพราะ segmentation model ใช้ RAM/VRAM สูง
+         */
+        for (
+          const job of
+          jobs
+        ) {
+          if (
+            job.resultBlob
+          ) {
+            continue;
+          }
+
+          await job.process();
+
+          await U.yieldToUI();
+        }
+      } finally {
+        await U.yieldToUI();
+
+        processAllBtn.disabled =
+          false;
+
+        processAllBtn.textContent =
+          t(
+            'image.removeBackgroundAll'
+          );
+
+        downloadZipBtn.classList.toggle(
+          'hidden',
+          !jobs.some(
+            job =>
+              !!job.resultBlob
+          )
+        );
+      }
+    }
+  );
+
+
+  // ============================================================
+  // DOWNLOAD ZIP
+  // ============================================================
+
+  downloadZipBtn.addEventListener(
+    'click',
+    async () => {
+      const ready =
+        jobs.filter(
+          job =>
+            !!job.resultBlob
+        );
+
+      if (
+        !ready.length
+      ) {
+        return;
+      }
+
+      downloadZipBtn.disabled =
+        true;
+
+      downloadZipBtn.textContent =
+        t(
+          'image.compressingZip'
+        );
+
+      try {
+        const zip =
+          new JSZip();
+
+        const usedNames =
+          new Set();
+
+        ready.forEach(
+          job => {
+            const base =
+              U.baseName(
+                job.file.name
+              );
+
+            let name =
+              `${base}-nobg.png`;
+
+            let n =
+              2;
+
+            while (
+              usedNames.has(
+                name
+              )
+            ) {
+              name =
+                `${base}-nobg-${n++}.png`;
+            }
+
+            usedNames.add(
+              name
+            );
+
+            zip.file(
+              name,
+              job.resultBlob
+            );
+          }
+        );
+
+        const content =
+          await zip.generateAsync(
+            {
+              type:
+                'blob'
+            }
+          );
+
+        U.downloadBlob(
+          content,
+          'no-background.zip'
+        );
+
+      } catch (
+        err
+      ) {
+        console.error(
+          'Background removal ZIP failed:',
+          err
+        );
+
+      } finally {
+        downloadZipBtn.disabled =
+          false;
+
+        downloadZipBtn.textContent =
+          t(
+            'image.downloadZip'
+          );
+      }
+    }
+  );
+
+
+  // ============================================================
+  // DROPZONE
+  // ============================================================
+
+  U.setupDropzone(
+    dropzone,
+    fileInput,
+    addFiles
+  );
+
+
+  // ============================================================
+  // CACHE / APP CLEAR
+  // ============================================================
+
+  U.onClearCache(
+    () => {
+      jobs.forEach(
+        job => {
+          job.dispose();
+        }
+      );
+
+      jobs.length =
+        0;
+
+      jobsEl.innerHTML =
+        '';
+
+      updateBulkUI();
+    }
+  );
+
+
+  // ============================================================
+  // LANGUAGE CHANGE
+  // ============================================================
+
+  document.addEventListener(
+    'languagechange',
+    () => {
+      /*
+       * Bulk button
+       */
+      if (
+        !processAllBtn.disabled
+      ) {
+        processAllBtn.textContent =
+          t(
+            'image.removeBackgroundAll'
+          );
+      }
+
+      /*
+       * ZIP button
+       */
+      if (
+        !downloadZipBtn.disabled
+      ) {
+        downloadZipBtn.textContent =
+          t(
+            'image.downloadZip'
+          );
+      }
+
+      /*
+       * Job statuses
+       */
+      jobs.forEach(
+        job => {
+          job.updateLanguageUI();
+        }
+      );
+    }
+  );
+
+
+  // ============================================================
+  // INITIAL UI
+  // ============================================================
+
+  updateBulkUI();
+
+
+  // ============================================================
+  // OPTIONAL DEBUG INFO
+  // ============================================================
+
+  /*
+   * เปิด console ดูได้ว่าใช้อะไร
+   *
+   * window.KittoBGRemove
+   */
+  window.KittoBGRemove = {
+    get model() {
+      return MODEL_ID;
+    },
+
+    get dtype() {
+      return MODEL_DTYPE;
+    },
+
+    get device() {
+      return activeDevice;
+    },
+
+    async loadModel() {
+      return loadSegmenter();
+    },
+
+    async dispose() {
+      try {
+        if (
+          segmenter &&
+          typeof segmenter.dispose === 'function'
+        ) {
+          await segmenter.dispose();
+        }
+      } catch (_) {}
+
+      segmenter =
+        null;
+
+      segmenterPromise =
+        null;
+    }
+  };
+
+})();
