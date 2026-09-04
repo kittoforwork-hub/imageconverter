@@ -46,24 +46,30 @@
   /*
    * Model / library.
    *
-   * Switched from @imgly/background-removal (IS-Net) to briaai/RMBG-1.4
-   * served through Hugging Face's Transformers.js. In side-by-side
-   * testing RMBG-1.4 keeps noticeably cleaner edges around hair, fur
-   * and fine detail than IS-Net, which is the main complaint with the
-   * old pipeline. It is also the model most browser background-removal
-   * tools (Hugging Face's own demo, several open-source extensions)
-   * settled on for that reason.
+   * Switched from @imgly/background-removal (IS-Net) to a Hugging Face
+   * Transformers.js pipeline. First attempt used briaai/RMBG-1.4, which
+   * gives the cleanest edges of the well-known options, but that repo
+   * requires accepting a license on huggingface.co before it can be
+   * downloaded — an anonymous browser fetch gets redirected to a login
+   * page instead of the model file, and that response has no CORS
+   * headers, which surfaces as a confusing "CORS policy" / "Failed to
+   * fetch" error with no login prompt ever shown.
+   *
+   * Using onnx-community/ormbg-ONNX instead: same underlying IS-Net
+   * family, fine-tuned specifically on matting datasets (P3M-10K,
+   * AIM-500, PPM-100) for cleaner hair/fur edges than a generic IS-Net
+   * model, Apache-2.0 licensed, ungated, hosted with normal public CORS
+   * — no login wall, no CORS error.
    *
    * To keep it from being heavy on the user's device we run the 8-bit
-   * quantized weights (~45 MB, cached after first use) instead of the
-   * full fp32 checkpoint (~176 MB). Quality loss from the quantization
-   * is minor for this model; if you ever want maximum possible quality
-   * and don't mind the extra download/memory, change MODEL_DTYPE below
-   * to 'fp32'.
+   * quantized weights (small, cached after first use) instead of the
+   * full fp32 checkpoint. If you ever want maximum possible quality and
+   * don't mind the extra download/memory, change MODEL_DTYPE below to
+   * 'fp32'.
    */
   const LIB_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/+esm';
 
-  const MODEL_ID = 'briaai/RMBG-1.4';
+  const MODEL_ID = 'onnx-community/ormbg-ONNX';
 
   /*
    * 'q8'   -> ~45MB, low RAM/VRAM footprint, small quality trade-off (default here)
