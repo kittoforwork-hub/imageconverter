@@ -6,8 +6,20 @@
   // I18N
   // ============================================================
 
-  const I18n =
-    window.I18n || null;
+  /*
+   * อ่าน I18n แบบ dynamic
+   * ----------------------------------------------------------
+   * ไม่จับ window.I18n แค่ครั้งเดียวตอนโหลดไฟล์
+   *
+   * ข้อดี:
+   * - รองรับกรณี i18n.js โหลดทีหลัง
+   * - รองรับกรณี window.I18n ถูกสร้างหลังไฟล์นี้เริ่มทำงาน
+   */
+
+  function getI18n() {
+
+    return window.I18n || null;
+  }
 
 
   // ============================================================
@@ -19,12 +31,16 @@
     values
   ) {
 
+    const i18n =
+      getI18n();
+
+
     if (
-      I18n &&
-      typeof I18n.t === 'function'
+      i18n &&
+      typeof i18n.t === 'function'
     ) {
 
-      return I18n.t(
+      return i18n.t(
         key,
         values
       );
@@ -36,12 +52,16 @@
 
   function currentLanguage() {
 
+    const i18n =
+      getI18n();
+
+
     if (
-      I18n &&
-      typeof I18n.getLanguage === 'function'
+      i18n &&
+      typeof i18n.getLanguage === 'function'
     ) {
 
-      return I18n.getLanguage();
+      return i18n.getLanguage();
     }
 
     return 'en';
@@ -185,6 +205,21 @@
 
 
   // ============================================================
+  // CHECK TOOL
+  // ============================================================
+
+  function isKnownTool(
+    tool
+  ) {
+
+    return !!(
+      tool &&
+      TOOL_META[tool]
+    );
+  }
+
+
+  // ============================================================
   // CATEGORY
   // ============================================================
 
@@ -202,8 +237,26 @@
 
 
     /*
+     * ต้องมี Category นี้อยู่จริง
+     */
+
+    const categoryExists =
+      catButtons.some(
+        button =>
+          button.dataset.cat === cat
+      );
+
+
+    if (!categoryExists) {
+      return;
+    }
+
+
+    /*
      * ถ้าเปลี่ยน Category
      * ให้ล้าง cache ของเครื่องมือเดิม
+     *
+     * แต่จะไม่ clear ถ้ายังมีงานกำลังทำอยู่
      */
 
     if (
@@ -211,7 +264,12 @@
       currentCat !== cat
     ) {
 
-      runAutoClearCache();
+      if (
+        !hasProcessingWork()
+      ) {
+
+        runAutoClearCache();
+      }
     }
 
 
@@ -286,9 +344,21 @@
       activeChip
     ) {
 
-      showTool(
-        activeChip.dataset.tool
-      );
+      const tool =
+        activeChip.dataset.tool;
+
+
+      if (
+        tool
+      ) {
+
+        showTool(
+          tool,
+          {
+            fromCategory: true
+          }
+        );
+      }
     }
   }
 
@@ -298,11 +368,73 @@
   // ============================================================
 
   function showTool(
-    tool
+    tool,
+    options
   ) {
 
     if (!tool) {
       return;
+    }
+
+
+    const meta =
+      getToolMeta(
+        tool
+      );
+
+
+    /*
+     * ถ้าเป็น Tool ที่ไม่รู้จัก
+     * ไม่เปิด panel แปลก ๆ
+     */
+
+    if (
+      !isKnownTool(tool)
+    ) {
+
+      return;
+    }
+
+
+    const fromCategory =
+      !!(
+        options &&
+        options.fromCategory
+      );
+
+
+    /*
+     * ถ้ามี Category อยู่แล้ว
+     * Tool ต้องตรงกับ Category
+     *
+     * ยกเว้นกรณี showCategory() เรียกเข้ามาโดยตรง
+     */
+
+    if (
+      currentCat &&
+      meta.kind !== currentCat &&
+      !fromCategory
+    ) {
+
+      showCategory(
+        meta.kind
+      );
+
+      return;
+    }
+
+
+    /*
+     * ถ้ายังไม่มี Category
+     * ให้ synchronize ตาม Tool
+     */
+
+    if (
+      !currentCat
+    ) {
+
+      currentCat =
+        meta.kind;
     }
 
 
@@ -340,6 +472,44 @@
         );
       }
     );
+
+
+    /*
+     * กันกรณี current category ไม่ตรง
+     * ในกรณีที่ Tool ถูกเปิดจากภายนอก
+     */
+
+    if (
+      currentCat !== meta.kind
+    ) {
+
+      currentCat =
+        meta.kind;
+
+
+      catButtons.forEach(
+        button => {
+
+          button.classList.toggle(
+            'is-active',
+            button.dataset.cat ===
+              currentCat
+          );
+        }
+      );
+
+
+      chipGroups.forEach(
+        group => {
+
+          group.classList.toggle(
+            'hidden',
+            group.dataset.catGroup !==
+              currentCat
+          );
+        }
+      );
+    }
 
 
     scheduleCuteRefresh();
@@ -395,6 +565,30 @@
 
 
             if (!tool) {
+              return;
+            }
+
+
+            const meta =
+              getToolMeta(
+                tool
+              );
+
+
+            /*
+             * ถ้า Tool อยู่คนละ Category
+             * ให้เปลี่ยน Category ก่อน
+             */
+
+            if (
+              currentCat &&
+              meta.kind !== currentCat
+            ) {
+
+              showCategory(
+                meta.kind
+              );
+
               return;
             }
 
@@ -904,14 +1098,14 @@
 
 
         const processing =
-          panel.querySelectorAll(
+          panel.querySelector(
             '.is-processing'
-          ).length > 0;
+          );
 
 
         const result =
           panel.querySelector(
-            '[id^="result-"]'
+            '.tool-result, [id^="result-"]'
           );
 
 
@@ -969,6 +1163,15 @@
     card
   ) {
 
+    if (!card) {
+      return false;
+    }
+
+
+    /*
+     * Explicit state มี priority สูงสุด
+     */
+
     if (
       card.dataset.processing ===
       'true'
@@ -996,6 +1199,10 @@
       return true;
     }
 
+
+    /*
+     * Text detection ใช้เป็น fallback เท่านั้น
+     */
 
     const text =
       (
@@ -1112,7 +1319,7 @@
 
         const result =
           panel.querySelector(
-            '[id^="result-"]'
+            '.tool-result, [id^="result-"]'
           );
 
 
@@ -1170,10 +1377,21 @@
               );
 
 
-            card.classList.toggle(
-              'is-processing',
-              busy
-            );
+            /*
+             * อย่าเขียน class ซ้ำถ้า state ไม่เปลี่ยน
+             */
+
+            if (
+              card.classList.contains(
+                'is-processing'
+              ) !== busy
+            ) {
+
+              card.classList.toggle(
+                'is-processing',
+                busy
+              );
+            }
 
 
             if (busy) {
@@ -1334,21 +1552,40 @@
   // LANGUAGE CHANGE
   // ============================================================
 
+  function handleLanguageChange() {
+
+    /*
+     * ไม่สร้าง element ใหม่
+     * ไม่ลบ state
+     * ไม่แตะไฟล์ผู้ใช้
+     */
+
+    refreshCuteLanguage();
+
+    scheduleCuteRefresh();
+  }
+
+
+  /*
+   * รองรับทั้ง event มาตรฐานและ custom event
+   *
+   * i18n.js สามารถ dispatch:
+   *   new Event('languagechange')
+   *
+   * หรือ:
+   *   new Event('i18nchange')
+   */
+
   document.addEventListener(
     'languagechange',
-    () => {
+    handleLanguageChange,
+    true
+  );
 
-      /*
-       * ไม่สร้าง element ใหม่
-       * ไม่ลบ state
-       * ไม่แตะไฟล์ผู้ใช้
-       */
 
-      refreshCuteLanguage();
-
-      scheduleCuteRefresh();
-
-    },
+  document.addEventListener(
+    'i18nchange',
+    handleLanguageChange,
     true
   );
 
@@ -1386,6 +1623,10 @@
             mutations
           ) {
 
+            // --------------------------------------------------
+            // CHILD LIST
+            // --------------------------------------------------
+
             if (
               mutation.type ===
                 'childList' &&
@@ -1402,6 +1643,10 @@
             }
 
 
+            // --------------------------------------------------
+            // ATTRIBUTES
+            // --------------------------------------------------
+
             if (
               mutation.type ===
               'attributes'
@@ -1411,17 +1656,24 @@
                 mutation.target;
 
 
+              if (!target) {
+                continue;
+              }
+
+
+              /*
+               * สนใจเฉพาะ element ที่เกี่ยวกับ state
+               */
+
               if (
-                target &&
+                target.matches &&
                 (
-                  target.classList?.contains(
-                    'hidden'
+                  target.matches(
+                    '.tool-panel, .dropzone, .ticket, .file-row, .page-card, .tool-result'
                   ) ||
-                  target.classList?.contains(
-                    'is-processing'
-                  ) ||
-                  target.dataset.processing !==
-                    undefined
+                  target.closest?.(
+                    '.tool-panel'
+                  )
                 )
               ) {
 
@@ -1471,13 +1723,29 @@
 
   function runAutoClearCache() {
 
+    /*
+     * ห้าม clear cache ระหว่าง processing
+     */
+
+    if (
+      hasProcessingWork()
+    ) {
+
+      return;
+    }
+
+
     if (
       window.Utils &&
       typeof window.Utils.clearCache ===
         'function'
     ) {
 
-      window.Utils.clearCache();
+      try {
+
+        window.Utils.clearCache();
+
+      } catch (_) {}
     }
 
 
@@ -1487,7 +1755,11 @@
         'function'
     ) {
 
-      window.PdfWorkerClient.dispose();
+      try {
+
+        window.PdfWorkerClient.dispose();
+
+      } catch (_) {}
     }
 
 
@@ -1543,8 +1815,23 @@
 
   function hasProcessingWork() {
 
-    return !!document.querySelector(
-      '.tool-panel:not(.hidden) .is-processing'
+    const activePanel =
+      document.querySelector(
+        '.tool-panel:not(.hidden)'
+      );
+
+
+    if (!activePanel) {
+      return false;
+    }
+
+
+    return !!(
+      activePanel.querySelector(
+        '.is-processing'
+      ) ||
+      activePanel.dataset.processing ===
+        'true'
     );
   }
 
@@ -1556,7 +1843,8 @@
         '.tool-panel:not(.hidden) .js-download-btn:not(.hidden)',
         '.tool-panel:not(.hidden) .js-download:not(.hidden)',
         '.tool-panel:not(.hidden) .result-strip:not(.hidden)',
-        '.tool-panel:not(.hidden) .is-ready'
+        '.tool-panel:not(.hidden) .is-ready',
+        '.tool-panel:not(.hidden) .tool-result:not(.hidden)'
       ].join(',')
     );
   }
@@ -1651,7 +1939,11 @@
           'function'
       ) {
 
-        window.Utils.clearCache();
+        try {
+
+          window.Utils.clearCache();
+
+        } catch (_) {}
       }
 
 
@@ -1661,7 +1953,11 @@
           'function'
       ) {
 
-        window.PdfWorkerClient.dispose();
+        try {
+
+          window.PdfWorkerClient.dispose();
+
+        } catch (_) {}
       }
 
 
