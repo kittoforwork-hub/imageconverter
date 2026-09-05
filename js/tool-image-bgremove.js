@@ -1610,14 +1610,46 @@
 
     workerGeneration++;
 
-    worker =
-      new Worker(
-        workerBlobUrl,
-        {
-          type:
-            'module'
-        }
-      );
+    try {
+
+      worker =
+        new Worker(
+          workerBlobUrl,
+          {
+            type:
+              'module'
+          }
+        );
+
+    } catch (
+      error
+    ) {
+
+      /*
+       * Worker construction can fail synchronously because of
+       * CSP, browser capability, or an invalid Worker URL.
+       * Clean up the Blob URL so repeated attempts do not leak
+       * resources.
+       */
+      if (
+        workerBlobUrl
+      ) {
+
+        revokeUrl(
+          workerBlobUrl
+        );
+
+        workerBlobUrl =
+          null;
+
+      }
+
+      worker =
+        null;
+
+      throw error;
+
+    }
 
     worker.__generation =
       workerGeneration;
@@ -1676,6 +1708,18 @@
         console.error(
           '[Image Background Removal] Worker message error:',
           error
+        );
+
+        /*
+         * A messageerror means the Worker could no longer
+         * deliver structured-cloned data reliably. Keeping the
+         * Worker alive here can leave the current request pending
+         * forever, especially during large-image processing.
+         * Treat it as a hard Worker failure so all pending jobs
+         * are rejected and the Worker can be recreated cleanly.
+         */
+        destroyWorker(
+          'BACKGROUND_WORKER_MESSAGE_ERROR'
         );
 
       };
