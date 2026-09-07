@@ -9600,6 +9600,158 @@ window.I18n = (() => {
 
 
   // ============================================================
+  // RUNTIME KEY ALIASES
+  // ============================================================
+  //
+  // Keep older/dynamic tool messages compatible with the master
+  // dictionary without forcing every tool to ship duplicate text.
+  // Aliases intentionally point to existing translated keys, so
+  // every supported language gets a real translation automatically.
+  //
+
+  const KEY_ALIASES = {
+
+    canvasUnavailable: 'errors.canvasContext',
+    chooseFiles: 'common.chooseFiles',
+    clearFiles: 'converter.clearFiles',
+    clearSearch: 'converter.clearSearch',
+    close: 'common.close',
+    convert: 'converter.convert',
+    convertedFile: 'converter.converted',
+    convertedMany: 'converter.converted',
+    converterNotFound: 'converter.noResults',
+    converting: 'converter.converting',
+    convertingFile: 'converter.converting',
+    count: 'converter.count',
+    csvEmpty: 'converter.errorDefault',
+    docxTextMissing: 'converter.errorDefault',
+    download: 'common.download',
+    dragFiles: 'converter.dragFiles',
+    errorDefault: 'converter.errorDefault',
+    fileTooLarge: 'file.largeWarning',
+    imageOpenFailed: 'errors.imageLoadFailed',
+    jsZipNotFound: 'errors.processingFailed',
+    jsonEmpty: 'converter.errorDefault',
+    jsonInvalid: 'converter.errorDefault',
+    jsonObjectRequired: 'converter.errorDefault',
+    mammothNotFound: 'converter.errorDefault',
+    maxFiles: 'converter.errorDefault',
+    outputFailed: 'errors.createFailed',
+    pdfCanvasFailed: 'errors.canvasContext',
+    pdfLibNotFound: 'errors.processingFailed',
+    pdfNotFound: 'errors.pdfOpenFailed',
+    pleaseSelectFile: 'common.chooseFile',
+    pptxSlideMissing: 'converter.errorDefault',
+    preparing: 'converter.preparing',
+    resultReady: 'common.ready',
+    searchLabel: 'converter.searchLabel',
+    searchPlaceholder: 'converter.searchPlaceholder',
+    supported: 'converter.supported',
+    svgEmpty: 'converter.errorDefault',
+    tools: 'converter.tools',
+    unsupportedFile: 'errors.unsupportedFile',
+    xlsxNotFound: 'converter.errorDefault',
+    xmlEmpty: 'converter.errorDefault',
+    xmlInvalid: 'converter.errorDefault',
+    xmlRootMissing: 'converter.errorDefault',
+    yamlEmpty: 'converter.errorDefault',
+
+    'errors.emptyPdfResult': 'errors.createFailed',
+    'errors.emptyPng': 'errors.invalidImageDimensions',
+    'errors.imageCreateFailed': 'errors.imageLoadFailed',
+    'errors.invalidPng': 'errors.processingFailed',
+    'errors.pdfConvertFailed': 'errors.processingFailed',
+    'errors.pdfOnly': 'errors.unsupportedFile',
+    'errors.pdfOpenFailed': 'errors.fileReadFailed',
+    'errors.pdfRenderFailed': 'errors.processingFailed',
+    'errors.pdfWorkerUnsupported': 'errors.processingFailed',
+    'errors.pngOnly': 'errors.unsupportedFile',
+    'errors.selectPdfFirst': 'errors.fileNotFound',
+    'errors.watermarkRequired': 'errors.processingFailed',
+    'errors.workerPdfMissing': 'errors.processingFailed',
+    'errors.zipCreateFailed': 'errors.createFailed',
+
+    'image.converting': 'image.convertingAll',
+    'image.readFailed': 'image.imageReadFailed',
+    'image.reading': 'image.readImage',
+    'image.readyFileLarger': 'image.readyDownload',
+    'image.readySavedPercent': 'image.readyDownload',
+    'image.savingLarger': 'image.ready',
+    'image.savingSame': 'image.ready',
+    'image.savingSmaller': 'image.ready',
+
+    'pdf.applyingImageWatermark': 'pdf.applyingWatermark',
+    'pdf.applyingPageNumbers': 'pdf.applyPageNumber',
+    'pdf.applyingTextAndImage': 'pdf.applyingWatermark',
+    'pdf.applyingTextWatermark': 'pdf.applyingWatermark',
+    'pdf.applyingWatermark': 'pdf.applyWatermark',
+    'pdf.browserPdfWorkerUnsupported': 'pdf.workerUnavailable',
+    'pdf.building': 'pdf.buildPdf',
+    'pdf.cancel': 'common.cancel',
+    'pdf.cancelledProgress': 'pdf.cancelled',
+    'pdf.createdResult': 'pdf.created',
+    'pdf.heavyWorkWarning': 'file.largeWarning',
+    'pdf.largeWarning': 'file.largeWarning',
+    'pdf.mergeNeedTwo': 'pdf.minimumFiles',
+    'pdf.mergedResult': 'pdf.merged',
+    'pdf.merging': 'pdf.converting',
+    'pdf.noPdfSelected': 'pdf.invalidPdf',
+    'pdf.pageNumberFailed': 'pdf.buildFailed',
+    'pdf.readyPageNumberDownload': 'pdf.readyDownload',
+    'pdf.watermarkFailed': 'pdf.buildFailed',
+    'pdf.watermarkImageSelected': 'pdf.watermarkImage',
+
+    'pdfWorker.backgroundNotSupported': 'pdf.workerUnavailable',
+    'pdfWorker.browserNotSupported': 'pdf.workerUnavailable',
+    'pdfWorker.httpFailed': 'pdf.workerRequestFailed',
+    'pdfWorker.invalidOptions': 'pdf.workerRequestFailed',
+    'pdfWorker.invalidPageList': 'pdf.workerRequestFailed',
+    'pdfWorker.invalidPdfBuffers': 'pdf.workerRequestFailed',
+    'pdfWorker.invalidPdfData': 'pdf.workerRequestFailed',
+    'pdfWorker.invalidRequest': 'pdf.workerRequestFailed',
+    'pdfWorker.invalidWatermarkImage': 'pdf.workerRequestFailed',
+    'pdfWorker.invalidWorker': 'pdf.workerRequestFailed',
+    'pdfWorker.loadFailed': 'pdf.workerRequestFailed',
+    'pdfWorker.messageError': 'pdf.workerRequestFailed',
+    'pdfWorker.notReady': 'pdf.workerUnavailable',
+    'pdfWorker.requestFailed': 'pdf.workerRequestFailed',
+    'pdfWorker.requestTimeout': 'pdf.workerRequestFailed',
+    'pdfWorker.stopped': 'pdf.workerStopped',
+    'pdfWorker.stoppedBeforeSend': 'pdf.workerStopped',
+    'pdfWorker.unknownError': 'tool.error',
+    'pdfWorker.workerError': 'pdf.workerRequestFailed',
+
+    'pdf.workerFailed': 'pdf.workerRequestFailed',
+
+  };
+
+
+  function getAliasKey(
+    key
+  ) {
+
+    const seen = new Set();
+    let current = key;
+
+    while (
+      Object.prototype.hasOwnProperty.call(
+        KEY_ALIASES,
+        current
+      ) &&
+      !seen.has(current)
+    ) {
+
+      seen.add(current);
+      current = KEY_ALIASES[current];
+
+    }
+
+    return current;
+
+  }
+
+
+  // ============================================================
   // RESOLVE TRANSLATION
   // ============================================================
 
@@ -9615,10 +9767,16 @@ window.I18n = (() => {
       getFallbackMessages();
 
 
+    const lookupKey =
+      getAliasKey(
+        key
+      );
+
+
     const currentValue =
       getNestedValue(
         currentMessages,
-        key
+        lookupKey
       );
 
 
@@ -9646,7 +9804,7 @@ window.I18n = (() => {
     const fallbackValue =
       getNestedValue(
         fallbackMessages,
-        key
+        lookupKey
       );
 
 
@@ -9850,7 +10008,7 @@ window.I18n = (() => {
     return (
       getNestedValue(
         messages,
-        key
+        getAliasKey(key)
       ) !== undefined
     );
 
@@ -9891,10 +10049,14 @@ window.I18n = (() => {
       ]?.messages;
 
 
+    const lookupKey =
+      getAliasKey(key);
+
+
     if (
       getNestedValue(
         currentMessages,
-        key
+        lookupKey
       ) !== undefined
     ) {
 
@@ -9911,7 +10073,7 @@ window.I18n = (() => {
     return (
       getNestedValue(
         fallbackMessages,
-        key
+        lookupKey
       ) !== undefined
     );
 
@@ -11056,7 +11218,7 @@ window.I18n = (() => {
 
     return getNestedValue(
       messages,
-      key
+      getAliasKey(key)
     );
 
   }
