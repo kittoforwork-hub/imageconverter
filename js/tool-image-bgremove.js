@@ -68,7 +68,7 @@
 
   if (
     Object.values(el).some(
-      v => !v
+      value => !value
     )
   ) {
     console.warn(
@@ -79,60 +79,63 @@
   }
 
   // ============================================================
-  // LOW-RAM CONFIG
+  // CONFIG
   // ============================================================
 
+  /*
+   * IMPORTANT:
+   *
+   * Transformers.js v3.8.1 had WebGPU runtime problems involving
+   * shape-related WebGPU kernels such as computeSliceOffsets.
+   *
+   * Transformers.js v4 introduced a new WebGPU runtime and the
+   * upstream project explicitly states these WebGPU issues were
+   * fixed in v4.
+   */
   const TRANSFORMERS_VERSION =
-    '3.8.1';
-
-  const TRANSFORMERS_URL =
-    `https://cdn.jsdelivr.net/npm/@huggingface/transformers@${TRANSFORMERS_VERSION}/+esm`;
+    '4.3.0';
 
   /*
-   * Browser-ready BiRefNet Lite 512x512.
+   * Official jsDelivr browser ESM entry.
+   */
+  const TRANSFORMERS_URL =
+    `https://cdn.jsdelivr.net/npm/@huggingface/transformers@${TRANSFORMERS_VERSION}`;
+
+  /*
+   * Browser-ready 512x512 BiRefNet Lite.
    */
   const MODEL_ID =
     'studioludens/birefnet-lite-512';
 
   /*
-   * GPU:
+   * GPU precision.
    *
-   * Prefer fp16 when the adapter exposes shader-f16.
+   * Prefer fp16 when shader-f16 exists.
+   * Otherwise use fp32 WebGPU.
    */
   const GPU_DTYPE_FP16 =
     'fp16';
 
-  /*
-   * GPU fallback:
-   *
-   * Some adapters can use WebGPU but do not expose
-   * shader-f16. In that case use fp32 instead of
-   * immediately disabling WebGPU.
-   */
   const GPU_DTYPE_FP32 =
     'fp32';
 
   /*
-   * CPU/WASM:
+   * WASM fallback.
    */
   const CPU_DTYPE =
     'fp32';
 
   /*
-   * The model itself is a fixed 512x512 browser model.
+   * Model input.
    *
-   * Do not feed 1024px data into the AI stage because
-   * that only increases memory usage before the processor
-   * resizes it.
+   * The model is specifically exported for 512x512 browser
+   * inference.
    */
   const AI_MAX_DIMENSION =
     512;
 
   /*
-   * Final output protection.
-   *
-   * For very large source images, output is resized
-   * to stay within a safe memory envelope.
+   * Final image protection.
    */
   const MAX_OUTPUT_PIXELS =
     8 * 1000 * 1000;
@@ -147,23 +150,20 @@
     'png';
 
   /*
-   * Automatically try WebGPU first.
-   *
-   * If WebGPU is unavailable, unsupported, throws,
-   * or stalls, CPU/WASM is used.
+   * Try WebGPU first.
    */
   const PREFER_GPU =
     true;
 
   /*
-   * Once WebGPU has caused a hard failure/timeout during
-   * this page session, don't keep retrying the same bad backend.
+   * Once WebGPU hard-fails during this page session, use WASM
+   * directly for subsequent jobs.
    */
   let gpuDisabledForSession =
     false;
 
   /*
-   * Destroy idle worker after 60 seconds.
+   * Destroy unused worker after 60 seconds.
    */
   const WORKER_IDLE_TIMEOUT =
     60 * 1000;
@@ -171,7 +171,8 @@
   /*
    * Watchdogs.
    *
-   * Progress messages reset the watchdog.
+   * The watchdog is important because a GPU runtime failure may
+   * produce validation errors without rejecting the JS Promise.
    */
   const WATCHDOG = {
     prepare:
@@ -181,10 +182,10 @@
       180 * 1000,
 
     aiGpu:
-      45 * 1000,
+      60 * 1000,
 
     aiCpu:
-      120 * 1000,
+      180 * 1000,
 
     output:
       60 * 1000
@@ -212,22 +213,17 @@
     new Map();
 
   /*
-   * Only one AI task uses the worker at a time.
-   *
-   * This avoids:
-   * - concurrent inference
-   * - duplicate model memory
-   * - model disposal races
-   * - unnecessary RAM spikes
+   * Only one worker inference at a time.
    */
   let workerQueue =
     Promise.resolve();
 
   // ============================================================
-  // HELPERS
+  // GENERAL HELPERS
   // ============================================================
 
   const yieldUI = async () => {
+
     if (
       typeof U.yieldToUI ===
       'function'
@@ -258,6 +254,7 @@
   };
 
   const baseName = name => {
+
     if (
       typeof U.baseName ===
       'function'
@@ -317,32 +314,36 @@
         i <
           units.length - 1
       ) {
+
         n /=
           1024;
 
         i++;
+
       }
 
       return `${n.toFixed(
         i ? 1 : 0
       )} ${units[i]}`;
+
     };
 
-  const revoke = url => {
+  const revoke =
+    url => {
 
-    if (!url) {
-      return;
-    }
+      if (!url) {
+        return;
+      }
 
-    try {
+      try {
 
-      URL.revokeObjectURL(
-        url
-      );
+        URL.revokeObjectURL(
+          url
+        );
 
-    } catch (_) {}
+      } catch (_) {}
 
-  };
+    };
 
   const downloadBlob =
     (
@@ -389,6 +390,7 @@
         },
         1000
       );
+
     };
 
   const errorKey =
@@ -405,24 +407,49 @@
         code ===
         'BACKGROUND_TRANSFORMERS_LOAD_FAILED'
       ) {
+
         return 'errors.backgroundLibraryLoadFailed';
+
       }
 
       if (
         code ===
         'BACKGROUND_EMPTY_RESULT'
       ) {
+
         return 'image.backgroundRemovalFailed';
+
       }
 
       if (
         code ===
         'BACKGROUND_INVALID_MASK_DIMENSIONS'
       ) {
+
         return 'image.backgroundRemovalFailed';
+
+      }
+
+      if (
+        code ===
+        'BACKGROUND_GPU_TIMEOUT'
+      ) {
+
+        return 'image.backgroundRemovalFailed';
+
+      }
+
+      if (
+        code ===
+        'BACKGROUND_WORKER_STALLED'
+      ) {
+
+        return 'image.backgroundRemovalFailed';
+
       }
 
       return 'image.backgroundRemovalFailed';
+
     };
 
   // ============================================================
@@ -433,6 +460,10 @@
 
     return `
       'use strict';
+
+      // ========================================================
+      // CONSTANTS
+      // ========================================================
 
       const TRANSFORMERS_URL =
         ${JSON.stringify(
@@ -479,7 +510,7 @@
         )};
 
       // ========================================================
-      // WORKER STATE
+      // MODEL STATE
       // ========================================================
 
       let tf =
@@ -636,6 +667,9 @@
                 tf =
                   module;
 
+                /*
+                 * Configure WASM conservatively.
+                 */
                 try {
 
                   if (
@@ -648,12 +682,6 @@
                     tf.env.allowLocalModels =
                       false;
 
-                    /*
-                     * Keep WASM single-threaded.
-                     *
-                     * Multi-threading here can increase
-                     * memory usage considerably.
-                     */
                     if (
                       tf.env.backends &&
                       tf.env.backends.onnx &&
@@ -668,6 +696,10 @@
 
                     }
 
+                    /*
+                     * Keep logging quiet unless the library
+                     * emits a real error.
+                     */
                     if (
                       Object.prototype.hasOwnProperty.call(
                         tf.env,
@@ -785,17 +817,13 @@
         try {
 
           /*
-           * Do NOT pass powerPreference.
-           *
-           * Some Chrome/Windows environments report that
-           * powerPreference is ignored.
+           * Do not pass powerPreference.
            */
-
           const adapterPromise =
             navigator.gpu.requestAdapter();
 
           /*
-           * Prevent adapter detection from hanging forever.
+           * Adapter watchdog.
            */
           const timeoutPromise =
             new Promise(
@@ -838,24 +866,25 @@
             {};
 
           /*
-           * The 512 model naturally stays within the
-           * WebGPU storage-buffer binding requirements.
+           * The 512 model uses max 7 storage buffers
+           * per shader stage according to its model card.
+           *
+           * Reject clearly insufficient adapters.
            */
-          const maxStorageBuffers =
+          const storageLimit =
             Number(
               limits.maxStorageBuffersPerShaderStage
             );
 
           if (
             Number.isFinite(
-              maxStorageBuffers
+              storageLimit
             ) &&
-            maxStorageBuffers <
-              8
+            storageLimit < 8
           ) {
 
             console.warn(
-              '[BG Worker] WebGPU storage buffer limit too low.'
+              '[BG Worker] WebGPU storage-buffer limit too low.'
             );
 
             return {
@@ -869,14 +898,10 @@
           }
 
           /*
-           * Preferred:
+           * Prefer fp16.
            *
-           * shader-f16 available -> fp16
-           *
-           * shader-f16 unavailable -> fp32
-           *
-           * This is intentionally NOT treated as a
-           * WebGPU failure.
+           * If shader-f16 is missing, DO NOT reject WebGPU.
+           * The model also ships with a fp32 ONNX variant.
            */
           let dtype =
             GPU_DTYPE_FP32;
@@ -950,7 +975,9 @@
             ) ||
             !info
           ) {
+
             return;
+
           }
 
           if (
@@ -995,7 +1022,11 @@
         gpuDtype = null
       ) {
 
-        if (
+        const selectedGpuDtype =
+          gpuDtype ||
+          GPU_DTYPE_FP16;
+
+        const canReuse =
           model &&
           processor &&
           loadedMode ===
@@ -1004,8 +1035,11 @@
             mode !==
               'gpu' ||
             loadedGpuDtype ===
-              gpuDtype
-          )
+              selectedGpuDtype
+          );
+
+        if (
+          canReuse
         ) {
 
           return {
@@ -1035,14 +1069,6 @@
           100
         );
 
-        const isGPU =
-          mode ===
-          'gpu';
-
-        const selectedGpuDtype =
-          gpuDtype ||
-          GPU_DTYPE_FP16;
-
         const progressCallback =
           makeDownloadProgress(
             jobId
@@ -1069,12 +1095,14 @@
               {
 
                 dtype:
-                  isGPU
+                  mode ===
+                    'gpu'
                     ? selectedGpuDtype
                     : CPU_DTYPE,
 
                 device:
-                  isGPU
+                  mode ===
+                    'gpu'
                     ? 'webgpu'
                     : 'wasm',
 
@@ -1092,7 +1120,8 @@
             mode;
 
           loadedGpuDtype =
-            isGPU
+            mode ===
+              'gpu'
               ? selectedGpuDtype
               : null;
 
@@ -1275,8 +1304,9 @@
             );
 
           /*
-           * Preserve aspect ratio while ensuring the largest
-           * dimension sent to the AI runtime is 512px.
+           * Preserve aspect ratio.
+           *
+           * Largest input dimension <= 512.
            */
           const scale =
             Math.min(
@@ -1292,6 +1322,7 @@
           const targetWidth =
             Math.max(
               1,
+
               Math.round(
                 sourceWidth *
                 scale
@@ -1301,6 +1332,7 @@
           const targetHeight =
             Math.max(
               1,
+
               Math.round(
                 sourceHeight *
                 scale
@@ -1313,7 +1345,6 @@
               await createImageBitmap(
                 file,
                 {
-
                   resizeWidth:
                     targetWidth,
 
@@ -1322,15 +1353,11 @@
 
                   resizeQuality:
                     'medium'
-
                 }
               );
 
           } catch (_) {
 
-            /*
-             * Older browser fallback.
-             */
             bitmap =
               await createImageBitmap(
                 file
@@ -1343,8 +1370,7 @@
           );
 
           /*
-           * Safety clamp in case the browser ignored
-           * the resize options.
+           * Clamp in case browser ignored resize options.
            */
           const actualScale =
             Math.min(
@@ -1363,18 +1389,20 @@
                 )
             );
 
-          const canvasWidth =
+          const width =
             Math.max(
               1,
+
               Math.round(
                 bitmap.width *
                 actualScale
               )
             );
 
-          const canvasHeight =
+          const height =
             Math.max(
               1,
+
               Math.round(
                 bitmap.height *
                 actualScale
@@ -1383,8 +1411,8 @@
 
           const canvas =
             new OffscreenCanvas(
-              canvasWidth,
-              canvasHeight
+              width,
+              height
             );
 
           const ctx =
@@ -1414,8 +1442,8 @@
             bitmap,
             0,
             0,
-            canvasWidth,
-            canvasHeight
+            width,
+            height
           );
 
           return await canvas.convertToBlob({
@@ -1446,7 +1474,7 @@
       }
 
       // ========================================================
-      // PICK OUTPUT TENSOR
+      // PICK LOGITS
       // ========================================================
 
       function pickOutputTensor(
@@ -1473,14 +1501,12 @@
         }
 
         /*
-         * Extra fallback:
-         * if the model itself returns a Tensor.
+         * Additional direct Tensor fallback.
          */
         if (
           output &&
           output.dims &&
-          typeof output.sigmoid ===
-            'function'
+          output.data
         ) {
 
           return output;
@@ -1492,194 +1518,219 @@
       }
 
       // ========================================================
-      // NORMALIZE MASK TENSOR
+      // READ TENSOR DATA
       // ========================================================
 
-      function normalizeMaskTensor(
+      async function readTensorData(
         tensor
       ) {
 
         if (
-          !tensor ||
-          !tensor.dims
+          !tensor
         ) {
 
           throw new Error(
-            'BACKGROUND_INVALID_MASK_DIMENSIONS'
+            'BACKGROUND_EMPTY_RESULT'
           );
 
         }
 
         /*
-         * The BiRefNet output is normally:
+         * Transformers.js exposes tensor.data as a typed array.
          *
-         * [1, 1, H, W]
-         *
-         * We need:
-         *
-         * [H, W, 1]
-         *
-         * for RawImage.fromTensor(..., 'HWC').
+         * Some future implementations may expose an async getter,
+         * so support both safely.
          */
+        let data =
+          tensor.data;
 
-        let result =
-          tensor;
-
-        /*
-         * Remove singleton dimensions until the tensor
-         * is no longer above 3 dimensions.
-         */
-        while (
-          result &&
-          result.dims &&
-          result.dims.length >
-            3
-        ) {
-
-          const next =
-            result.squeeze();
-
-          if (
-            next ===
-            result
-          ) {
-            break;
-          }
-
-          if (
-            result &&
-            typeof result.dispose ===
-              'function'
-          ) {
-
-            try {
-              result.dispose();
-            } catch (_) {}
-
-          }
-
-          result =
-            next;
-
-        }
-
-        /*
-         * If the result is already 3D:
-         *
-         * [H,W,1]
-         *
-         * or potentially
-         *
-         * [1,H,W]
-         *
-         * The model output normally becomes [H,W,1]
-         * after the next step only when necessary.
-         */
         if (
-          result &&
-          result.dims &&
-          result.dims.length ===
-            3
-        ) {
-
-          const dims =
-            result.dims;
-
-          /*
-           * If first dimension is 1 and last is not 1,
-           * interpret it as CHW-like [1,H,W] and convert
-           * to [H,W,1] through permute.
-           */
-          if (
-            dims[0] === 1 &&
-            dims[2] !== 1 &&
-            typeof result.permute ===
-              'function'
-          ) {
-
-            const converted =
-              result.permute(
-                [1, 2, 0]
-              );
-
-            if (
-              converted !==
-              result
-            ) {
-
-              if (
-                typeof result.dispose ===
-                  'function'
-              ) {
-
-                try {
-                  result.dispose();
-                } catch (_) {}
-
-              }
-
-              result =
-                converted;
-
-            }
-
-          }
-
-          return result;
-
-        }
-
-        /*
-         * Most importantly:
-         *
-         * [H,W]
-         *
-         * must become:
-         *
-         * [H,W,1]
-         */
-        if (
-          result &&
-          result.dims &&
-          result.dims.length ===
-            2 &&
-          typeof result.unsqueeze ===
+          data &&
+          typeof data.then ===
             'function'
         ) {
 
-          const expanded =
-            result.unsqueeze(
-              2
-            );
+          data =
+            await data;
 
+        }
+
+        if (
+          !data ||
+          typeof data.length !==
+            'number'
+        ) {
+
+          /*
+           * Final fallback through tolist().
+           *
+           * This is only used if data is unavailable.
+           */
           if (
-            expanded !==
-            result
+            typeof tensor.tolist ===
+              'function'
           ) {
 
-            if (
-              typeof result.dispose ===
-                'function'
-            ) {
-
-              try {
-                result.dispose();
-              } catch (_) {}
-
-            }
-
-            result =
-              expanded;
+            data =
+              tensor.tolist();
 
           }
 
         }
 
         if (
-          !result ||
-          !result.dims ||
-          result.dims.length !==
-            3
+          !data ||
+          typeof data.length !==
+            'number'
+        ) {
+
+          throw new Error(
+            'BACKGROUND_EMPTY_RESULT'
+          );
+
+        }
+
+        return data;
+
+      }
+
+      // ========================================================
+      // BUILD MASK WITHOUT TENSOR SHAPE OPERATIONS
+      // ========================================================
+
+      async function logitsToMask(
+        tensor,
+        jobId
+      ) {
+
+        checkCancel(
+          jobId
+        );
+
+        const dims =
+          Array.isArray(
+            tensor.dims
+          )
+            ? tensor.dims.map(
+                value =>
+                  Number(
+                    value
+                  )
+              )
+            : [];
+
+        const data =
+          await readTensorData(
+            tensor
+          );
+
+        checkCancel(
+          jobId
+        );
+
+        /*
+         * Expected model output:
+         *
+         * [1, 1, 512, 512]
+         *
+         * But support:
+         *
+         * [1, 1, H, W]
+         * [1, H, W]
+         * [H, W]
+         */
+        let width =
+          0;
+
+        let height =
+          0;
+
+        let offset =
+          0;
+
+        if (
+          dims.length ===
+          4
+        ) {
+
+          height =
+            Math.floor(
+              dims[2]
+            );
+
+          width =
+            Math.floor(
+              dims[3]
+            );
+
+        } else if (
+          dims.length ===
+          3
+        ) {
+
+          /*
+           * Usually [1,H,W].
+           */
+          if (
+            dims[0] ===
+            1
+          ) {
+
+            height =
+              Math.floor(
+                dims[1]
+              );
+
+            width =
+              Math.floor(
+                dims[2]
+              );
+
+          } else {
+
+            /*
+             * Fallback for [H,W,1].
+             */
+            height =
+              Math.floor(
+                dims[0]
+              );
+
+            width =
+              Math.floor(
+                dims[1]
+              );
+
+          }
+
+        } else if (
+          dims.length ===
+          2
+        ) {
+
+          height =
+            Math.floor(
+              dims[0]
+            );
+
+          width =
+            Math.floor(
+              dims[1]
+            );
+
+        }
+
+        if (
+          !Number.isInteger(
+            width
+          ) ||
+          !Number.isInteger(
+            height
+          ) ||
+          width <=
+            0 ||
+          height <=
+            0
         ) {
 
           throw new Error(
@@ -1688,7 +1739,128 @@
 
         }
 
-        return result;
+        const expected =
+          width *
+          height;
+
+        /*
+         * Model output is single-channel, so the first H*W values
+         * are sufficient.
+         */
+        if (
+          data.length <
+          expected
+        ) {
+
+          throw new Error(
+            'BACKGROUND_INVALID_MASK_DIMENSIONS'
+          );
+
+        }
+
+        const maskData =
+          new Uint8ClampedArray(
+            expected
+          );
+
+        /*
+         * Convert logits -> sigmoid -> 0..255.
+         *
+         * This is deliberately done in normal JS instead of
+         * calling tensor.sigmoid()/mul()/to()/squeeze()/unsqueeze().
+         *
+         * That avoids extra WebGPU tensor kernels entirely after
+         * model inference.
+         */
+        for (
+          let i =
+            0;
+
+          i <
+            expected;
+
+          i++
+        ) {
+
+          if (
+            (i & 16383) ===
+            0
+          ) {
+
+            checkCancel(
+              jobId
+            );
+
+          }
+
+          let value =
+            Number(
+              data[
+                offset +
+                i
+              ]
+            );
+
+          if (
+            !Number.isFinite(
+              value
+            )
+          ) {
+
+            value =
+              0;
+
+          }
+
+          /*
+           * Prevent exp() from overflowing.
+           */
+          value =
+            Math.max(
+              -50,
+              Math.min(
+                50,
+                value
+              )
+            );
+
+          const alpha =
+            1 /
+            (
+              1 +
+              Math.exp(
+                -value
+              )
+            );
+
+          maskData[i] =
+            Math.round(
+              alpha *
+              255
+            );
+
+        }
+
+        /*
+         * RawImage constructor directly creates a 1-channel image.
+         *
+         * No tensor shape operation is involved.
+         */
+        const {
+          RawImage
+        } =
+          await loadTF();
+
+        checkCancel(
+          jobId
+        );
+
+        return new RawImage(
+          maskData,
+          width,
+          height,
+          1
+        );
 
       }
 
@@ -1736,7 +1908,7 @@
         try {
 
           /*
-           * Decode directly at protected output size.
+           * Decode original directly at protected output size.
            */
           bitmap =
             await createImageBitmap(
@@ -1770,18 +1942,12 @@
                 alpha:
                   true,
 
-                /*
-                 * We do read pixel data once for the alpha
-                 * composition.
-                 */
                 willReadFrequently:
                   true
               }
             );
 
-          if (
-            !ctx
-          ) {
+          if (!ctx) {
 
             throw new Error(
               'BACKGROUND_CANVAS_UNSUPPORTED'
@@ -1804,7 +1970,7 @@
           );
 
           /*
-           * Resize mask once if required.
+           * Resize alpha mask from 512x512 back to output size.
            */
           if (
             mask.width !==
@@ -1840,7 +2006,7 @@
             resizedMask.data;
 
           /*
-           * Apply single-channel alpha to RGBA image.
+           * Apply alpha.
            */
           for (
             let p =
@@ -1853,16 +2019,18 @@
 
             p +=
               4,
-              i++
+            i++
           ) {
 
             const a =
               alpha[i];
 
             pixels[p + 3] =
-              a <= 3
+              a <=
+                3
                 ? 0
-                : a >= 252
+                : a >=
+                    252
                   ? 255
                   : a;
 
@@ -1874,9 +2042,6 @@
             0
           );
 
-          /*
-           * Dispose temporary resized mask.
-           */
           if (
             resizedMask !==
               mask &&
@@ -1971,7 +2136,7 @@
       }
 
       // ========================================================
-      // RUN BACKGROUND REMOVAL
+      // RUN
       // ========================================================
 
       async function run(
@@ -2012,10 +2177,19 @@
         let mask =
           null;
 
+        let pixelValues =
+          null;
+
+        let output =
+          null;
+
+        let tensor =
+          null;
+
         try {
 
           // ----------------------------------------------------
-          // PREPARE MODEL INPUT
+          // MODEL INPUT
           // ----------------------------------------------------
 
           modelBlob =
@@ -2048,7 +2222,7 @@
           );
 
           // ----------------------------------------------------
-          // MODE SELECTION
+          // SELECT BACKEND
           // ----------------------------------------------------
 
           let mode =
@@ -2146,7 +2320,7 @@
             ) {
 
               console.warn(
-                '[BG Worker] WebGPU failed; switching to WASM:',
+                '[BG Worker] WebGPU load failed; falling back to WASM:',
                 gpuError
               );
 
@@ -2207,12 +2381,26 @@
           // PREPROCESS
           // ----------------------------------------------------
 
-          const {
-            pixel_values
-          } =
+          const processed =
             await loaded.processor(
               image
             );
+
+          pixelValues =
+            processed &&
+            processed.pixel_values
+              ? processed.pixel_values
+              : null;
+
+          if (
+            !pixelValues
+          ) {
+
+            throw new Error(
+              'BACKGROUND_EMPTY_RESULT'
+            );
+
+          }
 
           checkCancel(
             jobId
@@ -2230,17 +2418,17 @@
           // INFERENCE
           // ----------------------------------------------------
 
-          const output =
+          output =
             await loaded.model({
               input_image:
-                pixel_values
+                pixelValues
             });
 
           checkCancel(
             jobId
           );
 
-          const tensor =
+          tensor =
             pickOutputTensor(
               output
             );
@@ -2264,22 +2452,51 @@
           );
 
           // ----------------------------------------------------
-          // ALPHA MASK
+          // MASK
           // ----------------------------------------------------
 
-          let alphaTensor =
-            tensor
-              .sigmoid()
-              .mul(
-                255
-              )
-              .to(
-                'uint8'
-              );
-
           /*
-           * Dispose original logits immediately.
+           * IMPORTANT:
+           *
+           * Do NOT use:
+           *
+           * tensor.sigmoid()
+           * tensor.mul()
+           * tensor.to()
+           * tensor.squeeze()
+           * tensor.unsqueeze()
+           * tensor.permute()
+           *
+           * here.
+           *
+           * We read logits to CPU and build RawImage directly.
+           * This avoids additional WebGPU shape kernels.
            */
+          mask =
+            await logitsToMask(
+              tensor,
+              jobId
+            );
+
+          // ----------------------------------------------------
+          // RELEASE TENSORS
+          // ----------------------------------------------------
+
+          if (
+            pixelValues &&
+            typeof pixelValues.dispose ===
+              'function'
+          ) {
+
+            try {
+              pixelValues.dispose();
+            } catch (_) {}
+
+          }
+
+          pixelValues =
+            null;
+
           if (
             tensor &&
             typeof tensor.dispose ===
@@ -2292,69 +2509,11 @@
 
           }
 
-          /*
-           * IMPORTANT:
-           *
-           * BiRefNet returns:
-           *
-           * [1, 1, H, W]
-           *
-           * squeeze()
-           * =>
-           * [H, W]
-           *
-           * RawImage.fromTensor requires 3 dimensions.
-           *
-           * normalizeMaskTensor() converts it to:
-           *
-           * [H, W, 1]
-           */
-          alphaTensor =
-            normalizeMaskTensor(
-              alphaTensor
-            );
+          tensor =
+            null;
 
           /*
-           * Create RawImage from HWC 3D uint8 tensor.
-           */
-          mask =
-            await RawImage.fromTensor(
-              alphaTensor,
-              'HWC'
-            );
-
-          /*
-           * Tensor no longer needed.
-           */
-          if (
-            alphaTensor &&
-            typeof alphaTensor.dispose ===
-              'function'
-          ) {
-
-            try {
-              alphaTensor.dispose();
-            } catch (_) {}
-
-          }
-
-          /*
-           * Release input tensor.
-           */
-          if (
-            pixel_values &&
-            typeof pixel_values.dispose ===
-              'function'
-          ) {
-
-            try {
-              pixel_values.dispose();
-            } catch (_) {}
-
-          }
-
-          /*
-           * Release additional output tensors.
+           * Dispose additional tensor outputs.
            */
           if (
             output &&
@@ -2371,8 +2530,6 @@
 
               if (
                 value &&
-                value !==
-                  tensor &&
                 typeof value.dispose ===
                   'function'
               ) {
@@ -2387,12 +2544,19 @@
 
           }
 
+          output =
+            null;
+
           progress(
             jobId,
             'ai',
             'matting',
             100,
             100
+          );
+
+          checkCancel(
+            jobId
           );
 
           // ----------------------------------------------------
@@ -2427,7 +2591,7 @@
           }
 
           /*
-           * Transfer the ArrayBuffer rather than cloning it.
+           * Transfer final buffer without cloning.
            */
           const buffer =
             await finalBlob.arrayBuffer();
@@ -2438,15 +2602,14 @@
 
           post(
             'result',
-            {
 
+            {
               jobId,
 
               buffer,
 
               mime:
                 OUTPUT_FORMAT
-
             },
 
             [
@@ -2457,12 +2620,74 @@
         } finally {
 
           /*
-           * Drop local references ASAP.
+           * Release tensors if an exception occurred.
            */
+          if (
+            pixelValues &&
+            typeof pixelValues.dispose ===
+              'function'
+          ) {
+
+            try {
+              pixelValues.dispose();
+            } catch (_) {}
+
+          }
+
+          if (
+            tensor &&
+            typeof tensor.dispose ===
+              'function'
+          ) {
+
+            try {
+              tensor.dispose();
+            } catch (_) {}
+
+          }
+
+          if (
+            output &&
+            typeof output ===
+              'object'
+          ) {
+
+            for (
+              const value of
+                Object.values(
+                  output
+                )
+            ) {
+
+              if (
+                value &&
+                typeof value.dispose ===
+                  'function'
+              ) {
+
+                try {
+                  value.dispose();
+                } catch (_) {}
+
+              }
+
+            }
+
+          }
+
           image =
             null;
 
           modelBlob =
+            null;
+
+          pixelValues =
+            null;
+
+          tensor =
+            null;
+
+          output =
             null;
 
           if (
@@ -2570,6 +2795,7 @@
 
             post(
               'error',
+
               {
                 jobId,
 
@@ -2797,7 +3023,7 @@
   }
 
   // ============================================================
-  // PROGRESS
+  // WATCHDOG
   // ============================================================
 
   function weightedProgress(
@@ -2930,17 +3156,13 @@
       'ai'
     ) {
 
-      if (
+      return (
         job &&
         job.mode ===
           'gpu'
-      ) {
-
-        return WATCHDOG.aiGpu;
-
-      }
-
-      return WATCHDOG.aiCpu;
+      )
+        ? WATCHDOG.aiGpu
+        : WATCHDOG.aiCpu;
 
     }
 
@@ -3006,7 +3228,9 @@
           if (
             request.settled
           ) {
+
             return;
+
           }
 
           const isGPU =
@@ -3025,26 +3249,22 @@
             isGPU
           ) {
 
-            /*
-             * Permanently stop retrying GPU in this
-             * page session.
-             */
             gpuDisabledForSession =
               true;
 
           }
 
           console.warn(
-            '[Image Background Removal] Watchdog terminated worker:',
+            '[Image Background Removal] Worker watchdog:',
             message
           );
 
           /*
-           * A stuck WebGPU Promise cannot be reliably
-           * force-cancelled from JS.
+           * This is intentionally brutal:
            *
-           * Terminating the Worker is the reliable
-           * escape path.
+           * A stuck GPU Promise cannot reliably be cancelled
+           * from the page. Killing the Worker releases its
+           * execution context and allows us to retry CPU cleanly.
            */
           destroyWorker(
             message
@@ -3073,12 +3293,10 @@
     if (
       !data
     ) {
-      return;
-    }
 
-    // ----------------------------------------------------------
-    // READY
-    // ----------------------------------------------------------
+      return;
+
+    }
 
     if (
       data.type ===
@@ -3230,10 +3448,6 @@
       'gpuFallback'
     ) {
 
-      /*
-       * Worker detected WebGPU failure and switched
-       * to CPU.
-       */
       gpuDisabledForSession =
         true;
 
@@ -3329,9 +3543,6 @@
       'done'
     ) {
 
-      /*
-       * Result owns Promise resolution.
-       */
       scheduleIdleDestroy();
 
       return;
@@ -3483,7 +3694,7 @@
   }
 
   // ============================================================
-  // PROCESS IN WORKER
+  // PROCESS QUEUE
   // ============================================================
 
   function processInWorker(
@@ -3491,9 +3702,6 @@
     requestedMode
   ) {
 
-    /*
-     * Queue all inference tasks.
-     */
     const task =
       workerQueue.then(
         async () => {
@@ -3517,7 +3725,7 @@
       );
 
     /*
-     * Keep queue alive after failures.
+     * Keep queue alive after failure.
      */
     workerQueue =
       task.catch(
@@ -3560,9 +3768,8 @@
     } catch (_) {}
 
     /*
-     * Worker-side cancellation is cooperative.
-     *
-     * If it doesn't stop quickly, terminate worker.
+     * Cooperative cancel first.
+     * If still pending, kill worker.
      */
     setTimeout(
       () => {
@@ -3641,10 +3848,6 @@
       this.build();
 
     }
-
-    // ----------------------------------------------------------
-    // BUILD
-    // ----------------------------------------------------------
 
     build() {
 
@@ -3747,7 +3950,9 @@
             if (
               this.disposed
             ) {
+
               return;
+
             }
 
             this.originalWidth =
@@ -4072,9 +4277,6 @@
 
       }
 
-      /*
-       * Use actual preview dimensions if already known.
-       */
       if (
         this.before &&
         this.before.naturalWidth
@@ -4136,8 +4338,8 @@
         await yieldUI();
 
         /*
-         * If GPU has already been disabled during this session,
-         * start directly with CPU.
+         * If GPU already failed earlier this session,
+         * go directly to CPU.
          */
         const requestedMode =
           gpuDisabledForSession
@@ -4164,9 +4366,6 @@
               ? firstError.message
               : '';
 
-          /*
-           * Cases where the GPU worker was forcibly terminated:
-           */
           const gpuFailed =
             this.mode ===
               'gpu' &&
@@ -4174,6 +4373,15 @@
               message
             );
 
+          /*
+           * Important fallback:
+           *
+           * WebGPU validation errors can leave an inference
+           * Promise hanging. The watchdog kills the worker,
+           * which reaches here as BACKGROUND_GPU_TIMEOUT.
+           *
+           * Then we start a fresh worker on WASM.
+           */
           if (
             gpuFailed &&
             !cpuRetried &&
@@ -4209,9 +4417,6 @@
 
             await yieldUI();
 
-            /*
-             * New worker, CPU/WASM.
-             */
             blob =
               await processInWorker(
                 this,
@@ -4328,10 +4533,6 @@
               ? error.message
               : '';
 
-          /*
-           * Normal user cancellation should not become
-           * a visible error.
-           */
           if (
             !/BACKGROUND_CANCELLED|BACKGROUND_WORKER_TERMINATED/.test(
               message
@@ -4656,7 +4857,7 @@
       );
 
       /*
-       * Let the next new job probe GPU again.
+       * Allow GPU to be probed again after a manual reset.
        */
       gpuDisabledForSession =
         false;
@@ -4851,8 +5052,8 @@
                 'blob',
 
               /*
-               * PNG is already compressed.
-               * STORE avoids another CPU/RAM spike.
+               * PNG files are already compressed.
+               * STORE avoids unnecessary CPU/RAM work.
                */
               compression:
                 'STORE'
@@ -4886,7 +5087,7 @@
   );
 
   // ============================================================
-  // CACHE CLEAR HOOK
+  // CACHE CLEAR
   // ============================================================
 
   if (
