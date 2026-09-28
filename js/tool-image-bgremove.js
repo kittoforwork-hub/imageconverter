@@ -9,6 +9,7 @@
     if (I18n && typeof I18n.t === 'function') {
       return I18n.t(key, values);
     }
+
     return String(key);
   };
 
@@ -25,7 +26,9 @@
   };
 
   if (Object.values(el).some(v => !v)) {
-    console.warn('[Image Background Removal] Required elements not found.');
+    console.warn(
+      '[Image Background Removal] Required elements not found.'
+    );
     return;
   }
 
@@ -34,56 +37,150 @@
   // ============================================================
 
   const TRANSFORMERS_VERSION = '3.8.1';
+
   const TRANSFORMERS_URL =
     `https://cdn.jsdelivr.net/npm/@huggingface/transformers@${TRANSFORMERS_VERSION}/+esm`;
 
-  // Browser-ready 512x512 BiRefNet Lite.
-  const MODEL_ID = 'studioludens/birefnet-lite-512';
+  /*
+   * Browser-ready BiRefNet Lite 512x512.
+   */
+  const MODEL_ID =
+    'studioludens/birefnet-lite-512';
 
-  // WebGPU uses FP16 weights.
-  const GPU_DTYPE = 'fp16';
+  /*
+   * WebGPU:
+   * - fp16 = smaller GPU memory footprint
+   */
+  const GPU_DTYPE =
+    'fp16';
 
-  // CPU/WASM uses FP32.
-  const CPU_DTYPE = 'fp32';
+  /*
+   * WASM:
+   * - fp32 = stable CPU fallback
+   */
+  const CPU_DTYPE =
+    'fp32';
 
-  // Input given to the AI is controlled.
-  // The model itself runs at 512x512.
-  const AI_MAX_DIMENSION = 1024;
+  /*
+   * The actual model input is 512x512.
+   *
+   * We intentionally do not feed 1024px into the AI stage.
+   */
+  const AI_MAX_DIMENSION =
+    512;
 
-  // Protect RAM used by final canvas/ImageData.
-  const MAX_OUTPUT_PIXELS = 8 * 1000 * 1000;
-  const MAX_OUTPUT_DIMENSION = 4500;
+  /*
+   * Protect final canvas/ImageData usage.
+   */
+  const MAX_OUTPUT_PIXELS =
+    8 * 1000 * 1000;
 
-  const OUTPUT_FORMAT = 'image/png';
-  const OUTPUT_EXTENSION = 'png';
-  const PREFER_GPU = true;
+  const MAX_OUTPUT_DIMENSION =
+    4500;
 
-  // Reuse model briefly, then unload it.
-  const WORKER_IDLE_TIMEOUT = 90 * 1000;
+  const OUTPUT_FORMAT =
+    'image/png';
+
+  const OUTPUT_EXTENSION =
+    'png';
+
+  /*
+   * WebGPU is allowed.
+   *
+   * If it stalls, the main thread watchdog will terminate the
+   * worker and retry the job using WASM CPU.
+   */
+  const PREFER_GPU =
+    true;
+
+  /*
+   * Once GPU stalls/fails badly during this page session,
+   * disable further GPU attempts and use CPU directly.
+   */
+  let gpuDisabledForSession =
+    false;
+
+  /*
+   * Keep the worker/model for a short period.
+   */
+  const WORKER_IDLE_TIMEOUT =
+    60 * 1000;
+
+  /*
+   * Watchdog timeouts.
+   *
+   * Loading may legitimately take longer because the model
+   * can be downloaded from Hugging Face/CDN.
+   *
+   * Inference has a shorter timeout because this is the part
+   * that can hard-stall on problematic WebGPU implementations.
+   */
+  const WATCHDOG = {
+    prepare:
+      30 * 1000,
+
+    load:
+      90 * 1000,
+
+    aiGpu:
+      45 * 1000,
+
+    aiCpu:
+      120 * 1000,
+
+    output:
+      60 * 1000
+  };
 
   // ============================================================
   // STATE
   // ============================================================
 
   const jobs = [];
-  let jobSeq = 0;
-  let worker = null;
-  let workerUrl = null;
-  let idleTimer = null;
-  const pending = new Map();
+
+  let jobSeq =
+    0;
+
+  let worker =
+    null;
+
+  let workerUrl =
+    null;
+
+  let idleTimer =
+    null;
+
+  const pending =
+    new Map();
+
+  /*
+   * Only one inference may actively use the worker/model.
+   *
+   * This prevents multiple buttons/jobs from racing against
+   * the same Transformers.js model instance and disposing it
+   * while another job is using it.
+   */
+  let workerQueue =
+    Promise.resolve();
 
   // ============================================================
   // HELPERS
   // ============================================================
 
   const yieldUI = async () => {
-    if (typeof U.yieldToUI === 'function') {
+    if (
+      typeof U.yieldToUI ===
+      'function'
+    ) {
       await U.yieldToUI();
       return;
     }
 
     await new Promise(resolve => {
-      if (typeof requestAnimationFrame === 'function') {
+      if (
+        typeof requestAnimationFrame ===
+        'function'
+      ) {
         requestAnimationFrame(resolve);
       } else {
         setTimeout(resolve, 0);
@@ -92,36 +189,63 @@
   };
 
   const baseName = name => {
-    if (typeof U.baseName === 'function') {
+    if (
+      typeof U.baseName ===
+      'function'
+    ) {
       return U.baseName(name);
     }
 
-    return String(name || 'image').replace(/\.[^.]+$/, '');
+    return String(
+      name || 'image'
+    ).replace(
+      /\.[^.]+$/,
+      ''
+    );
   };
 
   const formatBytes = bytes => {
-    if (typeof U.formatBytes === 'function') {
+    if (
+      typeof U.formatBytes ===
+      'function'
+    ) {
       return U.formatBytes(bytes);
     }
 
-    if (!Number.isFinite(bytes)) {
+    if (
+      !Number.isFinite(bytes)
+    ) {
       return '';
     }
 
-    const units = ['B', 'KB', 'MB', 'GB'];
+    const units = [
+      'B',
+      'KB',
+      'MB',
+      'GB'
+    ];
 
-    let n = Math.max(0, bytes);
-    let i = 0;
+    let n =
+      Math.max(
+        0,
+        bytes
+      );
+
+    let i =
+      0;
 
     while (
       n >= 1024 &&
-      i < units.length - 1
+      i <
+        units.length - 1
     ) {
       n /= 1024;
       i++;
     }
 
-    return `${n.toFixed(i ? 1 : 0)} ${units[i]}`;
+    return `${n.toFixed(
+      i ? 1 : 0
+    )} ${units[i]}`;
   };
 
   const downloadBlob = (
@@ -130,7 +254,7 @@
   ) => {
     if (
       typeof U.downloadBlob ===
-        'function'
+      'function'
     ) {
       U.downloadBlob(
         blob,
@@ -158,10 +282,9 @@
     a.click();
 
     setTimeout(
-      () =>
-        URL.revokeObjectURL(
-          url
-        ),
+      () => {
+        revoke(url);
+      },
       1000
     );
   };
@@ -172,9 +295,7 @@
     }
 
     try {
-      URL.revokeObjectURL(
-        url
-      );
+      URL.revokeObjectURL(url);
     } catch (_) {}
   };
 
@@ -208,7 +329,6 @@
   // ============================================================
 
   function workerSource() {
-
     return `
       'use strict';
 
@@ -246,6 +366,11 @@
           OUTPUT_FORMAT
         )};
 
+      const PREFER_GPU =
+        ${String(
+          PREFER_GPU
+        )};
+
       let tf =
         null;
 
@@ -267,18 +392,44 @@
       const cancelled =
         new Set();
 
-      const post =
-        (
+      // ========================================================
+      // POST
+      // ========================================================
+
+      const post = (
+        type,
+        payload = {},
+        transfer = undefined
+      ) => {
+
+        const message = {
           type,
-          payload = {}
-        ) => {
-
-          self.postMessage({
-            type,
-            ...payload
-          });
-
+          ...payload
         };
+
+        if (
+          Array.isArray(transfer) &&
+          transfer.length
+        ) {
+
+          self.postMessage(
+            message,
+            transfer
+          );
+
+        } else {
+
+          self.postMessage(
+            message
+          );
+
+        }
+
+      };
+
+      // ========================================================
+      // CANCEL
+      // ========================================================
 
       const isCancelled =
         jobId =>
@@ -303,6 +454,10 @@
           }
 
         };
+
+      // ========================================================
+      // PROGRESS
+      // ========================================================
 
       function progress(
         jobId,
@@ -334,20 +489,16 @@
       }
 
       // ========================================================
-      // LOAD TRANSFORMERS
+      // LOAD TRANSFORMERS.JS
       // ========================================================
 
       async function loadTF() {
 
-        if (
-          tf
-        ) {
+        if (tf) {
           return tf;
         }
 
-        if (
-          tfPromise
-        ) {
+        if (tfPromise) {
           return tfPromise;
         }
 
@@ -358,9 +509,7 @@
             .then(
               module => {
 
-                if (
-                  !module
-                ) {
+                if (!module) {
 
                   throw new Error(
                     'BACKGROUND_TRANSFORMERS_LOAD_FAILED'
@@ -373,9 +522,7 @@
 
                 try {
 
-                  if (
-                    tf.env
-                  ) {
+                  if (tf.env) {
 
                     tf.env.allowRemoteModels =
                       true;
@@ -389,7 +536,12 @@
                       tf.env.backends.onnx.wasm
                     ) {
 
-                      // Low-RAM mode.
+                      /*
+                       * Low-RAM CPU mode.
+                       * One WASM thread avoids spawning
+                       * multiple worker threads and
+                       * multiplying memory usage.
+                       */
                       tf.env.backends.onnx.wasm.numThreads =
                         1;
 
@@ -467,7 +619,7 @@
       }
 
       // ========================================================
-      // WEBGPU
+      // WEBGPU PROBE
       // ========================================================
 
       async function probeWebGPU() {
@@ -492,15 +644,111 @@
 
         try {
 
-          // Do not use powerPreference.
+          /*
+           * IMPORTANT:
+           * Do not pass powerPreference.
+           *
+           * Chrome on Windows can log:
+           * "powerPreference option is currently ignored"
+           * which is harmless, but there is no reason to
+           * request it here.
+           */
+
+          const adapterPromise =
+            navigator.gpu.requestAdapter();
+
+          /*
+           * Adapter request itself should never sit forever.
+           */
+          const timeoutPromise =
+            new Promise(
+              resolve => {
+
+                setTimeout(
+                  () => {
+                    resolve(
+                      null
+                    );
+                  },
+                  4000
+                );
+
+              }
+            );
+
           const adapter =
-            await navigator.gpu.requestAdapter();
+            await Promise.race([
+              adapterPromise,
+              timeoutPromise
+            ]);
 
-          return !!adapter;
+          if (!adapter) {
+            return false;
+          }
 
-        } catch (
-          error
-        ) {
+          /*
+           * This model's 512 graph uses up to 7 storage
+           * buffers per shader stage according to the model
+           * documentation.
+           *
+           * Keep a small safety margin and reject very old/
+           * restricted adapters.
+           */
+          const limits =
+            adapter.limits ||
+            {};
+
+          const maxStorageBuffers =
+            Number(
+              limits.maxStorageBuffersPerShaderStage
+            );
+
+          if (
+            Number.isFinite(
+              maxStorageBuffers
+            ) &&
+            maxStorageBuffers <
+              8
+          ) {
+
+            console.warn(
+              '[BG Worker] WebGPU storage buffer limit too low.'
+            );
+
+            return false;
+
+          }
+
+          /*
+           * The fp16 model requires floating-point16 shader
+           * support in WebGPU environments where that feature
+           * is exposed.
+           */
+          if (
+            adapter.features &&
+            typeof adapter.features.has ===
+              'function'
+          ) {
+
+            if (
+              !adapter.features.has(
+                'shader-f16'
+              )
+            ) {
+
+              console.warn(
+                '[BG Worker] WebGPU shader-f16 is unavailable.'
+              );
+
+              return false;
+
+            }
+
+          }
+
+          return true;
+
+        } catch (error) {
 
           console.warn(
             '[BG Worker] WebGPU probe failed:',
@@ -514,7 +762,7 @@
       }
 
       // ========================================================
-      // MODEL DOWNLOAD PROGRESS
+      // DOWNLOAD PROGRESS
       // ========================================================
 
       function makeDownloadProgress(
@@ -637,6 +885,7 @@
             await AutoModel.from_pretrained(
               MODEL_ID,
               {
+
                 dtype:
                   isGPU
                     ? GPU_DTYPE
@@ -649,6 +898,7 @@
 
                 progress_callback:
                   progressCallback
+
               }
             );
 
@@ -672,9 +922,7 @@
             processor
           };
 
-        } catch (
-          error
-        ) {
+        } catch (error) {
 
           await disposeModel();
 
@@ -791,6 +1039,8 @@
 
       async function makeModelBlob(
         file,
+        originalWidth,
+        originalHeight,
         jobId
       ) {
 
@@ -810,6 +1060,51 @@
 
         try {
 
+          const sourceWidth =
+            Math.max(
+              1,
+              Number(
+                originalWidth
+              ) || AI_MAX_DIMENSION
+            );
+
+          const sourceHeight =
+            Math.max(
+              1,
+              Number(
+                originalHeight
+              ) || AI_MAX_DIMENSION
+            );
+
+          const scale =
+            Math.min(
+              1,
+
+              AI_MAX_DIMENSION /
+                sourceWidth,
+
+              AI_MAX_DIMENSION /
+                sourceHeight
+            );
+
+          const targetWidth =
+            Math.max(
+              1,
+              Math.round(
+                sourceWidth *
+                scale
+              )
+            );
+
+          const targetHeight =
+            Math.max(
+              1,
+              Math.round(
+                sourceHeight *
+                scale
+              )
+            );
+
           try {
 
             bitmap =
@@ -817,16 +1112,18 @@
                 file,
                 {
                   resizeWidth:
-                    AI_MAX_DIMENSION,
+                    targetWidth,
+
+                  resizeHeight:
+                    targetHeight,
 
                   resizeQuality:
-                    'high'
+                    'medium'
                 }
               );
 
           } catch (_) {
 
-            // Older browser fallback.
             bitmap =
               await createImageBitmap(
                 file
@@ -838,34 +1135,52 @@
             jobId
           );
 
-          const targetWidth =
+          const finalWidth =
             Math.min(
-              bitmap.width,
-              AI_MAX_DIMENSION
-            );
-
-          const targetHeight =
-            Math.min(
-              bitmap.height,
+              AI_MAX_DIMENSION,
               Math.max(
                 1,
-                Math.round(
-                  bitmap.height *
-                  (
-                    targetWidth /
-                    Math.max(
-                      1,
-                      bitmap.width
-                    )
-                  )
+                bitmap.width
+              )
+            );
+
+          const finalScale =
+            Math.min(
+              1,
+              finalWidth /
+                Math.max(
+                  1,
+                  bitmap.width
+                ),
+              AI_MAX_DIMENSION /
+                Math.max(
+                  1,
+                  bitmap.height
                 )
+            );
+
+          const canvasWidth =
+            Math.max(
+              1,
+              Math.round(
+                bitmap.width *
+                finalScale
+              )
+            );
+
+          const canvasHeight =
+            Math.max(
+              1,
+              Math.round(
+                bitmap.height *
+                finalScale
               )
             );
 
           const canvas =
             new OffscreenCanvas(
-              targetWidth,
-              targetHeight
+              canvasWidth,
+              canvasHeight
             );
 
           const ctx =
@@ -873,13 +1188,11 @@
               '2d',
               {
                 alpha:
-                  true
+                  false
               }
             );
 
-          if (
-            !ctx
-          ) {
+          if (!ctx) {
 
             throw new Error(
               'BACKGROUND_CANVAS_UNSUPPORTED'
@@ -891,14 +1204,14 @@
             true;
 
           ctx.imageSmoothingQuality =
-            'high';
+            'medium';
 
           ctx.drawImage(
             bitmap,
             0,
             0,
-            targetWidth,
-            targetHeight
+            canvasWidth,
+            canvasHeight
           );
 
           return await canvas.convertToBlob({
@@ -909,7 +1222,7 @@
                 : 'image/jpeg',
 
             quality:
-              0.9
+              0.85
           });
 
         } finally {
@@ -929,7 +1242,7 @@
       }
 
       // ========================================================
-      // OUTPUT TENSOR
+      // PICK MODEL OUTPUT
       // ========================================================
 
       function pickOutputTensor(
@@ -1003,8 +1316,7 @@
         try {
 
           /*
-           * Decode directly at protected final size.
-           * This prevents huge original-resolution bitmaps.
+           * Decode directly at protected output size.
            */
           bitmap =
             await createImageBitmap(
@@ -1043,9 +1355,7 @@
               }
             );
 
-          if (
-            !ctx
-          ) {
+          if (!ctx) {
 
             throw new Error(
               'BACKGROUND_CANVAS_UNSUPPORTED'
@@ -1067,10 +1377,6 @@
             size.height
           );
 
-          /*
-           * Keep the mask one-channel.
-           * Only the final image uses RGBA ImageData.
-           */
           if (
             mask.width !==
               size.width ||
@@ -1107,8 +1413,10 @@
           for (
             let p = 0,
               i = 0;
+
             p <
               pixels.length;
+
             p += 4,
               i++
           ) {
@@ -1165,6 +1473,7 @@
             await canvas.convertToBlob({
               type:
                 OUTPUT_FORMAT,
+
               quality:
                 1
             });
@@ -1219,6 +1528,7 @@
         }
 
       }
+
       // ========================================================
       // RUN BACKGROUND REMOVAL
       // ========================================================
@@ -1227,7 +1537,8 @@
         jobId,
         file,
         originalWidth,
-        originalHeight
+        originalHeight,
+        requestedMode
       ) {
 
         checkCancel(
@@ -1263,12 +1574,14 @@
         try {
 
           /*
-           * Keep giant source images away from
+           * Keep giant original files away from
            * the AI runtime.
            */
           modelBlob =
             await makeModelBlob(
               file,
+              originalWidth,
+              originalHeight,
               jobId
             );
 
@@ -1293,18 +1606,38 @@
             100
           );
 
+          // ----------------------------------------------------
+          // MODE SELECTION
+          // ----------------------------------------------------
+
           let mode =
             'cpu';
 
           if (
-            ${String(
-              PREFER_GPU
-            )} &&
-            await probeWebGPU()
+            requestedMode ===
+            'gpu'
           ) {
 
-            mode =
-              'gpu';
+            if (
+              await probeWebGPU()
+            ) {
+              mode =
+                'gpu';
+            }
+
+          } else if (
+            requestedMode ===
+            'auto'
+          ) {
+
+            if (
+              PREFER_GPU &&
+              !gpuKnownBad &&
+              await probeWebGPU()
+            ) {
+              mode =
+                'gpu';
+            }
 
           }
 
@@ -1317,7 +1650,7 @@
 
           if (
             mode ===
-              'gpu'
+            'gpu'
           ) {
 
             try {
@@ -1342,7 +1675,7 @@
             ) {
 
               console.warn(
-                '[BG Worker] BiRefNet Lite WebGPU failed; using CPU fallback:',
+                '[BG Worker] WebGPU model load failed; switching to WASM:',
                 gpuError
               );
 
@@ -1371,7 +1704,7 @@
 
           if (
             mode ===
-              'cpu'
+            'cpu'
           ) {
 
             post(
@@ -1437,9 +1770,7 @@
               output
             );
 
-          if (
-            !tensor
-          ) {
+          if (!tensor) {
 
             throw new Error(
               'BACKGROUND_EMPTY_RESULT'
@@ -1468,7 +1799,7 @@
               );
 
           /*
-           * Release model output tensor ASAP.
+           * Release model output immediately.
            */
           if (
             tensor &&
@@ -1483,8 +1814,7 @@
           }
 
           /*
-           * Remove leading batch/channel
-           * dimensions when present.
+           * Remove batch/channel dimensions.
            */
           if (
             alphaTensor &&
@@ -1503,7 +1833,7 @@
 
             if (
               squeezed !==
-                alphaTensor
+              alphaTensor
             ) {
 
               if (
@@ -1542,7 +1872,7 @@
           }
 
           /*
-           * Release input tensor immediately.
+           * Release input tensor as early as possible.
            */
           if (
             pixel_values &&
@@ -1557,7 +1887,7 @@
           }
 
           /*
-           * Release any other tensor output.
+           * Release any additional output tensors.
            */
           if (
             output &&
@@ -1627,7 +1957,10 @@
           }
 
           /*
-           * Convert once to a transferable buffer.
+           * Transfer the ArrayBuffer rather than copying it.
+           *
+           * This can materially reduce the main-thread memory
+           * spike for large PNG results.
            */
           const buffer =
             await finalBlob.arrayBuffer();
@@ -1643,14 +1976,14 @@
               buffer,
               mime:
                 OUTPUT_FORMAT
-            }
+            },
+            [
+              buffer
+            ]
           );
 
         } finally {
 
-          /*
-           * Drop references as soon as possible.
-           */
           image =
             null;
 
@@ -1689,12 +2022,8 @@
               ? event.data
               : null;
 
-          if (
-            !data
-          ) {
-
+          if (!data) {
             return;
-
           }
 
           // ----------------------------------------------------
@@ -1703,7 +2032,7 @@
 
           if (
             data.type ===
-              'cancel'
+            'cancel'
           ) {
 
             cancelled.add(
@@ -1742,7 +2071,9 @@
               jobId,
               data.file,
               data.originalWidth,
-              data.originalHeight
+              data.originalHeight,
+              data.requestedMode ||
+                'auto'
             );
 
             post(
@@ -1760,6 +2091,7 @@
               'error',
               {
                 jobId,
+
                 message:
                   error &&
                   error.message
@@ -1791,24 +2123,17 @@
   // ============================================================
 
   function clearIdleTimer() {
-
-    if (
-      idleTimer
-    ) {
-
+    if (idleTimer) {
       clearTimeout(
         idleTimer
       );
 
       idleTimer =
         null;
-
     }
-
   }
 
   function scheduleIdleDestroy() {
-
     clearIdleTimer();
 
     idleTimer =
@@ -1817,17 +2142,14 @@
 
           if (
             pending.size ===
-              0
+            0
           ) {
-
             destroyWorker();
-
           }
 
         },
         WORKER_IDLE_TIMEOUT
       );
-
   }
 
   function destroyWorker(
@@ -1841,6 +2163,19 @@
       const request of
         pending.values()
     ) {
+
+      if (
+        request.watchdog
+      ) {
+
+        clearTimeout(
+          request.watchdog
+        );
+
+        request.watchdog =
+          null;
+
+      }
 
       try {
 
@@ -1889,9 +2224,7 @@
     if (
       worker
     ) {
-
       return worker;
-
     }
 
     const blob =
@@ -1982,7 +2315,7 @@
 
     if (
       phase ===
-        'prepare'
+      'prepare'
     ) {
 
       start =
@@ -1993,7 +2326,7 @@
 
     } else if (
       phase ===
-        'load'
+      'load'
     ) {
 
       start =
@@ -2004,7 +2337,7 @@
 
     } else if (
       phase ===
-        'ai'
+      'ai'
     ) {
 
       start =
@@ -2015,7 +2348,7 @@
 
     } else if (
       phase ===
-        'output'
+      'output'
     ) {
 
       start =
@@ -2026,7 +2359,7 @@
 
     } else if (
       phase ===
-        'complete'
+      'complete'
     ) {
 
       start =
@@ -2051,6 +2384,153 @@
 
   }
 
+  function watchdogDuration(
+    request
+  ) {
+
+    const job =
+      request &&
+      request.job;
+
+    const phase =
+      request &&
+      request.phase
+        ? request.phase
+        : 'prepare';
+
+    if (
+      phase ===
+      'prepare'
+    ) {
+      return WATCHDOG.prepare;
+    }
+
+    if (
+      phase ===
+      'load'
+    ) {
+      return WATCHDOG.load;
+    }
+
+    if (
+      phase ===
+      'ai'
+    ) {
+
+      if (
+        job &&
+        job.mode ===
+          'gpu'
+      ) {
+        return WATCHDOG.aiGpu;
+      }
+
+      return WATCHDOG.aiCpu;
+
+    }
+
+    if (
+      phase ===
+      'output'
+    ) {
+      return WATCHDOG.output;
+    }
+
+    return WATCHDOG.output;
+
+  }
+
+  function clearRequestWatchdog(
+    request
+  ) {
+
+    if (
+      request &&
+      request.watchdog
+    ) {
+
+      clearTimeout(
+        request.watchdog
+      );
+
+      request.watchdog =
+        null;
+
+    }
+
+  }
+
+  function armRequestWatchdog(
+    request
+  ) {
+
+    if (
+      !request ||
+      request.settled
+    ) {
+      return;
+    }
+
+    clearRequestWatchdog(
+      request
+    );
+
+    const duration =
+      watchdogDuration(
+        request
+      );
+
+    request.watchdog =
+      setTimeout(
+        () => {
+
+          if (
+            request.settled
+          ) {
+            return;
+          }
+
+          const message =
+            request.job &&
+            request.job.mode ===
+              'gpu'
+              ? 'BACKGROUND_GPU_TIMEOUT'
+              : 'BACKGROUND_WORKER_STALLED';
+
+          if (
+            request.job &&
+            request.job.mode ===
+              'gpu'
+          ) {
+
+            /*
+             * Stop trying WebGPU again for this page session.
+             * The current worker is already considered unsafe.
+             */
+            gpuDisabledForSession =
+              true;
+
+          }
+
+          /*
+           * Destroying the worker is intentional.
+           *
+           * A Promise inside a worker can become permanently
+           * unresolved when a WebGPU backend stalls. There is
+           * no reliable way to force-cancel that Promise from
+           * the main thread, so terminating the worker is the
+           * actual watchdog.
+           */
+          destroyWorker(
+            message
+          );
+
+        },
+        duration
+      );
+
+  }
+
   // ============================================================
   // WORKER MESSAGE HANDLER
   // ============================================================
@@ -2065,21 +2545,15 @@
         ? event.data
         : null;
 
-    if (
-      !data
-    ) {
-
+    if (!data) {
       return;
-
     }
 
     if (
       data.type ===
-        'ready'
+      'ready'
     ) {
-
       return;
-
     }
 
     const request =
@@ -2087,12 +2561,8 @@
         data.jobId
       );
 
-    if (
-      !request
-    ) {
-
+    if (!request) {
       return;
-
     }
 
     const job =
@@ -2104,17 +2574,24 @@
 
     if (
       data.type ===
-        'progress'
+      'progress'
     ) {
+
+      request.phase =
+        data.phase ||
+        request.phase ||
+        'prepare';
+
+      armRequestWatchdog(
+        request
+      );
 
       if (
         !job ||
         job.disposed ||
         !job.processing
       ) {
-
         return;
-
       }
 
       const total =
@@ -2129,7 +2606,7 @@
 
       const raw =
         total >
-          0
+        0
           ? (
               current /
               total
@@ -2161,8 +2638,15 @@
 
     if (
       data.type ===
-        'mode'
+      'mode'
     ) {
+
+      request.phase =
+        'load';
+
+      armRequestWatchdog(
+        request
+      );
 
       if (
         job &&
@@ -2197,19 +2681,38 @@
 
     if (
       data.type ===
-        'gpuFallback'
+      'gpuFallback'
     ) {
+
+      /*
+       * Worker itself detected a GPU load/runtime failure
+       * and has already switched to CPU.
+       */
+      request.phase =
+        'load';
+
+      armRequestWatchdog(
+        request
+      );
 
       if (
         job &&
-        !job.disposed &&
-        job.status
+        !job.disposed
       ) {
 
-        job.status.textContent =
-          t(
-            'image.preparingModel'
-          );
+        job.mode =
+          'cpu';
+
+        if (
+          job.status
+        ) {
+
+          job.status.textContent =
+            t(
+              'image.preparingModel'
+            );
+
+        }
 
       }
 
@@ -2223,8 +2726,15 @@
 
     if (
       data.type ===
-        'result'
+      'result'
     ) {
+
+      clearRequestWatchdog(
+        request
+      );
+
+      request.settled =
+        true;
 
       try {
 
@@ -2267,9 +2777,15 @@
 
     if (
       data.type ===
-        'done'
+      'done'
     ) {
 
+      /*
+       * Result normally arrives before done.
+       *
+       * Do not resolve/delete here because the result handler
+       * owns the Promise resolution.
+       */
       scheduleIdleDestroy();
 
       return;
@@ -2282,8 +2798,15 @@
 
     if (
       data.type ===
-        'error'
+      'error'
     ) {
+
+      clearRequestWatchdog(
+        request
+      );
+
+      request.settled =
+        true;
 
       pending.delete(
         data.jobId
@@ -2301,12 +2824,14 @@
     }
 
   }
+
   // ============================================================
-  // PROCESS IN WORKER
+  // EXECUTE ONE WORKER JOB
   // ============================================================
 
-  function processInWorker(
-    job
+  function executeWorkerJob(
+    job,
+    requestedMode
   ) {
 
     return new Promise(
@@ -2315,18 +2840,45 @@
         reject
       ) => {
 
+        if (
+          !job ||
+          job.disposed
+        ) {
+
+          reject(
+            new Error(
+              'BACKGROUND_CANCELLED'
+            )
+          );
+
+          return;
+
+        }
+
         const current =
           ensureWorker();
 
         clearIdleTimer();
 
+        const request = {
+          resolve,
+          reject,
+          job,
+          phase:
+            'prepare',
+          watchdog:
+            null,
+          settled:
+            false
+        };
+
         pending.set(
           job.id,
-          {
-            resolve,
-            reject,
-            job
-          }
+          request
+        );
+
+        armRequestWatchdog(
+          request
         );
 
         try {
@@ -2346,13 +2898,22 @@
                 job.originalWidth,
 
               originalHeight:
-                job.originalHeight
+                job.originalHeight,
+
+              requestedMode:
+                requestedMode ||
+                'auto'
             }
           );
 
-        } catch (
-          error
-        ) {
+        } catch (error) {
+
+          clearRequestWatchdog(
+            request
+          );
+
+          request.settled =
+            true;
 
           pending.delete(
             job.id
@@ -2370,6 +2931,53 @@
   }
 
   // ============================================================
+  // PROCESS IN WORKER
+  // ============================================================
+
+  function processInWorker(
+    job,
+    requestedMode
+  ) {
+
+    /*
+     * Queue jobs so only one uses the model at a time.
+     */
+    const task =
+      workerQueue.then(
+        async () => {
+
+          if (
+            job.disposed
+          ) {
+
+            throw new Error(
+              'BACKGROUND_CANCELLED'
+            );
+
+          }
+
+          return await executeWorkerJob(
+            job,
+            requestedMode
+          );
+
+        }
+      );
+
+    /*
+     * Keep the chain alive after rejection so the next
+     * queued job can still run.
+     */
+    workerQueue =
+      task.catch(
+        () => {}
+      );
+
+    return task;
+
+  }
+
+  // ============================================================
   // CANCEL
   // ============================================================
 
@@ -2381,9 +2989,7 @@
       !worker ||
       !job
     ) {
-
       return;
-
     }
 
     try {
@@ -2535,18 +3141,14 @@
           '.js-remove-job-btn'
         );
 
-      if (
-        name
-      ) {
+      if (name) {
 
         name.textContent =
           this.file.name;
 
       }
 
-      if (
-        size
-      ) {
+      if (size) {
 
         size.textContent =
           formatBytes(
@@ -2555,9 +3157,7 @@
 
       }
 
-      if (
-        dim
-      ) {
+      if (dim) {
 
         dim.textContent =
           t(
@@ -2575,9 +3175,7 @@
           if (
             this.disposed
           ) {
-
             return;
-
           }
 
           this.originalWidth =
@@ -2588,9 +3186,7 @@
             this.before.naturalHeight ||
             0;
 
-          if (
-            dim
-          ) {
+          if (dim) {
 
             dim.textContent =
               `${this.originalWidth}×${this.originalHeight}`;
@@ -2614,9 +3210,7 @@
           this.process()
       );
 
-      if (
-        removeBtn
-      ) {
+      if (removeBtn) {
 
         removeBtn.addEventListener(
           'click',
@@ -2633,7 +3227,7 @@
 
             if (
               index >=
-                0
+              0
             ) {
 
               jobs.splice(
@@ -2666,14 +3260,13 @@
         this.disposed ||
         !this.progress
       ) {
-
         return;
-
       }
 
       this.displayedProgress =
         Math.max(
           this.displayedProgress,
+
           Math.max(
             0,
             Math.min(
@@ -2699,9 +3292,7 @@
         !this.status ||
         this.disposed
       ) {
-
         return;
-
       }
 
       const raw =
@@ -2747,9 +3338,7 @@
       if (
         this.disposed
       ) {
-
         return;
-
       }
 
       this.errorKey =
@@ -2829,9 +3418,7 @@
         this.processing ||
         !this.status
       ) {
-
         return;
-
       }
 
       if (
@@ -2884,14 +3471,11 @@
         this.processing ||
         this.resultBlob
       ) {
-
         return;
-
       }
 
       /*
        * Usually the preview has already loaded.
-       * Copy dimensions one more time if available.
        */
       if (
         this.before &&
@@ -2946,21 +3530,112 @@
 
       }
 
+      /*
+       * Track whether we already retried with CPU.
+       */
+      let cpuRetried =
+        false;
+
       try {
 
         await yieldUI();
 
-        const blob =
-          await processInWorker(
-            this
-          );
+        /*
+         * If GPU has already been disabled for this page,
+         * use CPU directly.
+         */
+        let requestedMode =
+          gpuDisabledForSession
+            ? 'cpu'
+            : 'auto';
+
+        let blob;
+
+        try {
+
+          blob =
+            await processInWorker(
+              this,
+              requestedMode
+            );
+
+        } catch (
+          firstError
+        ) {
+
+          const message =
+            firstError &&
+            firstError.message
+              ? firstError.message
+              : '';
+
+          const gpuFailed =
+            this.mode ===
+              'gpu' &&
+            /BACKGROUND_GPU_TIMEOUT|BACKGROUND_WORKER_FAILED|BACKGROUND_WORKER_MESSAGE_ERROR|BACKGROUND_WORKER_TERMINATED/.test(
+              message
+            );
+
+          /*
+           * GPU watchdog/worker failure:
+           *
+           * - Disable GPU for this session.
+           * - Destroyed worker is already gone.
+           * - Retry the same image using CPU.
+           */
+          if (
+            gpuFailed &&
+            !cpuRetried &&
+            !this.disposed
+          ) {
+
+            cpuRetried =
+              true;
+
+            gpuDisabledForSession =
+              true;
+
+            this.mode =
+              'cpu';
+
+            if (
+              this.status
+            ) {
+
+              this.status.textContent =
+                t(
+                  'image.preparingModel'
+                );
+
+            }
+
+            this.setProgress(
+              Math.min(
+                25,
+                this.displayedProgress
+              )
+            );
+
+            await yieldUI();
+
+            blob =
+              await processInWorker(
+                this,
+                'cpu'
+              );
+
+          } else {
+
+            throw firstError;
+
+          }
+
+        }
 
         if (
           this.disposed
         ) {
-
           return;
-
         }
 
         this.resultBlob =
@@ -3113,9 +3788,7 @@
       if (
         this.disposed
       ) {
-
         return;
-
       }
 
       this.disposed =
@@ -3205,9 +3878,7 @@
             'image/'
           )
         ) {
-
           return;
-
         }
 
         if (
@@ -3215,9 +3886,7 @@
             file
           )
         ) {
-
           return;
-
         }
 
         const job =
@@ -3283,7 +3952,7 @@
 
   if (
     typeof U.setupDropzone ===
-      'function'
+    'function'
   ) {
 
     U.setupDropzone(
@@ -3391,9 +4060,7 @@
       if (
         el.processAll.disabled
       ) {
-
         return;
-
       }
 
       const queue =
@@ -3406,9 +4073,7 @@
       if (
         !queue.length
       ) {
-
         return;
-
       }
 
       el.processAll.disabled =
@@ -3504,9 +4169,7 @@
         typeof JSZip !==
           'function'
       ) {
-
         return;
-
       }
 
       el.downloadZip.disabled =
@@ -3563,6 +4226,10 @@
               type:
                 'blob',
 
+              /*
+               * STORE avoids an additional CPU/RAM spike
+               * compressing already-compressed PNG files.
+               */
               compression:
                 'STORE'
             }
@@ -3600,7 +4267,7 @@
 
   if (
     typeof U.onClearCache ===
-      'function'
+    'function'
   ) {
 
     U.onClearCache(
@@ -3616,6 +4283,13 @@
 
         el.jobs.innerHTML =
           '';
+
+        /*
+         * Cache clear should also reset this so a fresh worker
+         * can probe WebGPU again after the user cleared state.
+         */
+        gpuDisabledForSession =
+          false;
 
         destroyWorker(
           'BACKGROUND_CACHE_CLEARED'
@@ -3662,6 +4336,10 @@
 
     }
   );
+
+  // ============================================================
+  // INIT
+  // ============================================================
 
   updateBulkUI();
 
