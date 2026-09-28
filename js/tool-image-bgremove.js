@@ -334,8 +334,6 @@
 
     };
 
-  };
-
   const revoke =
     url => {
 
