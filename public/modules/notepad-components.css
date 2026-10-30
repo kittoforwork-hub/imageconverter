@@ -1,0 +1,2442 @@
+/* Component stylesheet module. Detailed selectors are kept separate from the shared design system. */
+/* KITTO WORKSHOP UTILITY */
+
+/* NOTEPAD VARIABLES */
+
+:root {
+  --notepad-paper: #fff8fb;
+  --notepad-paper-2: #fceef5;
+  --notepad-card: rgba(255, 255, 255, .96);
+
+  --notepad-ink: #44384f;
+  --notepad-ink-soft: #7b6d84;
+  --notepad-ink-faint: #b09eaf;
+
+  --notepad-line: #eadde6;
+  --notepad-line-strong: #dcc9d7;
+
+  --notepad-accent: #f5a8c7;
+  --notepad-accent-ink: #6a3f58;
+  --notepad-accent-soft: #fff0f7;
+
+  --notepad-success: #79b89a;
+  --notepad-success-soft: #e4f7ed;
+
+  --notepad-danger: #db7b8f;
+
+  --notepad-radius: 14px;
+
+  --notepad-font-display:
+    'Space Grotesk',
+    system-ui,
+    sans-serif;
+
+  --notepad-font-mono:
+    'IBM Plex Mono',
+    ui-monospace,
+    monospace;
+
+  --notepad-shadow:
+    0 16px 40px
+    rgba(110, 74, 105, .10);
+
+  --notepad-shadow-soft:
+    0 8px 24px
+    rgba(110,74,105,.07);
+}
+
+/* RESET */
+
+.notepad-page,
+.notepad-page * ,
+.notepad-page *::before,
+.notepad-page *::after {
+  box-sizing: border-box;
+}
+
+.notepad-page button,
+.notepad-page input,
+.notepad-page textarea,
+.notepad-page select {
+  font: inherit;
+}
+
+.notepad-page button,
+.notepad-page input,
+.notepad-page textarea,
+.notepad-page select,
+.notepad-page a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.notepad-page button {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/*
+ * รองรับข้อความหลายภาษา
+ */
+.notepad-page,
+.notepad-page button,
+.notepad-page input,
+.notepad-page textarea,
+.notepad-page h1,
+.notepad-page h2,
+.notepad-page p,
+.notepad-page span {
+  overflow-wrap: anywhere;
+}
+
+/* BODY */
+
+html {
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+
+  margin: 0;
+
+  color:
+    var(--notepad-ink);
+
+  font-family:
+    var(--notepad-font-display);
+
+  -webkit-font-smoothing:
+    antialiased;
+
+  text-rendering:
+    optimizeLegibility;
+
+  background-color:
+    var(--notepad-paper);
+
+  background-image:
+    radial-gradient(
+      circle at 8% 5%,
+      rgba(245,168,199,.20),
+      transparent 24%
+    ),
+    radial-gradient(
+      circle at 92% 10%,
+      rgba(219,197,255,.20),
+      transparent 26%
+    ),
+    linear-gradient(
+      180deg,
+      #fffaff 0%,
+      var(--notepad-paper) 55%,
+      #f8f1f6 100%
+    );
+
+  background-attachment:
+    fixed;
+}
+
+/* NOTEPAD PAGE */
+
+.notepad-page {
+  position: relative;
+
+  width:
+    min(
+      980px,
+      100%
+    );
+
+  min-height:
+    100vh;
+
+  margin:
+    0 auto;
+
+  padding:
+    34px
+    20px
+    72px;
+}
+
+/*
+ * Decorative background blobs
+ */
+
+.notepad-page::before,
+.notepad-page::after {
+
+  content: '';
+
+  position: fixed;
+
+  width: 110px;
+  height: 110px;
+
+  border-radius:
+    38% 62% 57% 43% /
+    47% 42% 58% 53%;
+
+  pointer-events:
+    none;
+
+  z-index:
+    -1;
+
+  opacity:
+    .48;
+
+  filter:
+    blur(1px);
+}
+
+.notepad-page::before {
+  top:
+    8%;
+
+  left:
+    max(
+      10px,
+      calc(50% - 610px)
+    );
+
+  background:
+    rgba(255,196,218,.34);
+
+  transform:
+    rotate(-12deg);
+}
+
+.notepad-page::after {
+  right:
+    max(
+      10px,
+      calc(50% - 610px)
+    );
+
+  bottom:
+    8%;
+
+  background:
+    rgba(220,205,255,.32);
+
+  transform:
+    rotate(17deg);
+}
+
+/* MOTION */
+
+@keyframes notepad-panel-in {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+}
+
+@keyframes notepad-card-in {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(10px)
+      scale(.985);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+@keyframes notepad-pop-in {
+  0% {
+    opacity: 0;
+
+    transform:
+      scale(.94);
+  }
+
+  65% {
+    opacity: 1;
+
+    transform:
+      scale(1.02);
+  }
+
+  100% {
+    transform:
+      scale(1);
+  }
+}
+
+@keyframes notepad-float {
+  0%,
+  100% {
+    transform:
+      translateY(0);
+  }
+
+  50% {
+    transform:
+      translateY(-3px);
+  }
+}
+
+@keyframes notepad-pulse {
+  0%,
+  100% {
+    transform:
+      scale(.92);
+
+    opacity:
+      .52;
+  }
+
+  50% {
+    transform:
+      scale(1.08);
+
+    opacity:
+      .85;
+  }
+}
+
+@keyframes notepad-spin {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+@keyframes notepad-modal-in {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(8px)
+      scale(.97);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+@keyframes notepad-fade-in {
+  from {
+    opacity:
+      0;
+  }
+
+  to {
+    opacity:
+      1;
+  }
+}
+
+@keyframes notepad-status-pulse {
+  0%,
+  100% {
+    opacity:
+      1;
+  }
+
+  50% {
+    opacity:
+      .45;
+  }
+}
+
+/* HEADER */
+
+.notepad-header {
+  position:
+    relative;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    18px;
+
+  margin-bottom:
+    22px;
+
+  animation:
+    notepad-panel-in
+    .32s
+    cubic-bezier(.2,.8,.2,1)
+    both;
+}
+
+.notepad-title {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  min-width:
+    0;
+
+  flex:
+    1 1 auto;
+}
+
+/* BACK HOME BUTTON */
+
+.notepad-home-btn {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap:
+    7px;
+
+  flex:
+    0 0 auto;
+
+  min-height:
+    38px;
+
+  max-width:
+    100%;
+
+  padding:
+    8px 12px;
+
+  border:
+    1px solid
+    var(--notepad-line-strong);
+
+  border-radius:
+    12px;
+
+  background:
+    rgba(255,255,255,.76);
+
+  color:
+    var(--notepad-ink-soft);
+
+  font-family:
+    var(--notepad-font-mono);
+
+  font-size:
+    11.5px;
+
+  font-weight:
+    500;
+
+  cursor:
+    pointer;
+
+  box-shadow:
+    0 5px 14px
+    rgba(36,48,74,.045);
+
+  transition:
+    transform .15s ease,
+    background .15s ease,
+    border-color .15s ease,
+    color .15s ease,
+    box-shadow .15s ease;
+}
+
+.notepad-home-btn:hover {
+  background:
+    #fff;
+
+  border-color:
+    #d9c5d3;
+
+  color:
+    var(--notepad-ink);
+
+  transform:
+    translateY(-1px);
+
+  box-shadow:
+    0 7px 17px
+    rgba(36,48,74,.07);
+}
+
+.notepad-home-btn:active {
+  transform:
+    translateY(1px)
+    scale(.98);
+}
+
+.notepad-home-btn:focus-visible {
+  outline:
+    2px solid
+    rgba(255,184,107,.35);
+
+  outline-offset:
+    2px;
+}
+
+.notepad-home-arrow {
+  flex:
+    0 0 auto;
+
+  font-size:
+    17px;
+
+  line-height:
+    1;
+
+  transition:
+    transform .15s ease;
+}
+
+.notepad-home-btn:hover
+.notepad-home-arrow {
+  transform:
+    translateX(-2px);
+}
+
+/* NOTEPAD ICON */
+
+.notepad-icon {
+  position:
+    relative;
+
+  width:
+    50px;
+
+  height:
+    50px;
+
+  flex:
+    0 0 50px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  border:
+    1px solid
+    #ecc7da;
+
+  border-radius:
+    16px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #fff6fa,
+      #fff
+    );
+
+  box-shadow:
+    0 7px 18px
+    rgba(245,168,199,.11);
+
+  font-size:
+    24px;
+
+  animation:
+    notepad-float
+    3s
+    ease-in-out
+    infinite;
+}
+
+.notepad-icon::after {
+  content:
+    '🐾';
+
+  position:
+    absolute;
+
+  top:
+    -5px;
+
+  right:
+    -4px;
+
+  color:
+    var(--notepad-accent);
+
+  font-size:
+    11px;
+
+  animation:
+    notepad-pulse
+    2.6s
+    ease-in-out
+    infinite;
+}
+
+/* TITLE */
+
+.notepad-title > div:last-child {
+  min-width:
+    0;
+}
+
+.notepad-title h1 {
+  margin:
+    0 0 5px;
+
+  font-size:
+    clamp(
+      26px,
+      4vw,
+      38px
+    );
+
+  font-weight:
+    700;
+
+  letter-spacing:
+    -.035em;
+
+  line-height:
+    1.15;
+}
+
+.notepad-title h1::after {
+  content:
+    '🐾';
+
+  display:
+    inline-block;
+
+  margin-left:
+    8px;
+
+  color:
+    var(--notepad-accent);
+
+  font-size:
+    .42em;
+
+  transform:
+    translateY(-.95em)
+    rotate(10deg);
+
+  animation:
+    notepad-float
+    2.8s
+    ease-in-out
+    infinite;
+}
+
+.notepad-title p {
+  margin:
+    0;
+
+  color:
+    var(--notepad-ink-soft);
+
+  font-size:
+    13px;
+
+  line-height:
+    1.55;
+}
+
+/* SAVE STATUS */
+
+.notepad-status {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap:
+    8px;
+
+  min-height:
+    34px;
+
+  max-width:
+    42%;
+
+  padding:
+    7px 11px;
+
+  border:
+    1px solid
+    var(--notepad-line);
+
+  border-radius:
+    999px;
+
+  background:
+    rgba(255,249,252,.78);
+
+  color:
+    var(--notepad-ink-soft);
+
+  font-family:
+    var(--notepad-font-mono);
+
+  font-size:
+    11px;
+
+  line-height:
+    1.35;
+
+  text-align:
+    center;
+
+  white-space:
+    normal;
+
+  overflow-wrap:
+    anywhere;
+
+  box-shadow:
+    0 4px 12px
+    rgba(36,48,74,.035);
+
+  transition:
+    color .18s ease,
+    border-color .18s ease,
+    background .18s ease;
+}
+
+.status-dot {
+  width:
+    7px;
+
+  height:
+    7px;
+
+  flex:
+    0 0 7px;
+
+  border-radius:
+    50%;
+
+  background:
+    var(--notepad-success);
+
+  box-shadow:
+    0 0 0 5px
+    rgba(73,170,122,.10);
+}
+
+.notepad-status.is-saving {
+  color:
+    #80663d;
+
+  border-color:
+    #efd4aa;
+
+  background:
+    #fffaf2;
+}
+
+.notepad-status.is-saving
+.status-dot {
+  background:
+    var(--notepad-accent);
+
+  box-shadow:
+    0 0 0 5px
+    rgba(255,184,107,.12);
+
+  animation:
+    notepad-status-pulse
+    .9s
+    ease-in-out
+    infinite;
+}
+
+.notepad-status.is-saved {
+  color:
+    var(--notepad-success);
+
+  border-color:
+    #b9dec8;
+
+  background:
+    var(--notepad-success-soft);
+}
+
+.notepad-status.is-error {
+  color:
+    var(--notepad-danger);
+
+  border-color:
+    #efc2c2;
+
+  background:
+    #fff1f1;
+}
+
+.notepad-status.is-error
+.status-dot {
+  background:
+    var(--notepad-danger);
+
+  box-shadow:
+    0 0 0 5px
+    rgba(223,106,106,.10);
+}
+
+/* TOOLBAR */
+
+.notepad-toolbar {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    8px;
+
+  min-height:
+    62px;
+
+  padding:
+    8px 10px;
+
+  border:
+    1px solid
+    var(--notepad-line);
+
+  border-radius:
+    18px;
+
+  background:
+    rgba(255,255,255,.78);
+
+  box-shadow:
+    0 9px 24px
+    rgba(36,48,74,.05);
+
+  backdrop-filter:
+    blur(7px);
+
+  animation:
+    notepad-card-in
+    .35s
+    .04s
+    cubic-bezier(.2,.8,.2,1)
+    both;
+}
+
+/* TOOLBAR GROUP */
+
+.toolbar-group {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    5px;
+
+  min-width:
+    0;
+
+  flex:
+    0 1 auto;
+}
+
+.toolbar-divider {
+  width:
+    1px;
+
+  height:
+    28px;
+
+  flex:
+    0 0 1px;
+
+  margin:
+    0 3px;
+
+  background:
+    var(--notepad-line);
+}
+
+/* TOOL BUTTON */
+
+.notepad-btn {
+  position:
+    relative;
+
+  min-height:
+    38px;
+
+  max-width:
+    100%;
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap:
+    7px;
+
+  padding:
+    8px 11px;
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    11px;
+
+  background:
+    transparent;
+
+  color:
+    var(--notepad-ink-soft);
+
+  font-family:
+    var(--notepad-font-mono);
+
+  font-size:
+    11.5px;
+
+  font-weight:
+    500;
+
+  line-height:
+    1.35;
+
+  text-align:
+    center;
+
+  cursor:
+    pointer;
+
+  transition:
+    transform .14s ease,
+    background .15s ease,
+    border-color .15s ease,
+    color .15s ease,
+    box-shadow .15s ease;
+}
+
+.notepad-btn:hover:not(:disabled) {
+  background:
+    #fdf3f8;
+
+  border-color:
+    var(--notepad-line);
+
+  color:
+    var(--notepad-ink);
+
+  transform:
+    translateY(-1px);
+}
+
+.notepad-btn:active:not(:disabled) {
+  transform:
+    translateY(1px)
+    scale(.98);
+}
+
+.notepad-btn:focus-visible {
+  outline:
+    2px solid
+    rgba(255,184,107,.32);
+
+  outline-offset:
+    1px;
+}
+
+.notepad-btn:disabled {
+  opacity:
+    .38;
+
+  cursor:
+    not-allowed;
+}
+
+.notepad-btn.icon-only {
+  width:
+    38px;
+
+  flex:
+    0 0 38px;
+
+  padding:
+    0;
+
+  font-size:
+    19px;
+
+  line-height:
+    1;
+}
+
+#btn-clear-note:hover:not(:disabled) {
+  color:
+    var(--notepad-danger);
+
+  background:
+    #fff3f3;
+
+  border-color:
+    #f0d0d0;
+}
+
+/* SEARCH */
+
+.toolbar-search {
+  min-width:
+    180px;
+
+  margin-left:
+    auto;
+
+  flex:
+    1 1 220px;
+}
+
+.search-box {
+  width:
+    100%;
+
+  min-width:
+    0;
+
+  height:
+    38px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  border:
+    1px solid
+    var(--notepad-line);
+
+  border-radius:
+    11px;
+
+  background:
+    #fbfcff;
+
+  transition:
+    border-color .16s ease,
+    background .16s ease,
+    box-shadow .16s ease;
+}
+
+.search-box:focus-within {
+  border-color:
+    #e5a5c2;
+
+  background:
+    #fff;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(245,168,199,.12);
+}
+
+.search-icon {
+  flex:
+    0 0 auto;
+
+  padding-left:
+    10px;
+
+  color:
+    var(--notepad-ink-faint);
+
+  font-size:
+    13px;
+
+  pointer-events:
+    none;
+}
+
+#notepad-search {
+  width:
+    100%;
+
+  height:
+    100%;
+
+  min-width:
+    0;
+
+  padding:
+    0 7px;
+
+  border:
+    0;
+
+  outline:
+    0;
+
+  background:
+    transparent;
+
+  color:
+    var(--notepad-ink);
+
+  font-family:
+    var(--notepad-font-mono);
+
+  font-size:
+    11.5px;
+}
+
+#notepad-search::placeholder {
+  color:
+    #b7a7b4;
+}
+
+.search-clear {
+  width:
+    29px;
+
+  height:
+    29px;
+
+  flex:
+    0 0 29px;
+
+  margin-right:
+    4px;
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  padding:
+    0;
+
+  border:
+    0;
+
+  border-radius:
+    8px;
+
+  background:
+    transparent;
+
+  color:
+    #9aa4b7;
+
+  font-size:
+    18px;
+
+  line-height:
+    1;
+
+  cursor:
+    pointer;
+
+  opacity:
+    0;
+
+  pointer-events:
+    none;
+
+  transition:
+    opacity .15s ease,
+    background .15s ease,
+    color .15s ease;
+}
+
+.search-box.has-value
+.search-clear {
+  opacity:
+    1;
+
+  pointer-events:
+    auto;
+}
+
+.search-clear:hover {
+  background:
+    #f7eaf1;
+
+  color:
+    var(--notepad-ink);
+}
+
+/* EDITOR AREA */
+
+.notepad-editor-wrapper {
+  margin-top:
+    14px;
+
+  animation:
+    notepad-card-in
+    .4s
+    .10s
+    cubic-bezier(.2,.8,.2,1)
+    both;
+}
+
+.notepad-editor {
+  position:
+    relative;
+
+  overflow:
+    hidden;
+
+  min-height:
+    min(
+      68vh,
+      700px
+    );
+
+  border:
+    1px solid
+    var(--notepad-line);
+
+  border-radius:
+    20px;
+
+  background:
+    rgba(255,255,255,.90);
+
+  box-shadow:
+    0 16px 40px
+    rgba(52,65,94,.08);
+
+  transition:
+    border-color .18s ease,
+    box-shadow .18s ease;
+}
+
+.notepad-editor::before {
+  content:
+    '';
+
+  position:
+    absolute;
+
+  top:
+    0;
+
+  right:
+    0;
+
+  width:
+    170px;
+
+  height:
+    170px;
+
+  background:
+    radial-gradient(
+      circle,
+      var(--notepad-accent-soft),
+      transparent 68%
+    );
+
+  opacity:
+    .46;
+
+  pointer-events:
+    none;
+}
+
+.notepad-editor:focus-within {
+  border-color:
+    #e8bfd2;
+
+  box-shadow:
+    0 16px 40px
+    rgba(52,65,94,.08),
+    0 0 0 3px
+    rgba(245,168,199,.09);
+}
+
+/* TEXTAREA */
+
+.notepad-textarea {
+  position:
+    relative;
+
+  z-index:
+    1;
+
+  display:
+    block;
+
+  width:
+    100%;
+
+  min-height:
+    min(
+      68vh,
+      700px
+    );
+
+  padding:
+    27px
+    30px
+    38px;
+
+  resize:
+    vertical;
+
+  border:
+    0;
+
+  outline:
+    0;
+
+  background:
+    linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 31px,
+      rgba(102,113,138,.065) 32px
+    );
+
+  background-size:
+    100% 32px;
+
+  color:
+    var(--notepad-ink);
+
+  font-family:
+    var(--notepad-font-display);
+
+  font-size:
+    15px;
+
+  font-weight:
+    400;
+
+  line-height:
+    2;
+
+  letter-spacing:
+    .01em;
+
+  caret-color:
+    #dc82ae;
+
+  white-space:
+    pre-wrap;
+
+  overflow:
+    auto;
+}
+
+.notepad-textarea::placeholder {
+  color:
+    #aab3c2;
+
+  opacity:
+    1;
+}
+
+.notepad-textarea::selection {
+  background:
+    rgba(245,168,199,.30);
+
+  color:
+    var(--notepad-ink);
+}
+
+/* SCROLLBAR */
+
+.notepad-textarea::-webkit-scrollbar {
+  width:
+    10px;
+}
+
+.notepad-textarea::-webkit-scrollbar-track {
+  background:
+    transparent;
+}
+
+.notepad-textarea::-webkit-scrollbar-thumb {
+  border:
+    3px solid
+    transparent;
+
+  border-radius:
+    999px;
+
+  background:
+    #decdd8;
+
+  background-clip:
+    padding-box;
+}
+
+.notepad-textarea::-webkit-scrollbar-thumb:hover {
+  background:
+    #cdb9c7;
+
+  background-clip:
+    padding-box;
+}
+
+/* FOOTER */
+
+.notepad-footer {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    15px;
+
+  margin-top:
+    12px;
+
+  padding:
+    0 4px;
+
+  color:
+    #9f8e9b;
+
+  font-family:
+    var(--notepad-font-mono);
+
+  font-size:
+    10.5px;
+
+  line-height:
+    1.45;
+
+  animation:
+    notepad-panel-in
+    .28s
+    .15s
+    ease
+    both;
+}
+
+.notepad-info {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  flex-wrap:
+    wrap;
+
+  gap:
+    8px;
+
+  min-width:
+    0;
+}
+
+.notepad-info strong {
+  color:
+    var(--notepad-ink-soft);
+
+  font-weight:
+    600;
+}
+
+.info-divider {
+  color:
+    #d2c4ce;
+}
+
+.notepad-shortcuts {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    12px;
+
+  white-space:
+    nowrap;
+}
+
+.notepad-shortcuts span {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    4px;
+}
+
+/* KEYBOARD BADGES */
+
+.notepad-page kbd {
+  min-width:
+    20px;
+
+  height:
+    20px;
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  padding:
+    0 5px;
+
+  border:
+    1px solid
+    #ddcfd8;
+
+  border-bottom-width:
+    2px;
+
+  border-radius:
+    5px;
+
+  background:
+    rgba(255,255,255,.86);
+
+  color:
+    #7f707b;
+
+  font-family:
+    var(--notepad-font-mono);
+
+  font-size:
+    9px;
+
+  line-height:
+    1;
+
+  box-shadow:
+    0 1px 0
+    rgba(86,61,81,.03);
+}
+
+/* MODAL */
+
+.notepad-modal {
+  position:
+    fixed;
+
+  inset:
+    0;
+
+  z-index:
+    9999;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  padding:
+    20px;
+}
+
+.notepad-modal[hidden] {
+  display:
+    none;
+}
+
+.notepad-modal-backdrop {
+  position:
+    absolute;
+
+  inset:
+    0;
+
+  background:
+    rgba(75,58,72,.24);
+
+  backdrop-filter:
+    blur(5px);
+
+  -webkit-backdrop-filter:
+    blur(5px);
+
+  animation:
+    notepad-fade-in
+    .18s
+    ease
+    both;
+}
+
+.notepad-modal-box {
+  position:
+    relative;
+
+  z-index:
+    1;
+
+  width:
+    min(
+      400px,
+      100%
+    );
+
+  padding:
+    25px;
+
+  border:
+    1px solid
+    rgba(255,255,255,.85);
+
+  border-radius:
+    20px;
+
+  background:
+    rgba(255,255,255,.97);
+
+  box-shadow:
+    0 22px 55px
+    rgba(36,48,74,.16);
+
+  text-align:
+    center;
+
+  animation:
+    notepad-modal-in
+    .22s
+    cubic-bezier(.2,.8,.2,1)
+    both;
+}
+
+.modal-icon {
+  width:
+    52px;
+
+  height:
+    52px;
+
+  margin:
+    0 auto 13px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  border:
+    1px solid
+    #ecc7da;
+
+  border-radius:
+    15px;
+
+  background:
+    var(--notepad-accent-soft);
+
+  font-size:
+    23px;
+}
+
+.notepad-modal-box h2 {
+  margin:
+    0;
+
+  color:
+    var(--notepad-ink);
+
+  font-size:
+    19px;
+
+  font-weight:
+    700;
+
+  line-height:
+    1.35;
+
+  letter-spacing:
+    -.02em;
+}
+
+.notepad-modal-box p {
+  margin:
+    8px 0 20px;
+
+  color:
+    var(--notepad-ink-soft);
+
+  font-size:
+    12.5px;
+
+  line-height:
+    1.55;
+}
+
+.modal-actions {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap:
+    8px;
+}
+
+.modal-btn {
+  min-width:
+    110px;
+
+  min-height:
+    40px;
+
+  padding:
+    8px 14px;
+
+  border-radius:
+    11px;
+
+  font-family:
+    var(--notepad-font-mono);
+
+  font-size:
+    11.5px;
+
+  font-weight:
+    500;
+
+  line-height:
+    1.35;
+
+  cursor:
+    pointer;
+
+  transition:
+    transform .14s ease,
+    filter .14s ease,
+    background .14s ease,
+    border-color .14s ease,
+    box-shadow .14s ease;
+}
+
+.modal-btn:active {
+  transform:
+    translateY(1px)
+    scale(.98);
+}
+
+.modal-btn:focus-visible {
+  outline:
+    2px solid
+    rgba(255,184,107,.32);
+
+  outline-offset:
+    2px;
+}
+
+/* CANCEL */
+
+.modal-btn-cancel {
+  border:
+    1px solid
+    var(--notepad-line-strong);
+
+  background:
+    rgba(255,255,255,.86);
+
+  color:
+    var(--notepad-ink-soft);
+}
+
+.modal-btn-cancel:hover {
+  background:
+    var(--notepad-paper-2);
+
+  border-color:
+    #bdc8da;
+}
+
+/* CONFIRM */
+
+.modal-btn-confirm {
+  border:
+    1px solid
+    #d99012;
+
+  background:
+    var(--notepad-accent);
+
+  color:
+    var(--notepad-accent-ink);
+
+  box-shadow:
+    0 7px 16px
+    rgba(245,166,35,.14);
+}
+
+.modal-btn-confirm:hover {
+  filter:
+    brightness(1.04);
+
+  box-shadow:
+    0 9px 18px
+    rgba(245,166,35,.19);
+}
+
+/* LANGUAGE-SAFE */
+
+/*
+ * ภาษาญี่ปุ่น / เกาหลี / จีน
+ * ไม่ควรบังคับการเว้นคำแบบภาษาอังกฤษ
+ */
+
+html[lang^="ja"] .notepad-page,
+html[lang^="ko"] .notepad-page,
+html[lang^="zh"] .notepad-page {
+  word-break:
+    normal;
+}
+
+/*
+ * ภาษาไทย
+ * ป้องกันประโยคยาวล้นพื้นที่
+ */
+
+html[lang^="th"] .notepad-page {
+  word-break:
+    normal;
+
+  overflow-wrap:
+    anywhere;
+}
+
+/* MOBILE / TABLET */
+
+@media (max-width: 720px) {
+
+  .notepad-page {
+    width:
+      100%;
+
+    padding:
+      22px
+      12px
+      56px;
+  }
+
+  .notepad-header {
+    align-items:
+      flex-start;
+  }
+
+  .notepad-title {
+    flex-wrap:
+      wrap;
+  }
+
+  .notepad-home-btn {
+    order:
+      -1;
+  }
+
+  .notepad-title h1 {
+    font-size:
+      clamp(
+        25px,
+        7vw,
+        34px
+      );
+  }
+
+  .notepad-status {
+    max-width:
+      100%;
+  }
+
+  .notepad-toolbar {
+    flex-wrap:
+      wrap;
+
+    padding:
+      8px;
+
+    border-radius:
+      16px;
+  }
+
+  .toolbar-search {
+    width:
+      100%;
+
+    min-width:
+      0;
+
+    flex:
+      1 0 100%;
+
+    margin-left:
+      0;
+
+    order:
+      5;
+  }
+
+  .notepad-editor {
+    min-height:
+      62vh;
+  }
+
+  .notepad-textarea {
+    min-height:
+      62vh;
+
+    padding:
+      22px
+      22px
+      32px;
+  }
+
+  .notepad-footer {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+
+    padding:
+      0 2px;
+  }
+
+}
+
+/* MOBILE */
+
+@media (max-width: 560px) {
+
+  .notepad-page {
+    padding:
+      18px
+      10px
+      50px;
+  }
+
+  .notepad-header {
+    flex-direction:
+      column;
+
+    gap:
+      12px;
+
+    margin-bottom:
+      15px;
+  }
+
+  .notepad-title {
+    width:
+      100%;
+
+    gap:
+      10px;
+  }
+
+  .notepad-home-btn {
+    width:
+      auto;
+
+    min-height:
+      36px;
+
+    padding:
+      7px 10px;
+  }
+
+  .notepad-icon {
+    width:
+      44px;
+
+    height:
+      44px;
+
+    flex-basis:
+      44px;
+
+    border-radius:
+      14px;
+
+    font-size:
+      21px;
+  }
+
+  .notepad-icon::after {
+    font-size:
+      9px;
+  }
+
+  .notepad-title h1 {
+    font-size:
+      25px;
+  }
+
+  .notepad-title p {
+    width:
+      100%;
+
+    font-size:
+      12px;
+  }
+
+  .notepad-status {
+    align-self:
+      flex-start;
+
+    max-width:
+      100%;
+  }
+
+  .notepad-toolbar {
+    gap:
+      4px;
+
+    border-radius:
+      15px;
+  }
+
+  .toolbar-group {
+    gap:
+      2px;
+  }
+
+  .notepad-btn {
+    min-height:
+      36px;
+
+    padding:
+      7px 8px;
+
+    font-size:
+      11px;
+  }
+
+  .notepad-btn.icon-only {
+    width:
+      36px;
+
+    flex-basis:
+      36px;
+
+    font-size:
+      18px;
+  }
+
+  .toolbar-divider {
+    height:
+      26px;
+
+    margin:
+      0 1px;
+  }
+
+  .notepad-editor {
+    min-height:
+      66vh;
+
+    border-radius:
+      16px;
+  }
+
+  .notepad-textarea {
+    min-height:
+      66vh;
+
+    padding:
+      19px
+      17px
+      28px;
+
+    font-size:
+      14px;
+
+    line-height:
+      1.9;
+  }
+
+  .notepad-footer {
+    font-size:
+      10px;
+  }
+
+  .notepad-shortcuts {
+    display:
+      none;
+  }
+
+  .modal-actions {
+    width:
+      100%;
+  }
+
+  .modal-btn {
+    flex:
+      1;
+
+    min-width:
+      0;
+  }
+
+  .notepad-modal-box {
+    width:
+      100%;
+
+    padding:
+      23px
+      17px;
+
+    border-radius:
+      17px;
+  }
+
+}
+
+/* EXTRA SMALL MOBILE */
+
+@media (max-width: 390px) {
+
+  .notepad-title {
+    display:
+      grid;
+
+    grid-template-columns:
+      auto 1fr;
+
+    align-items:
+      center;
+  }
+
+  .notepad-home-btn {
+    grid-column:
+      1 / -1;
+
+    justify-self:
+      start;
+
+    margin-bottom:
+      2px;
+  }
+
+  .notepad-icon {
+    grid-column:
+      1;
+  }
+
+  .notepad-title > div:last-child {
+    grid-column:
+      2;
+  }
+
+  .notepad-title p {
+    grid-column:
+      1 / -1;
+  }
+
+  .notepad-btn span:last-child {
+    display:
+      none;
+  }
+
+  .notepad-btn {
+    width:
+      36px;
+
+    padding:
+      0;
+  }
+
+  .notepad-toolbar {
+    gap:
+      3px;
+  }
+
+}
+
+/* PRINT */
+
+@media print {
+
+  body {
+    background:
+      #fff;
+
+    background-image:
+      none;
+  }
+
+  .notepad-page {
+    width:
+      100%;
+
+    min-height:
+      auto;
+
+    padding:
+      0;
+  }
+
+  .notepad-page::before,
+  .notepad-page::after,
+  .notepad-toolbar,
+  .notepad-footer,
+  .notepad-status,
+  .notepad-home-btn,
+  .notepad-modal {
+    display:
+      none !important;
+  }
+
+  .notepad-header {
+    margin-bottom:
+      15px;
+  }
+
+  .notepad-editor {
+    min-height:
+      auto;
+
+    border:
+      0;
+
+    border-radius:
+      0;
+
+    box-shadow:
+      none;
+  }
+
+  .notepad-editor::before {
+    display:
+      none;
+  }
+
+  .notepad-textarea {
+    min-height:
+      auto;
+
+    padding:
+      0;
+
+    background:
+      none;
+
+    color:
+      #000;
+
+    resize:
+      none;
+
+    overflow:
+      visible;
+  }
+
+}
+
+/* ACCESSIBILITY */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .notepad-page *,
+  .notepad-page *::before,
+  .notepad-page *::after {
+    animation-duration:
+      .001ms !important;
+
+    animation-iteration-count:
+      1 !important;
+
+    transition-duration:
+      .001ms !important;
+  }
+
+}
+
+/* CUTE CAT THEME OVERRIDES */
+
+.notepad-page::before,
+.notepad-page::after {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  opacity: .38;
+  filter: blur(2px);
+}
+
+.notepad-page::before {
+  background:
+    radial-gradient(circle at 35% 35%, rgba(245,168,199,.42) 0 10px, transparent 11px),
+    radial-gradient(circle at 62% 35%, rgba(245,168,199,.42) 0 10px, transparent 11px),
+    radial-gradient(circle at 50% 62%, rgba(245,168,199,.42) 0 24px, transparent 25px);
+}
+
+.notepad-page::after {
+  background:
+    radial-gradient(circle at 35% 35%, rgba(208,184,244,.38) 0 10px, transparent 11px),
+    radial-gradient(circle at 62% 35%, rgba(208,184,244,.38) 0 10px, transparent 11px),
+    radial-gradient(circle at 50% 62%, rgba(208,184,244,.38) 0 24px, transparent 25px);
+}
+
+.notepad-icon {
+  border-color: #ecc7da !important;
+  background:
+    linear-gradient(145deg, #fff1f7, #fffafe) !important;
+  box-shadow: 0 8px 20px rgba(224,133,174,.12) !important;
+}
+
+.notepad-icon::before {
+  content: '⌒';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 8px;
+  text-align: center;
+  color: #b87399;
+  font-size: 11px;
+  transform: rotate(180deg);
+}
+
+.notepad-icon::after {
+  content: '🐾' !important;
+  color: #d989b0 !important;
+}
+
+.notepad-title h1::after {
+  content: '🐱' !important;
+  color: transparent !important;
+  -webkit-text-fill-color: initial;
+}
+
+.notepad-home-btn:hover {
+  background: #fff4f8 !important;
+  border-color: #e6c8d8 !important;
+}
+
+.notepad-btn:hover:not(:disabled) {
+  background: #fff4f8 !important;
+  border-color: #ead8e2 !important;
+}
+
+.notepad-btn:focus-visible,
+.notepad-home-btn:focus-visible,
+.modal-btn:focus-visible {
+  outline-color: rgba(245,168,199,.40) !important;
+}
+
+.search-box:focus-within {
+  border-color: #e5a6c1 !important;
+  box-shadow: 0 0 0 3px rgba(245,168,199,.12) !important;
+}
+
+.notepad-editor::before {
+  background:
+    radial-gradient(circle at 72% 26%, rgba(255,221,235,.95), transparent 28%),
+    radial-gradient(circle at 90% 10%, rgba(234,219,255,.65), transparent 22%) !important;
+}
+
+.notepad-modal-box::before {
+  content: '🐾';
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 17px;
+  opacity: .55;
+  transform: rotate(-12deg);
+}
+
+.notepad-modal-box {
+  border-color: rgba(236,199,218,.8) !important;
+  box-shadow: 0 22px 55px rgba(110,74,105,.14) !important;
+}
+
+.modal-btn-confirm {
+  border-color: #d98db2 !important;
+  background: #f5a8c7 !important;
+  color: #693d57 !important;
+  box-shadow: 0 7px 16px rgba(245,168,199,.18) !important;
+}
+
+.notepad-status.is-saving {
+  color: #8d6377 !important;
+  border-color: #ebcad9 !important;
+  background: #fff5f9 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notepad-page *,
+  .notepad-page *::before,
+  .notepad-page *::after {
+    animation-duration: .001ms !important;
+  }
+}
