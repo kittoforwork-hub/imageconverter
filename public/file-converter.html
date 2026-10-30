@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="th">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta content="File Converter - Workshop Utility BY KITTO" name="description"/>
+  <meta content="#f5f7f7" name="theme-color"/>
+  <meta content="index,follow" name="robots"/>
+  <meta content="website" property="og:type"/>
+  <meta content="File Converter - Workshop Utility BY KITTO" property="og:title"/>
+  <meta content="Convert supported file formats in your browser with Workshop Utility BY KITTO." property="og:description"/>
+  <!-- FAVICON -->
+  <link href="./assets/icons/favicon-32.png" rel="icon" sizes="32x32" type="image/png"/>
+  <link href="./assets/icons/favicon-16.png" rel="icon" sizes="16x16" type="image/png"/>
+  <link href="./assets/icons/favicon-48.png" rel="icon" sizes="48x48" type="image/png"/>
+  <link href="./favicon.ico" rel="shortcut icon" type="image/x-icon"/>
+  <link href="./assets/icons/apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180"/>
+  <!-- TITLE -->
+  <title data-i18n="converter.title">
+   File Converter
+  </title>
+  <!-- PRECONNECT -->
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <!-- FONTS -->
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+  <!-- MAIN STYLE -->
+  <!-- FILE CONVERTER STYLE -->
+  <link href="./css/file-converter.css" rel="stylesheet"/>
+  <link href="./css/ui-system.css" rel="stylesheet"/>
+ </head>
+ <body class="file-converter-page">
+  <!-- MAIN SHEET -->
+  <div class="fc-sheet">
+   <!-- HEADER -->
+   <header class="fc-topbar">
+    <div class="fc-topbar-row">
+     <!-- Brand -->
+     <a aria-label="Workshop Utility BY KITTO" class="fc-eyebrow" href="./index.html">
+      WORKSHOP UTILITY BY KITTO
+     </a>
+     <!-- Back -->
+     <a class="fc-back-button" data-i18n-aria-label="converter.backHome" href="./index.html">
+      <span>
+       &larr;
+      </span>
+      <span data-i18n="converter.backHome">
+       กลับหน้าหลัก
+      </span>
+     </a>
+    </div>
+    <!-- HERO -->
+    <section class="fc-hero">
+     <div class="hero-badge" data-i18n="converter.fileTools">
+      FILE TOOLS
+     </div>
+     <h1>
+      File
+      <span>
+       Converter
+      </span>
+     </h1>
+     <p class="fc-hero-subtitle" data-i18n="converter.subtitle">
+      รวมเครื่องมือแปลงไฟล์ไว้ในที่เดียว
+          รองรับรูปภาพ PDF เอกสาร Spreadsheet
+          Data และ Text พร้อมประมวลผลไฟล์ในเบราว์เซอร์
+          สำหรับเครื่องมือที่รองรับ
+     </p>
+    </section>
+   </header>
+   <!-- SEARCH -->
+   <section class="fc-search-section">
+    <div class="fc-search-box">
+     <span aria-hidden="true" class="fc-search-icon">
+      🔍
+     </span>
+     <input aria-label="ค้นหา Converter" autocomplete="off" data-i18n-aria-label="converter.searchLabel" data-i18n-placeholder="converter.searchPlaceholder" id="converter-search" placeholder="ค้นหา Converter เช่น JPG, PNG, PDF, CSV..." spellcheck="false" type="search"/>
+     <button aria-label="ล้างการค้นหา" class="clear-search" data-i18n-aria-label="converter.clearSearch" hidden="" id="clear-search" type="button">
+      &times;
+     </button>
+    </div>
+    <div aria-live="polite" class="search-result-info" id="search-result-info">
+    </div>
+   </section>
+   <!-- FILTER -->
+   <section class="fc-filter-section">
+    <div class="fc-filter-scroll">
+     <button class="filter-button active" data-filter="all" type="button">
+      <span>
+       ✦
+      </span>
+      <span data-i18n="converter.all">
+       ทั้งหมด
+      </span>
+     </button>
+     <button class="filter-button" data-filter="image" type="button">
+      <span>
+       🖼
+      </span>
+      <span data-i18n="converter.image">
+       รูปภาพ
+      </span>
+     </button>
+     <button class="filter-button" data-filter="pdf" type="button">
+      <span>
+       📄
+      </span>
+      <span data-i18n="converter.pdf">
+       PDF
+      </span>
+     </button>
+     <button class="filter-button" data-filter="document" type="button">
+      <span>
+       📝
+      </span>
+      <span data-i18n="converter.document">
+       เอกสาร
+      </span>
+     </button>
+     <button class="filter-button" data-filter="spreadsheet" type="button">
+      <span>
+       📊
+      </span>
+      <span data-i18n="converter.spreadsheet">
+       Spreadsheet
+      </span>
+     </button>
+     <button class="filter-button" data-filter="data" type="button">
+      <span>
+       { }
+      </span>
+      <span data-i18n="converter.data">
+       Data
+      </span>
+     </button>
+     <button class="filter-button" data-filter="text" type="button">
+      <span>
+       Aa
+      </span>
+      <span data-i18n="converter.text">
+       Text
+      </span>
+     </button>
+    </div>
+   </section>
+   <!-- CONVERTER CONTENT -->
+   <div class="converter-content" id="converter-content">
+    <!-- POPULAR -->
+    <section class="converter-category" data-category-section="popular">
+     <div class="category-header">
+      <div>
+       <div class="category-kicker" data-i18n="converter.popular">
+        POPULAR
+       </div>
+       <h2 data-i18n="converter.popularTitle">
+        เครื่องมือยอดนิยม
+       </h2>
+      </div>
+      <span class="category-count" data-category-count="popular">
+       6 Tools
+      </span>
+     </div>
+     <div class="converter-grid">
+      <!-- JPG → PNG -->
+      <button class="converter-card" data-category="image" data-converter="jpg-png" data-name="JPG PNG JPEG รูปภาพ แปลงรูป" type="button">
+       <div class="card-icon image-icon">
+        JPG
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         JPG &rarr; PNG
+        </h3>
+        <p data-i18n="converter.descJpgPng">
+         แปลงรูป JPG เป็น PNG
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.image">
+        IMAGE
+       </div>
+      </button>
+      <!-- PNG → JPG -->
+      <button class="converter-card" data-category="image" data-converter="png-jpg" data-name="PNG JPG JPEG รูปภาพ แปลงรูป" type="button">
+       <div class="card-icon image-icon">
+        PNG
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         PNG &rarr; JPG
+        </h3>
+        <p data-i18n="converter.descPngJpg">
+         แปลงรูป PNG เป็น JPG
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.image">
+        IMAGE
+       </div>
+      </button>
+      <!-- WEBP → JPG -->
+      <button class="converter-card" data-category="image" data-converter="webp-jpg" data-name="WebP JPG รูปภาพ แปลงรูป" type="button">
+       <div class="card-icon image-icon">
+        WEBP
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         WebP &rarr; JPG
+        </h3>
+        <p data-i18n="converter.descWebpJpg">
+         แปลง WebP เป็น JPG
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.image">
+        IMAGE
+       </div>
+      </button>
+      <!-- JPG → PDF -->
+      <button class="converter-card" data-category="pdf" data-converter="jpg-pdf" data-name="JPG JPEG PDF รูปภาพ เอกสาร" type="button">
+       <div class="card-icon pdf-icon">
+        JPG
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         JPG &rarr; PDF
+        </h3>
+        <p data-i18n="converter.descJpgPdf">
+         แปลงรูป JPG เป็น PDF
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.pdf">
+        PDF
+       </div>
+      </button>
+      <!-- PDF → JPG -->
+      <button class="converter-card" data-category="pdf" data-converter="pdf-jpg" data-name="PDF JPG JPEG เอกสาร รูปภาพ" type="button">
+       <div class="card-icon pdf-icon">
+        PDF
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         PDF &rarr; JPG
+        </h3>
+        <p data-i18n="converter.descPdfJpg">
+         แปลง PDF เป็นรูป JPG
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.pdf">
+        PDF
+       </div>
+      </button>
+      <!-- CSV → JSON -->
+      <button class="converter-card" data-category="data" data-converter="csv-json" data-name="CSV JSON Data ตาราง" type="button">
+       <div class="card-icon data-icon">
+        CSV
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         CSV &rarr; JSON
+        </h3>
+        <p data-i18n="converter.descCsvJson">
+         แปลงข้อมูล CSV เป็น JSON
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.data">
+        DATA
+       </div>
+      </button>
+     </div>
+    </section>
+    <!-- IMAGE -->
+    <section class="converter-category" data-category-section="image">
+     <div class="category-header">
+      <div>
+       <div class="category-kicker" data-i18n="converter.image">
+        IMAGE
+       </div>
+       <h2 data-i18n="converter.imageTitle">
+        Image Converter
+       </h2>
+      </div>
+      <span class="category-count" data-category-count="image">
+       10 Tools
+      </span>
+     </div>
+     <div class="converter-grid">
+      <button class="converter-card" data-category="image" data-converter="jpg-png" data-name="JPG JPEG PNG" type="button">
+       <div class="card-icon image-icon">
+        JPG
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         JPG &rarr; PNG
+        </h3>
+        <p data-i18n="converter.descJpgPng">
+         แปลง JPG เป็น PNG
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.image">
+        IMAGE
+       </div>
+      </button>
+      <button class="converter-card" data-category="image" data-converter="png-jpg" data-name="PNG JPG JPEG" type="button">
+       <div class="card-icon image-icon">
+        PNG
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         PNG &rarr; JPG
+        </h3>
+        <p data-i18n="converter.descPngJpg">
+         แปลง PNG เป็น JPG
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.image">
+        IMAGE
+       </div>
+      </button>
+      <button class="converter-card" data-category="image" data-converter="jpg-webp" data-name="JPG JPEG WebP" type="button">
+       <div class="card-icon image-icon">
+        JPG
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         JPG &rarr; WebP
+        </h3>
+        <p data-i18n="converter.descJpgWebp">
+         แปลง JPG เป็น WebP
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.image">
+        IMAGE
+       </div>
+      </button>
+      <button class="converter-card" data-category="image" data-converter="png-webp" data-name="PNG WebP" type="button">
+       <div class="card-icon image-icon">
+        PNG
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         PNG &rarr; WebP
+        </h3>
+        <p data-i18n="converter.descPngWebp">
+         แปลง PNG เป็น WebP
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.image">
+        IMAGE
+       </div>
+      </button>
+      <button class="converter-card" data-category="image" data-converter="webp-jpg" data-name="WebP JPG" type="button">
+       <div class="card-icon image-icon">
+        WEBP
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         WebP &rarr; JPG
+        </h3>
+        <p data-i18n="converter.descWebpJpg">
+         แปลง WebP เป็น JPG
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.image">
+        IMAGE
+       </div>
+      </button>
+      <button class="converter-card" data-category="image" data-converter="webp-png" data-name="WebP PNG" type="button">
+       <div class="card-icon image-icon">
+        WEBP
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         WebP &rarr; PNG
+        </h3>
+        <p data-i18n="converter.descWebpPng">
+         แปลง WebP เป็น PNG
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.image">
+        IMAGE
+       </div>
+      </button>
+      <button class="converter-card" data-category="image" data-converter="svg-png" data-name="SVG PNG Vector" type="button">
+       <div class="card-icon image-icon">
+        SVG
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         SVG &rarr; PNG
+        </h3>
+        <p data-i18n="converter.descSvgPng">
+         แปลง SVG เป็น PNG
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.image">
+        IMAGE
+       </div>
+      </button>
+      <button class="converter-card" data-category="image" data-converter="bmp-png" data-name="BMP PNG" type="button">
+       <div class="card-icon image-icon">
+        BMP
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         BMP &rarr; PNG
+        </h3>
+        <p data-i18n="converter.descBmpPng">
+         แปลง BMP เป็น PNG
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.image">
+        IMAGE
+       </div>
+      </button>
+      <button class="converter-card" data-category="image" data-converter="gif-png" data-name="GIF PNG" type="button">
+       <div class="card-icon image-icon">
+        GIF
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         GIF &rarr; PNG
+        </h3>
+        <p data-i18n="converter.descGifPng">
+         แปลง GIF เป็น PNG
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.image">
+        IMAGE
+       </div>
+      </button>
+      <button class="converter-card" data-category="image" data-converter="image-ico" data-name="Image ICO Favicon Icon" type="button">
+       <div class="card-icon image-icon">
+        ICO
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         Image &rarr; ICO
+        </h3>
+        <p data-i18n="converter.descImageIco">
+         สร้างไฟล์ ICO / Favicon
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.image">
+        IMAGE
+       </div>
+      </button>
+     </div>
+    </section>
+    <!-- PDF -->
+    <section class="converter-category" data-category-section="pdf">
+     <div class="category-header">
+      <div>
+       <div class="category-kicker" data-i18n="converter.pdf">
+        PDF
+       </div>
+       <h2 data-i18n="converter.pdfTitle">
+        PDF Converter
+       </h2>
+      </div>
+      <span class="category-count" data-category-count="pdf">
+       8 Tools
+      </span>
+     </div>
+     <div class="converter-grid">
+      <button class="converter-card" data-category="pdf" data-converter="jpg-pdf" data-name="JPG JPEG PDF" type="button">
+       <div class="card-icon pdf-icon">
+        JPG
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         JPG &rarr; PDF
+        </h3>
+        <p data-i18n="converter.descJpgPdf">
+         แปลงรูป JPG เป็น PDF
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.pdf">
+        PDF
+       </div>
+      </button>
+      <button class="converter-card" data-category="pdf" data-converter="png-pdf" data-name="PNG PDF" type="button">
+       <div class="card-icon pdf-icon">
+        PNG
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         PNG &rarr; PDF
+        </h3>
+        <p data-i18n="converter.descPngPdf">
+         แปลงรูป PNG เป็น PDF
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.pdf">
+        PDF
+       </div>
+      </button>
+      <button class="converter-card" data-category="pdf" data-converter="pdf-jpg" data-name="PDF JPG JPEG" type="button">
+       <div class="card-icon pdf-icon">
+        PDF
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         PDF &rarr; JPG
+        </h3>
+        <p data-i18n="converter.descPdfJpg">
+         แปลง PDF เป็น JPG
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.pdf">
+        PDF
+       </div>
+      </button>
+      <button class="converter-card" data-category="pdf" data-converter="pdf-png" data-name="PDF PNG" type="button">
+       <div class="card-icon pdf-icon">
+        PDF
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         PDF &rarr; PNG
+        </h3>
+        <p data-i18n="converter.descPdfPng">
+         แปลง PDF เป็น PNG
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.pdf">
+        PDF
+       </div>
+      </button>
+      <button class="converter-card" data-category="pdf" data-converter="pdf-txt" data-name="PDF TXT Text" type="button">
+       <div class="card-icon pdf-icon">
+        PDF
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         PDF &rarr; TXT
+        </h3>
+        <p data-i18n="converter.descPdfTxt">
+         ดึงข้อความจาก PDF
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.pdf">
+        PDF
+       </div>
+      </button>
+      <button class="converter-card" data-category="pdf" data-converter="image-pdf" data-name="Image JPG PNG PDF" type="button">
+       <div class="card-icon pdf-icon">
+        IMG
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         Image &rarr; PDF
+        </h3>
+        <p data-i18n="converter.descImagePdf">
+         รวมรูปหลายรูปเป็น PDF
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.pdf">
+        PDF
+       </div>
+      </button>
+      <button class="converter-card" data-category="pdf" data-converter="pdf-text" data-name="PDF Text Extract" type="button">
+       <div class="card-icon pdf-icon">
+        TXT
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         PDF &rarr; Text
+        </h3>
+        <p data-i18n="converter.descPdfText">
+         Extract ข้อความจาก PDF
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.pdf">
+        PDF
+       </div>
+      </button>
+      <button class="converter-card" data-category="pdf" data-converter="pdf-images" data-name="PDF Images JPG PNG" type="button">
+       <div class="card-icon pdf-icon">
+        IMG
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         PDF &rarr; Images
+        </h3>
+        <p data-i18n="converter.descPdfImages">
+         แยกทุกหน้า PDF เป็นรูป
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.pdf">
+        PDF
+       </div>
+      </button>
+     </div>
+    </section>
+    <!-- DOCUMENT -->
+    <section class="converter-category" data-category-section="document">
+     <div class="category-header">
+      <div>
+       <div class="category-kicker" data-i18n="converter.document">
+        DOCUMENT
+       </div>
+       <h2 data-i18n="converter.documentTitle">
+        Document Converter
+       </h2>
+      </div>
+      <span class="category-count" data-category-count="document">
+       5 Tools
+      </span>
+     </div>
+     <div class="converter-grid">
+      <button class="converter-card" data-category="document" data-converter="docx-pdf" data-name="DOCX Word PDF" type="button">
+       <div class="card-icon document-icon">
+        DOC
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         DOCX &rarr; PDF
+        </h3>
+        <p data-i18n="converter.descDocxPdf">
+         แปลง Word เป็น PDF
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.document">
+        DOCUMENT
+       </div>
+      </button>
+      <button class="converter-card" data-category="document" data-converter="xlsx-pdf" data-name="XLSX Excel PDF" type="button">
+       <div class="card-icon spreadsheet-icon">
+        XLS
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         XLSX &rarr; PDF
+        </h3>
+        <p data-i18n="converter.descXlsxPdf">
+         แปลง Excel เป็น PDF
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.document">
+        DOCUMENT
+       </div>
+      </button>
+      <button class="converter-card" data-category="document" data-converter="pptx-pdf" data-name="PPTX PowerPoint PDF" type="button">
+       <div class="card-icon document-icon">
+        PPT
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         PPTX &rarr; PDF
+        </h3>
+        <p data-i18n="converter.descPptxPdf">
+         แปลง PowerPoint เป็น PDF
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.document">
+        DOCUMENT
+       </div>
+      </button>
+      <button class="converter-card" data-category="document" data-converter="txt-pdf" data-name="TXT Text PDF" type="button">
+       <div class="card-icon document-icon">
+        TXT
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         TXT &rarr; PDF
+        </h3>
+        <p data-i18n="converter.descTxtPdf">
+         แปลง Text เป็น PDF
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.document">
+        DOCUMENT
+       </div>
+      </button>
+      <button class="converter-card" data-category="document" data-converter="html-pdf" data-name="HTML PDF Web" type="button">
+       <div class="card-icon document-icon">
+        HTML
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         HTML &rarr; PDF
+        </h3>
+        <p data-i18n="converter.descHtmlPdf">
+         แปลง HTML เป็น PDF
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.document">
+        DOCUMENT
+       </div>
+      </button>
+     </div>
+    </section>
+    <!-- SPREADSHEET -->
+    <section class="converter-category" data-category-section="spreadsheet">
+     <div class="category-header">
+      <div>
+       <div class="category-kicker" data-i18n="converter.spreadsheet">
+        SPREADSHEET
+       </div>
+       <h2 data-i18n="converter.spreadsheetTitle">
+        Spreadsheet Converter
+       </h2>
+      </div>
+      <span class="category-count" data-category-count="spreadsheet">
+       5 Tools
+      </span>
+     </div>
+     <div class="converter-grid">
+      <button class="converter-card" data-category="spreadsheet" data-converter="csv-xlsx" data-name="CSV XLSX Excel" type="button">
+       <div class="card-icon spreadsheet-icon">
+        CSV
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         CSV &rarr; XLSX
+        </h3>
+        <p data-i18n="converter.descCsvXlsx">
+         แปลง CSV เป็น Excel
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.spreadsheet">
+        SPREADSHEET
+       </div>
+      </button>
+      <button class="converter-card" data-category="spreadsheet" data-converter="xlsx-csv" data-name="XLSX Excel CSV" type="button">
+       <div class="card-icon spreadsheet-icon">
+        XLS
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         XLSX &rarr; CSV
+        </h3>
+        <p data-i18n="converter.descXlsxCsv">
+         แปลง Excel เป็น CSV
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.spreadsheet">
+        SPREADSHEET
+       </div>
+      </button>
+      <button class="converter-card" data-category="spreadsheet" data-converter="csv-json" data-name="CSV JSON Data" type="button">
+       <div class="card-icon spreadsheet-icon">
+        CSV
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         CSV &rarr; JSON
+        </h3>
+        <p data-i18n="converter.descCsvJson">
+         แปลง CSV เป็น JSON
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.spreadsheet">
+        SPREADSHEET
+       </div>
+      </button>
+      <button class="converter-card" data-category="spreadsheet" data-converter="json-csv" data-name="JSON CSV Data" type="button">
+       <div class="card-icon data-icon">
+        JSON
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         JSON &rarr; CSV
+        </h3>
+        <p data-i18n="converter.descJsonCsv">
+         แปลง JSON เป็น CSV
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.spreadsheet">
+        SPREADSHEET
+       </div>
+      </button>
+      <button class="converter-card" data-category="spreadsheet" data-converter="json-xlsx" data-name="JSON XLSX Excel" type="button">
+       <div class="card-icon data-icon">
+        JSON
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         JSON &rarr; XLSX
+        </h3>
+        <p data-i18n="converter.descJsonXlsx">
+         แปลง JSON เป็น Excel
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.spreadsheet">
+        SPREADSHEET
+       </div>
+      </button>
+     </div>
+    </section>
+    <!-- DATA -->
+    <section class="converter-category" data-category-section="data">
+     <div class="category-header">
+      <div>
+       <div class="category-kicker" data-i18n="converter.data">
+        DATA
+       </div>
+       <h2 data-i18n="converter.dataTitle">
+        Data Converter
+       </h2>
+      </div>
+      <span class="category-count" data-category-count="data">
+       6 Tools
+      </span>
+     </div>
+     <div class="converter-grid">
+      <button class="converter-card" data-category="data" data-converter="csv-json" data-name="CSV JSON" type="button">
+       <div class="card-icon data-icon">
+        CSV
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         CSV &rarr; JSON
+        </h3>
+        <p data-i18n="converter.descCsvJson">
+         แปลง CSV เป็น JSON
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.data">
+        DATA
+       </div>
+      </button>
+      <button class="converter-card" data-category="data" data-converter="json-csv" data-name="JSON CSV" type="button">
+       <div class="card-icon data-icon">
+        JSON
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         JSON &rarr; CSV
+        </h3>
+        <p data-i18n="converter.descJsonCsv">
+         แปลง JSON เป็น CSV
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.data">
+        DATA
+       </div>
+      </button>
+      <button class="converter-card" data-category="data" data-converter="json-xml" data-name="JSON XML" type="button">
+       <div class="card-icon data-icon">
+        JSON
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         JSON &rarr; XML
+        </h3>
+        <p data-i18n="converter.descJsonXml">
+         แปลง JSON เป็น XML
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.data">
+        DATA
+       </div>
+      </button>
+      <button class="converter-card" data-category="data" data-converter="xml-json" data-name="XML JSON" type="button">
+       <div class="card-icon data-icon">
+        XML
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         XML &rarr; JSON
+        </h3>
+        <p data-i18n="converter.descXmlJson">
+         แปลง XML เป็น JSON
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.data">
+        DATA
+       </div>
+      </button>
+      <button class="converter-card" data-category="data" data-converter="yaml-json" data-name="YAML JSON" type="button">
+       <div class="card-icon data-icon">
+        YAML
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         YAML &rarr; JSON
+        </h3>
+        <p data-i18n="converter.descYamlJson">
+         แปลง YAML เป็น JSON
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.data">
+        DATA
+       </div>
+      </button>
+      <button class="converter-card" data-category="data" data-converter="json-yaml" data-name="JSON YAML" type="button">
+       <div class="card-icon data-icon">
+        JSON
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         JSON &rarr; YAML
+        </h3>
+        <p data-i18n="converter.descJsonYaml">
+         แปลง JSON เป็น YAML
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.data">
+        DATA
+       </div>
+      </button>
+     </div>
+    </section>
+    <!-- TEXT -->
+    <section class="converter-category" data-category-section="text">
+     <div class="category-header">
+      <div>
+       <div class="category-kicker" data-i18n="converter.text">
+        TEXT
+       </div>
+       <h2 data-i18n="converter.textTitle">
+        Text Converter
+       </h2>
+      </div>
+      <span class="category-count" data-category-count="text">
+       4 Tools
+      </span>
+     </div>
+     <div class="converter-grid">
+      <button class="converter-card" data-category="text" data-converter="txt-pdf" data-name="TXT PDF Text" type="button">
+       <div class="card-icon document-icon">
+        TXT
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         TXT &rarr; PDF
+        </h3>
+        <p data-i18n="converter.descTxtPdf">
+         แปลง Text เป็น PDF
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.text">
+        TEXT
+       </div>
+      </button>
+      <button class="converter-card" data-category="text" data-converter="txt-html" data-name="TXT HTML" type="button">
+       <div class="card-icon document-icon">
+        TXT
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         TXT &rarr; HTML
+        </h3>
+        <p data-i18n="converter.descTxtHtml">
+         แปลง Text เป็น HTML
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.text">
+        TEXT
+       </div>
+      </button>
+      <button class="converter-card" data-category="text" data-converter="md-html" data-name="Markdown MD HTML" type="button">
+       <div class="card-icon document-icon">
+        MD
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         Markdown &rarr; HTML
+        </h3>
+        <p data-i18n="converter.descMdHtml">
+         แปลง Markdown เป็น HTML
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.text">
+        TEXT
+       </div>
+      </button>
+      <button class="converter-card" data-category="text" data-converter="html-txt" data-name="HTML TXT Text" type="button">
+       <div class="card-icon document-icon">
+        HTML
+       </div>
+       <div class="card-arrow">
+        &rarr;
+       </div>
+       <div class="card-content">
+        <h3>
+         HTML &rarr; TXT
+        </h3>
+        <p data-i18n="converter.descHtmlTxt">
+         ดึงข้อความจาก HTML
+        </p>
+       </div>
+       <div class="card-footer" data-i18n="converter.text">
+        TEXT
+       </div>
+      </button>
+     </div>
+    </section>
+    <!-- EMPTY SEARCH -->
+    <section class="empty-state" hidden="" id="empty-state">
+     <div class="empty-icon">
+      🔎
+     </div>
+     <h2 data-i18n="converter.noResults">
+      ไม่พบ Converter
+     </h2>
+     <p data-i18n="converter.noResultsHint">
+      ลองค้นหาด้วยชื่อไฟล์ เช่น JPG, PNG, PDF, CSV หรือ JSON
+     </p>
+     <button class="secondary-button" id="reset-search" type="button">
+      <span data-i18n="converter.showAll">
+       แสดงทั้งหมด
+      </span>
+     </button>
+    </section>
+   </div>
+   <!-- PRIVACY -->
+   <section class="privacy-box">
+    <div class="privacy-icon">
+     🔒
+    </div>
+    <div>
+     <h3 data-i18n="converter.privacyTitle">
+      Privacy First
+     </h3>
+     <p data-i18n="converter.privacyText">
+      เครื่องมือที่สามารถประมวลผลบนเบราว์เซอร์ได้
+          จะทำงานโดยไม่จำเป็นต้องอัปโหลดไฟล์ไปยังเซิร์ฟเวอร์
+          ทั้งนี้ขึ้นอยู่กับประเภทของ Converter
+     </p>
+    </div>
+   </section>
+   <!-- FOOTER -->
+   <footer class="site-footer">
+    <p>
+     Workshop Utility BY KITTO
+    </p>
+    <span data-i18n="converter.title">
+     File Converter
+    </span>
+   </footer>
+  </div>
+  <!-- CONVERTER MODAL -->
+  <div class="modal" hidden="" id="converter-modal">
+   <div class="modal-backdrop" data-modal-close="">
+   </div>
+   <section aria-describedby="modal-description" aria-labelledby="modal-title" aria-modal="true" class="modal-panel" role="dialog">
+    <!-- MODAL HEADER -->
+    <header class="modal-header">
+     <div>
+      <div class="modal-category" id="modal-category">
+       IMAGE CONVERTER
+      </div>
+      <h2 id="modal-title">
+       JPG &rarr; PNG
+      </h2>
+      <p id="modal-description">
+       แปลงไฟล์ JPG เป็น PNG
+      </p>
+     </div>
+     <button aria-label="ปิด" class="modal-close" data-i18n-aria-label="converter.close" id="modal-close" type="button">
+      &times;
+     </button>
+    </header>
+    <!-- MODAL BODY -->
+    <div class="modal-body">
+     <!-- DROP ZONE -->
+     <div aria-label="ลากไฟล์มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์" class="drop-zone" data-i18n-aria-label="converter.dragFiles" id="drop-zone" role="button" tabindex="0">
+      <div class="drop-icon">
+       &uarr;
+      </div>
+      <h3 data-i18n="converter.dragFiles">
+       ลากไฟล์มาวางที่นี่
+      </h3>
+      <p data-i18n="converter.chooseFiles">
+       หรือเลือกไฟล์จากเครื่องของคุณ
+      </p>
+      <button class="primary-button" id="browse-files" type="button">
+       <span data-i18n="converter.browse">
+        เลือกไฟล์
+       </span>
+      </button>
+      <div class="supported-formats" id="supported-formats">
+       รองรับไฟล์ที่กำหนดโดย Converter นี้
+      </div>
+      <input hidden="" id="file-input" multiple="" type="file"/>
+     </div>
+     <!-- FILE LIST -->
+     <section class="file-list-section" hidden="" id="file-list-section">
+      <div class="file-list-header">
+       <div>
+        <strong data-i18n="converter.selectedFiles">
+         ไฟล์ที่เลือก
+        </strong>
+        <span id="file-count">
+         0 files
+        </span>
+       </div>
+       <button class="text-button" id="clear-files" type="button">
+        <span data-i18n="converter.clearFiles">
+         ล้างทั้งหมด
+        </span>
+       </button>
+      </div>
+      <div class="file-list" id="file-list">
+      </div>
+     </section>
+     <!-- PROGRESS -->
+     <section class="progress-section" hidden="" id="progress-section">
+      <div class="progress-header">
+       <span data-i18n="converter.converting">
+        กำลังแปลงไฟล์...
+       </span>
+       <span id="progress-percent">
+        0%
+       </span>
+      </div>
+      <div class="progress-track">
+       <div class="progress-bar" id="progress-bar" style="width:0%">
+       </div>
+      </div>
+      <p class="progress-status" data-i18n="converter.preparing" id="progress-status">
+       กำลังเตรียมไฟล์
+      </p>
+     </section>
+     <!-- RESULT -->
+     <section class="result-section" hidden="" id="result-section">
+      <div class="result-header">
+       <div class="result-success-icon">
+        &checkmark;
+       </div>
+       <div>
+        <h3 data-i18n="converter.converted">
+         แปลงไฟล์สำเร็จ
+        </h3>
+        <p id="result-summary">
+         0 files converted
+        </p>
+       </div>
+      </div>
+      <div class="result-list" id="result-list">
+      </div>
+     </section>
+     <!-- ERROR -->
+     <div class="error-message" hidden="" id="error-message" role="alert">
+      <span>
+       ⚠
+      </span>
+      <div>
+       <strong data-i18n="converter.errorTitle">
+        เกิดข้อผิดพลาด
+       </strong>
+       <p data-i18n="converter.errorDefault" id="error-text">
+        ไม่สามารถแปลงไฟล์ได้
+       </p>
+      </div>
+     </div>
+    </div>
+    <!-- MODAL FOOTER -->
+    <footer class="modal-footer">
+     <button class="secondary-button" id="modal-cancel" type="button">
+      <span data-i18n="converter.cancel">
+       ยกเลิก
+      </span>
+     </button>
+     <button class="primary-button convert-button" disabled="" id="convert-button" type="button">
+      <span data-i18n="converter.convert">
+       Convert
+      </span>
+      <span>
+       &rarr;
+      </span>
+     </button>
+    </footer>
+   </section>
+  </div>
+  <!-- JAVASCRIPT -->
+  <!-- สำคัญ: i18n.js ต้องมาก่อน -->
+  <script src="./js/i18n.js">
+  </script>
+  <script defer="" src="./js/file-converter.js">
+  </script>
+ </body>
+</html>

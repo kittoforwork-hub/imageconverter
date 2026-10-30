@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="th">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta content="A simple online notepad with autosave, undo and redo, search, and UTF-8 text export." name="description"/>
+  <meta content="#f5f7f7" name="theme-color"/>
+  <meta content="index,follow" name="robots"/>
+  <title data-i18n="notepad.title">
+   Online Notepad
+  </title>
+  <link href="./assets/icons/favicon-16.png" rel="icon" sizes="16x16" type="image/png"/>
+  <link href="./assets/icons/favicon-32.png" rel="icon" sizes="32x32" type="image/png"/>
+  <link href="./assets/icons/favicon-48.png" rel="icon" sizes="48x48" type="image/png"/>
+  <link href="./favicon.ico" rel="shortcut icon" type="image/x-icon"/>
+  <link href="./assets/icons/apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180"/>
+  <link href="css/notepad.css" rel="stylesheet"/>
+  <link href="css/ui-system.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+ </head>
+ <body>
+  <main class="notepad-page">
+   <!-- HEADER -->
+   <header class="notepad-header">
+    <div class="notepad-title">
+     <!-- BACK TO HOME -->
+     <button class="notepad-home-btn" data-i18n-aria-label="notepad.backHome" data-i18n-title="notepad.backHome" id="btn-back-home" type="button">
+      <span aria-hidden="true" class="notepad-home-arrow">
+       &larr;
+      </span>
+      <span data-i18n="common.home">
+       หน้าหลัก
+      </span>
+     </button>
+     <!-- NOTE ICON -->
+     <div aria-hidden="true" class="notepad-icon">
+      📝
+     </div>
+     <!-- TITLE -->
+     <div>
+      <h1 data-i18n="notepad.title">
+       Online Notepad
+      </h1>
+      <p data-i18n="notepad.subtitle">
+       จดข้อความของคุณได้ง่าย ๆ และบันทึกอัตโนมัติ
+      </p>
+     </div>
+    </div>
+    <!-- SAVE STATUS -->
+    <div aria-live="polite" class="notepad-status">
+     <span aria-hidden="true" class="status-dot">
+     </span>
+     <span data-i18n="common.ready" id="notepad-save-status">
+      พร้อมใช้งาน
+     </span>
+    </div>
+   </header>
+   <!-- TOOLBAR -->
+   <section aria-label="Notepad toolbar" class="notepad-toolbar" data-i18n-aria-label="notepad.toolbar">
+    <!-- MAIN ACTIONS -->
+    <div class="toolbar-group">
+     <!-- NEW -->
+     <button class="notepad-btn" data-i18n-title="notepad.newNote" id="btn-new-note" type="button">
+      <span aria-hidden="true">
+       📄
+      </span>
+      <span data-i18n="notepad.new">
+       ใหม่
+      </span>
+     </button>
+     <!-- COPY -->
+     <button class="notepad-btn" data-i18n-title="notepad.copyAll" id="btn-copy-note" type="button">
+      <span aria-hidden="true">
+       📋
+      </span>
+      <span data-i18n="notepad.copy">
+       คัดลอก
+      </span>
+     </button>
+     <!-- SAVE TXT -->
+     <button class="notepad-btn" data-i18n-title="notepad.saveTxt" id="btn-save-txt" type="button">
+      <span aria-hidden="true">
+       💾
+      </span>
+      <span>
+       <span data-i18n="notepad.save">
+        บันทึก
+       </span>
+       .TXT
+      </span>
+     </button>
+     <!-- CLEAR -->
+     <button class="notepad-btn" data-i18n-title="notepad.clear" id="btn-clear-note" type="button">
+      <span aria-hidden="true">
+       🗑️
+      </span>
+      <span data-i18n="common.clear">
+       ล้างทั้งหมด
+      </span>
+     </button>
+    </div>
+    <!-- DIVIDER -->
+    <div aria-hidden="true" class="toolbar-divider">
+    </div>
+    <!-- UNDO / REDO -->
+    <div class="toolbar-group">
+     <!-- UNDO -->
+     <button class="notepad-btn icon-only" data-i18n-aria-label="notepad.undoLabel" data-i18n-title="notepad.undo" id="btn-undo" type="button">
+      &curvearrowleft;
+     </button>
+     <!-- REDO -->
+     <button class="notepad-btn icon-only" data-i18n-aria-label="notepad.redoLabel" data-i18n-title="notepad.redo" id="btn-redo" type="button">
+      &curvearrowright;
+     </button>
+    </div>
+    <!-- DIVIDER -->
+    <div aria-hidden="true" class="toolbar-divider">
+    </div>
+    <!-- SEARCH -->
+    <div class="toolbar-group toolbar-search">
+     <div class="search-box">
+      <span aria-hidden="true" class="search-icon">
+       🔍
+      </span>
+      <input autocomplete="off" data-i18n-aria-label="notepad.searchLabel" data-i18n-placeholder="notepad.searchPlaceholder" id="notepad-search" placeholder="ค้นหา..." spellcheck="false" type="search"/>
+      <button class="search-clear" data-i18n-aria-label="notepad.clearSearch" data-i18n-title="notepad.clearSearch" id="btn-search-clear" type="button">
+       &times;
+      </button>
+     </div>
+    </div>
+   </section>
+   <!-- EDITOR -->
+   <section class="notepad-editor-wrapper" data-i18n-aria-label="notepad.editorSection">
+    <div class="notepad-editor">
+     <textarea autocapitalize="off" autocomplete="off" autocorrect="off" class="notepad-textarea" data-i18n-aria-label="notepad.editorLabel" data-i18n-placeholder="notepad.editorPlaceholder" id="notepad-textarea" placeholder="เริ่มพิมพ์ข้อความของคุณที่นี่..." spellcheck="false"></textarea>
+    </div>
+   </section>
+   <!-- FOOTER / INFORMATION -->
+   <footer class="notepad-footer">
+    <!-- COUNTERS -->
+    <div class="notepad-info">
+     <span>
+      <span data-i18n="notepad.characters">
+       ตัวอักษร
+      </span>
+      :
+      <strong id="notepad-character-count">
+       0
+      </strong>
+     </span>
+     <span aria-hidden="true" class="info-divider">
+      &bull;
+     </span>
+     <span>
+      <span data-i18n="notepad.words">
+       คำ
+      </span>
+      :
+      <strong id="notepad-word-count">
+       0
+      </strong>
+     </span>
+     <span aria-hidden="true" class="info-divider">
+      &bull;
+     </span>
+     <span>
+      <span data-i18n="notepad.lines">
+       บรรทัด
+      </span>
+      :
+      <strong id="notepad-line-count">
+       0
+      </strong>
+     </span>
+    </div>
+    <!-- SHORTCUTS -->
+    <div class="notepad-shortcuts">
+     <span>
+      <kbd>
+       Ctrl
+      </kbd>
+      <kbd>
+       Z
+      </kbd>
+      <span data-i18n="notepad.undo">
+       ย้อนกลับ
+      </span>
+     </span>
+     <span>
+      <kbd>
+       Ctrl
+      </kbd>
+      <kbd>
+       Y
+      </kbd>
+      <span data-i18n="notepad.redo">
+       ทำซ้ำ
+      </span>
+     </span>
+    </div>
+   </footer>
+  </main>
+  <!-- NEW NOTE CONFIRMATION -->
+  <div class="notepad-modal" hidden="" id="notepad-confirm-modal">
+   <!-- BACKDROP -->
+   <div class="notepad-modal-backdrop">
+   </div>
+   <!-- MODAL -->
+   <div aria-labelledby="notepad-confirm-title" aria-modal="true" class="notepad-modal-box" role="dialog">
+    <div aria-hidden="true" class="modal-icon">
+     ⚠️
+    </div>
+    <h2 data-i18n="notepad.newNoteQuestion" id="notepad-confirm-title">
+     สร้างโน้ตใหม่?
+    </h2>
+    <p data-i18n="notepad.currentTextWillClear">
+     ข้อความปัจจุบันจะถูกล้างออก
+    </p>
+    <div class="modal-actions">
+     <button class="modal-btn modal-btn-cancel" data-i18n="common.cancel" id="btn-modal-cancel" type="button">
+      ยกเลิก
+     </button>
+     <button class="modal-btn modal-btn-confirm" data-i18n="notepad.createNew" id="btn-modal-confirm" type="button">
+      สร้างใหม่
+     </button>
+    </div>
+   </div>
+  </div>
+  <!-- I18N -->
+  <script src="js/i18n.js">
+  </script>
+  <!-- NOTEPAD JAVASCRIPT -->
+  <script src="js/notepad.js">
+  </script>
+  <script src="js/page-shell.js">
+  </script>
+ </body>
+</html>
