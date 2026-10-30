@@ -1,0 +1,15 @@
+{
+  "name": "workshop-utility-by-kitto",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser-based image, PDF and file utilities by KITTO.",
+  "scripts": {
+    "check": "node scripts/check-project.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "preview": "python -m http.server 8787 --directory public"
+  },
+  "devDependencies": {
+    "wrangler": "4.154.0"
+  }
+}

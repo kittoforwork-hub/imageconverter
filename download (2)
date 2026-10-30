@@ -1,0 +1,27 @@
+# Dependencies / local tooling
+node_modules/
+.wrangler/
+.dev.vars*
+!.dev.vars.example
+.cache/
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Test and build output
+coverage/
+dist/
+build/

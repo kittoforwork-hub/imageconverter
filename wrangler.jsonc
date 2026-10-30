@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Static site configuration for Cloudflare Workers Static Assets.
+  // The Worker name should match the existing workers.dev project if
+  // you want to keep the current URL.
+  "name": "utilitytools",
+  "compatibility_date": "2026-10-29",
+  "assets": {
+    "directory": "./public"
+  }
+}
