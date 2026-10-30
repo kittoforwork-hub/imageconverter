@@ -1,0 +1,2 @@
+/* style.css — stylesheet entry point. Keep page-specific component styles in css/modules/workspace-components.css. */
+@import url("./modules/workspace-components.css");

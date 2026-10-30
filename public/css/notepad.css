@@ -1,0 +1,2 @@
+/* notepad.css — stylesheet entry point. Keep page-specific component styles in css/modules/notepad-components.css. */
+@import url("./modules/notepad-components.css");
