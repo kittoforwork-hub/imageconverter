@@ -324,6 +324,12 @@
         );
 
 
+      this.sizePreset =
+        el.querySelector(
+          '.js-size-preset'
+        );
+
+
       this.lockBtn =
         el.querySelector(
           '.js-lock'
@@ -699,6 +705,7 @@
 
 
               this.swapDimensions();
+              if (this.sizePreset) this.sizePreset.value = 'custom';
 
             } else if (
               action ===
@@ -714,6 +721,7 @@
 
 
               this.swapDimensions();
+              if (this.sizePreset) this.sizePreset.value = 'custom';
 
             } else if (
               action ===
@@ -795,6 +803,43 @@
 
 
       // ------------------------------------------------------
+      // Size presets (fit inside the selected box; never crop)
+      // ------------------------------------------------------
+
+      if (this.sizePreset) {
+        this.sizePreset.addEventListener('change', () => {
+          if (this.isConverting || this.disposed) return;
+
+          const presets = {
+            square: [1000, 1000],
+            portrait: [1080, 1350],
+            story: [1080, 1920],
+            landscape: [1200, 630],
+            a4: [2480, 3508]
+          };
+          const box = presets[this.sizePreset.value];
+
+          if (!box || !this.naturalW || !this.naturalH) {
+            return;
+          }
+
+          const natural = this.getRotatedNaturalSize();
+          const scale = Math.min(
+            1,
+            box[0] / natural.w,
+            box[1] / natural.h
+          );
+
+          this.widthInput.value = String(Math.max(1, Math.round(natural.w * scale)));
+          this.heightInput.value = String(Math.max(1, Math.round(natural.h * scale)));
+          this.aspectLocked = true;
+          this.lockBtn?.classList.add('is-locked');
+          this.markStale();
+        });
+      }
+
+
+      // ------------------------------------------------------
       // Width
       // ------------------------------------------------------
 
@@ -858,6 +903,7 @@
             }
 
 
+            if (this.sizePreset) this.sizePreset.value = 'custom';
             this.markStale();
 
           }
@@ -930,6 +976,7 @@
             }
 
 
+            if (this.sizePreset) this.sizePreset.value = 'custom';
             this.markStale();
 
           }

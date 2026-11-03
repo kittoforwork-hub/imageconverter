@@ -290,6 +290,18 @@ window.I18n = (() => {
           compressHint:
             'ลดขนาดไฟล์รูปภาพโดยปรับคุณภาพและขนาดภาพ ประมวลผลทั้งหมดในเบราว์เซอร์ของคุณ',
 
+          targetSizeLabel:
+            'ขนาดเป้าหมาย (KB)',
+
+          targetSizeHint:
+            'ระบบปรับคุณภาพ/ความละเอียดให้อัตโนมัติ ใช้กับ JPG / WEBP',
+
+          targetSizePngHint:
+            'PNG ไม่รองรับการตั้งเป้าหมายขนาดไฟล์',
+
+          targetNotMet:
+            'ยังลดไม่ถึงเป้าหมาย — ได้ไฟล์ {size}',
+
           dropImage:
             'วางรูปภาพที่นี่',
 
@@ -349,6 +361,27 @@ window.I18n = (() => {
 
           dimensions:
             'ขนาด (px)',
+
+          sizePreset:
+            'ขนาดสำเร็จรูป',
+
+          presetCustom:
+            'กำหนดเอง',
+
+          presetSquare:
+            'จัตุรัส · พอดีใน 1000 × 1000',
+
+          presetPortrait:
+            'แนวตั้ง 4:5 · พอดีใน 1080 × 1350',
+
+          presetStory:
+            'Story 9:16 · พอดีใน 1080 × 1920',
+
+          presetLandscape:
+            'แนวนอน · พอดีใน 1200 × 630',
+
+          presetA4:
+            'A4 · พอดีใน 2480 × 3508',
 
           rotateFlip:
             'หมุน/พลิก',
@@ -1258,6 +1291,18 @@ window.I18n = (() => {
           compressHint:
             'Reduce image file size by adjusting quality and dimensions. Everything is processed in your browser.',
 
+          targetSizeLabel:
+            'Target size (KB)',
+
+          targetSizeHint:
+            'Auto-adjusts quality and dimensions; JPG / WEBP only',
+
+          targetSizePngHint:
+            'PNG does not support a reliable target file size',
+
+          targetNotMet:
+            'Target not reached — output is {size}',
+
           dropImage:
             'Drop your image here',
 
@@ -1317,6 +1362,27 @@ window.I18n = (() => {
 
           dimensions:
             'Size (px)',
+
+          sizePreset:
+            'Size preset',
+
+          presetCustom:
+            'Custom dimensions',
+
+          presetSquare:
+            'Square · fit within 1000 × 1000',
+
+          presetPortrait:
+            'Portrait 4:5 · fit within 1080 × 1350',
+
+          presetStory:
+            'Story 9:16 · fit within 1080 × 1920',
+
+          presetLandscape:
+            'Landscape · fit within 1200 × 630',
+
+          presetA4:
+            'A4 · fit within 2480 × 3508',
 
           rotateFlip:
             'Rotate / Flip',

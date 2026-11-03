@@ -82,6 +82,11 @@
       'format-img-compress'
     );
 
+  const targetSizeEl =
+    document.getElementById(
+      'targetsize-img-compress'
+    );
+
   const clearAllBtn =
     document.getElementById(
       'clearAll-img-compress'
@@ -177,8 +182,16 @@
     20000;
 
 
+  // Image canvas work can use substantial memory. Two concurrent jobs
+  // are a safer default across desktop and mobile browsers than three.
   const CONCURRENCY =
-    3;
+    Math.max(
+      1,
+      Math.min(
+        2,
+        Number(window.navigator && window.navigator.deviceMemory) <= 4 ? 1 : 2
+      )
+    );
 
 
   const MAX_CANVAS_PIXELS =
@@ -339,6 +352,56 @@
 
 
     return value;
+
+  }
+
+
+  function getTargetSize() {
+
+    if (
+      getFormat() === 'image/png' ||
+      !targetSizeEl
+    ) {
+
+      return 0;
+
+    }
+
+
+    const value =
+      Number.parseInt(
+        targetSizeEl.value,
+        10
+      );
+
+
+    if (
+      !Number.isFinite(value) ||
+      value < 10
+    ) {
+
+      return 0;
+
+    }
+
+
+    return Math.min(
+      50000,
+      value
+    );
+
+  }
+
+
+  function updateTargetSizeAvailability() {
+
+    if (!targetSizeEl) return;
+
+    const isPng = getFormat() === 'image/png';
+    targetSizeEl.disabled = isPng;
+    targetSizeEl.title = isPng
+      ? t('image.targetSizePngHint')
+      : '';
 
   }
 
@@ -834,6 +897,14 @@
 
       this.maxSize =
         getMaxSize();
+
+
+      this.targetSize =
+        getTargetSize();
+
+
+      this.targetMissed =
+        false;
 
 
       this.naturalW =
@@ -1347,6 +1418,16 @@
         this.resultBlob
       ) {
 
+        if (this.targetMissed) {
+          this.statusEl.textContent = t(
+            'image.targetNotMet',
+            { size: U.formatBytes(this.resultBlob.size) }
+          );
+          this.statusEl.classList.remove('is-error');
+          this.statusEl.classList.add('is-ready');
+          return;
+        }
+
         const saving =
           calculateSaving(
             this.file.size,
@@ -1551,13 +1632,19 @@
         getMaxSize();
 
 
+      const nextTargetSize =
+        getTargetSize();
+
+
       const changed =
         nextFormat !==
         this.format ||
         nextQuality !==
         this.quality ||
         nextMaxSize !==
-        this.maxSize;
+        this.maxSize ||
+        nextTargetSize !==
+        this.targetSize;
 
 
       this.format =
@@ -1570,6 +1657,10 @@
 
       this.maxSize =
         nextMaxSize;
+
+
+      this.targetSize =
+        nextTargetSize;
 
 
       if (
@@ -1631,6 +1722,10 @@
 
       this.resultBlob =
         null;
+
+
+      this.targetMissed =
+        false;
 
 
       if (
@@ -2189,63 +2284,114 @@
 
 
         // ----------------------------------------------------
-        // Encode
+        // Encode (with optional target-size optimisation)
         // ----------------------------------------------------
 
-        const quality =
-          this.format ===
-            'image/png'
-            ? undefined
-            : this.quality;
+        const encodeCanvas = quality => new Promise(
+          (resolve, reject) => {
+            try {
+              canvas.toBlob(
+                result => result
+                  ? resolve(result)
+                  : reject(new Error('CREATE_FAILED')),
+                this.format,
+                quality
+              );
+            } catch (error) {
+              reject(error);
+            }
+          }
+        );
 
+        let blob = await encodeCanvas(
+          this.format === 'image/png' ? undefined : this.quality
+        );
 
-        const blob =
-          await new Promise(
-            (
-              resolve,
-              reject
-            ) => {
+        if (this.disposed) return;
 
-              try {
+        this.targetMissed = false;
 
-                canvas.toBlob(
-                  result => {
+        if (
+          this.targetSize > 0 &&
+          this.format !== 'image/png' &&
+          blob.size > this.targetSize * 1024
+        ) {
+          const targetBytes = this.targetSize * 1024;
+          const floorQuality = Math.min(0.4, this.quality);
+          let candidate = await encodeCanvas(floorQuality);
+          if (this.disposed) return;
+          let resizePass = 0;
 
-                    if (
-                      result
-                    ) {
+          // Lower resolution only when even low JPEG/WEBP quality is too large.
+          while (
+            candidate.size > targetBytes &&
+            resizePass < 7 &&
+            Math.max(dimensions.width, dimensions.height) > 480
+          ) {
+            resizePass += 1;
+            dimensions = fitCanvasDimensions(
+              Math.max(1, Math.floor(dimensions.width * 0.88)),
+              Math.max(1, Math.floor(dimensions.height * 0.88))
+            );
 
-                      resolve(
-                        result
-                      );
+            canvas.width = dimensions.width;
+            canvas.height = dimensions.height;
+            // Resizing a canvas resets its drawing state.
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
 
-                    } else {
+            if (this.format === 'image/jpeg') {
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+            } else {
+              ctx.clearRect(0, 0, dimensions.width, dimensions.height);
+            }
 
-                      reject(
-                        new Error(
-                          'CREATE_FAILED'
-                        )
-                      );
+            ctx.drawImage(
+              this.previewImg,
+              0,
+              0,
+              dimensions.width,
+              dimensions.height
+            );
 
-                    }
+            candidate = await encodeCanvas(floorQuality);
+            if (this.disposed) return;
+            setProgress(this, Math.min(79, 70 + resizePass * 2));
+          }
 
-                  },
-                  this.format,
-                  quality
-                );
+          if (candidate.size <= targetBytes) {
+            // Binary-search for the highest quality that stays under the target.
+            let low = floorQuality;
+            let high = this.quality;
+            let bestBlob = candidate;
 
-              } catch (
-              error
-              ) {
+            for (let pass = 0; pass < 5 && high - low > 0.015; pass += 1) {
+              const middle = (low + high) / 2;
+              const trial = await encodeCanvas(middle);
+              if (this.disposed) return;
 
-                reject(
-                  error
-                );
-
+              if (trial.size <= targetBytes) {
+                bestBlob = trial;
+                low = middle;
+              } else {
+                high = middle;
               }
 
+              setProgress(this, Math.min(80, 72 + pass * 1.5));
             }
-          );
+
+            blob = bestBlob;
+          } else {
+            // Keep the best-effort result and make the unmet target explicit.
+            blob = candidate;
+            this.targetMissed = true;
+          }
+        }
+
+        if (this.newDimEl) {
+          this.newDimEl.textContent = `${dimensions.width}×${dimensions.height}`;
+        }
 
 
         /*
@@ -2385,7 +2531,12 @@
           this.statusEl
         ) {
 
-          if (
+          if (this.targetMissed) {
+            this.statusEl.textContent = t(
+              'image.targetNotMet',
+              { size: U.formatBytes(blob.size) }
+            );
+          } else if (
             saving.isSmaller
           ) {
 
@@ -2787,6 +2938,21 @@
   // ADD FILES
   // ============================================================
 
+  function isSupportedImageFile(file) {
+
+    if (!file) return false;
+    if (ALLOWED_FORMATS.includes(file.type)) return true;
+
+    const extension = String(file.name || '')
+      .split('.')
+      .pop()
+      .toLowerCase();
+
+    return ['jpg', 'jpeg', 'png', 'webp'].includes(extension);
+
+  }
+
+
   function addFiles(
     fileList
   ) {
@@ -2794,13 +2960,7 @@
     Array.from(
       fileList || []
     )
-      .filter(
-        file =>
-          file &&
-          ALLOWED_FORMATS.includes(
-            file.type
-          )
-      )
+      .filter(isSupportedImageFile)
       .forEach(
         file => {
 
@@ -2913,10 +3073,20 @@
 
     formatEl.addEventListener(
       'change',
-      refreshAllJobs
+      () => {
+        updateTargetSizeAvailability();
+        refreshAllJobs();
+      }
     );
 
   }
+
+
+  if (targetSizeEl) {
+    targetSizeEl.addEventListener('input', refreshAllJobs);
+  }
+
+  updateTargetSizeAvailability();
 
 
   // ============================================================
