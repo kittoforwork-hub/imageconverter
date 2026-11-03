@@ -2575,6 +2575,44 @@ input:focus {
     center;
 }
 
+
+#panel-img-convert .js-size-preset-row {
+  align-items: center;
+}
+
+#panel-img-convert .js-size-preset {
+  min-width: min(100%, 230px);
+  max-width: 100%;
+}
+
+#panel-img-compress .target-size-control {
+  flex-wrap: wrap;
+  gap: 5px 8px;
+}
+
+#panel-img-compress .target-size-input {
+  width: 100px;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--card);
+  color: var(--ink);
+  font: 12px var(--font-mono);
+}
+
+#panel-img-compress .target-size-control small {
+  flex-basis: 100%;
+  margin-left: 1px;
+  color: var(--ink-faint);
+  font: 10px/1.35 var(--font-mono);
+}
+
+#panel-img-compress .target-size-input:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
 /* CROP */
 
 .ticket-wide .ticket-body-crop {
