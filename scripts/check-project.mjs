@@ -123,6 +123,14 @@ async function main() {
     if (!htmlFiles.includes(path.join(publicDir, required))) addError(`Missing required page: public/${required}`);
   }
 
+  const homeHtml = await readFile(path.join(publicDir, 'index.html'), 'utf8');
+  const compressorJs = await readFile(path.join(publicDir, 'js', 'tool-image-compress.js'), 'utf8');
+  const imageConvertJs = await readFile(path.join(publicDir, 'js', 'tool-image-convert.js'), 'utf8');
+  if (!homeHtml.includes('id="targetsize-img-compress"')) addError('Missing image compressor target-size control.');
+  if (!homeHtml.includes('class="mono-select js-size-preset"')) addError('Missing image resize preset control.');
+  if (!compressorJs.includes('function getTargetSize')) addError('Missing target-size compression logic.');
+  if (!imageConvertJs.includes('const presets =')) addError('Missing image resize preset logic.');
+
   for (const file of htmlFiles) await checkHtml(file, await readFile(file, 'utf8'));
   for (const file of cssFiles) await checkCss(file, await readFile(file, 'utf8'));
 
