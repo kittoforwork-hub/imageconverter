@@ -35,12 +35,14 @@ A static, browser-based utility website for image editing, PDF workflows, genera
 
 ## Features
 
-- Convert, resize, crop, rotate and compress images.
+- Convert, resize, crop, rotate and compress images, including fit-within size presets (square, portrait, story, landscape and A4).
+- Set a target output size for JPG/WEBP compression; the browser adjusts quality first and reduces dimensions only when needed.
 - Remove image backgrounds in the browser with a downloaded AI model.
 - Convert images to PDF and PDF pages to images.
 - Reorder, rotate, split, merge and watermark PDF pages, and add page numbers.
 - Convert supported file formats using the file-converter page.
 - Save notes locally in the browser with autosave and editing history.
+- Batch image/PDF workflows remain local to the browser; there is no account, remote file storage or file-upload backend.
 - Thai, English, German, Japanese, Korean and Chinese UI translations where provided by the translation catalog.
 - A shared responsive UI system that keeps navigation, forms, cards and action buttons visually consistent across all three pages.
 

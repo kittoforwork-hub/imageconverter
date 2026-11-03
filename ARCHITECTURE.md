@@ -13,7 +13,7 @@
 - `public/js/app.js` — category and tool-panel navigation.
 - `public/js/runtime-setup.js` — PDF.js worker URL and shared canvas factory.
 - `public/js/page-shell.js` — shared language selector and page navigation.
-- `public/js/tool-image-*.js` — image tools.
+- `public/js/tool-image-*.js` — image tools, including per-image size presets and target-size compression.
 - `public/js/tool-pdf-*.js` and `tool-images-to-pdf.js` — PDF tools.
 - `public/js/pdf-worker-client.js` and `pdf-worker.js` — background PDF processing.
 - `public/js/file-converter.js` — converter catalog and conversion workflows.
