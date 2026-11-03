@@ -338,6 +338,19 @@
            </button>
           </div>
          </div>
+         <div class="control-row js-size-preset-row">
+          <span class="spec-label" data-i18n="image.sizePreset">
+           ขนาดสำเร็จรูป
+          </span>
+          <select aria-label="เลือกขนาดรูปภาพสำเร็จรูป" class="mono-select js-size-preset" data-i18n-aria-label="image.sizePreset" title="ปรับให้พอดีกับกรอบโดยไม่ตัดภาพ">
+           <option data-i18n="image.presetCustom" value="custom">กำหนดเอง</option>
+           <option data-i18n="image.presetSquare" value="square">จัตุรัส · 1000 × 1000</option>
+           <option data-i18n="image.presetPortrait" value="portrait">แนวตั้ง 4:5 · 1080 × 1350</option>
+           <option data-i18n="image.presetStory" value="story">Story 9:16 · 1080 × 1920</option>
+           <option data-i18n="image.presetLandscape" value="landscape">แนวนอน · 1200 × 630</option>
+           <option data-i18n="image.presetA4" value="a4">A4 · 2480 × 3508</option>
+          </select>
+         </div>
          <div class="control-row">
           <span class="spec-label" data-i18n="image.dimensions">
            ขนาด (px)
@@ -792,6 +805,15 @@
           1280 px
          </option>
         </select>
+       </label>
+       <label class="field-inline target-size-control">
+        <span data-i18n="image.targetSizeLabel">
+         ขนาดเป้าหมาย (KB)
+        </span>
+        <input aria-describedby="targetsize-hint-img-compress" class="target-size-input" id="targetsize-img-compress" max="50000" min="10" placeholder="ไม่กำหนด" step="10" type="number"/>
+        <small data-i18n="image.targetSizeHint" id="targetsize-hint-img-compress">
+         ใช้กับ JPG / WEBP
+        </small>
        </label>
        <label class="field-inline">
         <span data-i18n="common.format">
