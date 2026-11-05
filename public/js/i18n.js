@@ -450,7 +450,7 @@ window.I18n = (() => {
             'พร้อมดาวน์โหลด · {size}',
 
           preparingModel:
-            'กำลังเตรียมโมเดล…',
+            'กำลังเชื่อมต่อ Cloudflare AI…',
 
           loadingModelProgress:
             'กำลังโหลดโมเดล… {percent}%',
@@ -495,7 +495,7 @@ window.I18n = (() => {
             'บีบขนาดรูปให้เล็กลงแบบคงคุณภาพไว้ 📦',
 
           modelFirstUse:
-            'ครั้งแรกที่ใช้งานจะโหลดโมเดล AI ขนาดประมาณ 40MB (ครั้งเดียว เบราว์เซอร์จะแคชไว้ให้ครั้งถัดไปเร็วขึ้น) และใช้เวลาประมวลผลต่อรูปสักครู่ขึ้นอยู่กับสเปกเครื่อง'
+            'ประมวลผลด้วย AI บน Cloudflare ไม่ต้องดาวน์โหลดโมเดลลงเครื่อง รองรับไฟล์สูงสุด 20 MB ต่อรูป'
         },
 
 
@@ -1451,7 +1451,7 @@ window.I18n = (() => {
             'Ready to download · {size}',
 
           preparingModel:
-            'Preparing AI model…',
+            'Connecting to Cloudflare AI…',
 
           loadingModelProgress:
             'Loading model… {percent}%',
@@ -1496,7 +1496,7 @@ window.I18n = (() => {
             'Making your images smaller while keeping quality 📦',
 
           modelFirstUse:
-            'The first use downloads an AI model of about 40MB. It is cached by the browser for faster future use. Processing time depends on your device.'
+            'Processed by Cloudflare AI. No model download is required. Maximum file size: 20 MB per image.'
         },
 
 
@@ -2419,7 +2419,7 @@ window.I18n = (() => {
             'Bereit zum Download · {size}',
 
           preparingModel:
-            'KI-Modell wird vorbereitet…',
+            'Verbindung zu Cloudflare AI wird hergestellt…',
 
           loadingModelProgress:
             'Modell wird geladen… {percent}%',
@@ -2464,7 +2464,7 @@ window.I18n = (() => {
             'Wir machen Ihre Bilder kleiner und behalten die Qualität 📦',
 
           modelFirstUse:
-            'Bei der ersten Verwendung wird ein KI-Modell von etwa 40 MB geladen. Der Browser speichert es für zukünftige Verwendung.'
+            'Die Verarbeitung erfolgt mit Cloudflare AI. Kein Modelldownload erforderlich. Maximale Dateigröße: 20 MB pro Bild.'
         },
 
 
@@ -3387,7 +3387,7 @@ window.I18n = (() => {
             'ダウンロード準備完了 · {size}',
 
           preparingModel:
-            'AIモデルを準備中…',
+            'Cloudflare AI に接続しています…',
 
           loadingModelProgress:
             'モデル読み込み中… {percent}%',
@@ -3432,7 +3432,7 @@ window.I18n = (() => {
             '品質を保ちながら画像を小さくします 📦',
 
           modelFirstUse:
-            '初回使用時に約40MBのAIモデルをダウンロードします。ブラウザにキャッシュされるため、次回から速くなります。'
+            'Cloudflare AIで処理します。AIモデルのダウンロードは不要です。画像1枚あたり最大20MBです。'
         },
 
 
@@ -4355,7 +4355,7 @@ window.I18n = (() => {
             '다운로드 준비 완료 · {size}',
 
           preparingModel:
-            'AI 모델 준비 중…',
+            'Cloudflare AI 연결 중…',
 
           loadingModelProgress:
             '모델 로드 중… {percent}%',
@@ -4400,7 +4400,7 @@ window.I18n = (() => {
             '품질을 유지하면서 이미지 크기를 줄여요 📦',
 
           modelFirstUse:
-            '처음 사용할 때 약 40MB 크기의 AI 모델을 다운로드합니다. 다음 사용부터는 브라우저 캐시로 더 빠르게 사용할 수 있습니다.'
+            'Cloudflare AI로 처리합니다. AI 모델을 다운로드할 필요가 없습니다. 이미지 1개당 최대 20MB까지 지원합니다.'
         },
 
 
@@ -5323,7 +5323,7 @@ window.I18n = (() => {
             '准备下载 · {size}',
 
           preparingModel:
-            '正在准备 AI 模型…',
+            '正在连接 Cloudflare AI…',
 
           loadingModelProgress:
             '正在加载模型… {percent}%',
@@ -5368,7 +5368,7 @@ window.I18n = (() => {
             '在保持质量的同时缩小图片 📦',
 
           modelFirstUse:
-            '首次使用会下载约40MB的AI模型。浏览器会缓存模型，以便之后更快使用。'
+            '使用 Cloudflare AI 处理，无需下载模型。每张图片最大支持 20 MB。'
         },
 
 
@@ -6291,7 +6291,7 @@ window.I18n = (() => {
             '準備下載 · {size}',
 
           preparingModel:
-            '正在準備 AI 模型…',
+            '正在連線 Cloudflare AI…',
 
           loadingModelProgress:
             '正在載入模型… {percent}%',
@@ -6336,7 +6336,7 @@ window.I18n = (() => {
             '在保持品質的同時縮小圖片 📦',
 
           modelFirstUse:
-            '第一次使用時會下載約40MB的 AI 模型。瀏覽器會快取模型，之後使用會更快。'
+            '使用 Cloudflare AI 處理，不需下載模型。每張圖片最大支援 20 MB。'
         },
 
 
