@@ -68,8 +68,8 @@ This repository includes `wrangler.jsonc` and serves the contents of `public/` a
 2. Keep `wrangler.jsonc` at the repository root. Its `name` is currently `utilitytools` to match the existing `utilitytools.kitto-for-work.workers.dev` URL. If the actual Worker script has a different name, change the value to the exact Worker name before deploying.
 3. Set the production branch to `main` (or whichever branch you use).
 4. Set the optional **Build command** to `npm run check` so each deploy validates JavaScript syntax and local file references first. Keep the **Deploy command** as `npx wrangler deploy`.
-5. Cloudflare deploys the static assets from `public/`; there is no compile/bundling step for the site.
-6. Check the deployment logs, then test the home page and each tool page after deployment.
+5. Cloudflare deploys the Worker API and static assets from `public/` together using `wrangler.jsonc`.
+6. Confirm the `IMAGES` binding is present in the deployed Worker, then test `/api/health`, the home page, and the background-removal tool.
 
 Official guide: <https://developers.cloudflare.com/workers/static-assets/>.
 
@@ -99,7 +99,7 @@ GitHub Actions runs the same check on pushes and pull requests.
 
 ## Privacy and third-party dependencies
 
-Image/PDF processing and notepad storage are designed to run in the browser. This project does not include an application server endpoint for uploading user files. The browser still requests third-party resources such as fonts, JavaScript libraries, PDF fonts and the AI background-removal model from their configured CDNs; downloading those resources requires an internet connection and sends ordinary resource requests to those providers. Notepad content is stored in the browser's local storage for the current site origin.
+Most image and PDF tools process files in the browser. Background removal is the exception: the selected image is sent to this site's Cloudflare Worker at `/api/remove-background`, then processed by Cloudflare Images (BiRefNet) and returned as a transparent PNG. The Worker processes the bytes in memory and does not write originals or results to R2 or Cloudflare Images storage. Notepad content is stored in the browser's local storage for the current site origin.
 
 ## Notes for maintenance
 
@@ -110,3 +110,13 @@ Image/PDF processing and notepad storage are designed to run in the browser. Thi
 - Keep the PDF worker and its client in the same `public/js/` directory; the client resolves the worker URL relative to its own script URL.
 - Run `npm run check` after moving, renaming or adding any HTML, CSS, JavaScript or icon file.
 - The original high-resolution icon is preserved in `source-assets/`; the production icons in `public/assets/icons/` are resized for faster loading.
+
+## Cloudflare AI background removal
+
+Background removal runs on Cloudflare Images using the `segment: "foreground"` transformation (BiRefNet). The browser uploads one image at a time to `POST /api/remove-background`; the Worker returns a transparent PNG. Images are processed in memory and are not written to R2 or Cloudflare Images storage.
+
+- `src/index.js` is the Worker entry point and `IMAGES` is the Cloudflare Images binding in `wrangler.jsonc`.
+- `/api/*` is routed through the Worker using `assets.run_worker_first`; other website files remain static assets.
+- Accepted formats: JPEG, PNG, WebP, and AVIF. Maximum upload size: 20 MB per image.
+- Cloudflare Images Free includes 5,000 unique transformations per calendar month. New transformations stop after the free allowance is exhausted.
+- Deploy with Wrangler or the existing Cloudflare Workers Builds connection.
