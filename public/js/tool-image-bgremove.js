@@ -336,8 +336,11 @@
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
+        const diagnostic = [payload.cfCode, payload.diagnostic]
+          .filter(Boolean)
+          .join(' | ');
         throw new Error(
-          payload.code || `BACKGROUND_API_HTTP_${response.status}`
+          `${payload.code || `BACKGROUND_API_HTTP_${response.status}`}${diagnostic ? ` [${diagnostic}]` : ''}`
         );
       }
 
@@ -1101,12 +1104,14 @@
             )
           ) {
 
-            const errorCode = message;
+            const errorCode = message.split(/[ \[]/, 1)[0];
             const errorDetails = {
               BACKGROUND_FILE_TOO_LARGE: 'ไฟล์มีขนาดเกิน 20 MB',
               BACKGROUND_UNSUPPORTED_FORMAT: 'รองรับไฟล์ JPG, PNG, WebP และ AVIF เท่านั้น',
               BACKGROUND_FREE_LIMIT_REACHED: 'ใช้โควต้าฟรี Cloudflare Images 5,000 รายการต่อเดือนแล้ว',
               BACKGROUND_SERVICE_NOT_CONFIGURED: 'ยังไม่ได้ตั้งค่า Cloudflare Images binding',
+              BACKGROUND_IMAGES_BILLING_NOT_SUPPORTED: 'บัญชี Cloudflare ใช้ระบบ Images Billing แบบเก่า ต้องเปลี่ยนเป็น Images plan ก่อน',
+              BACKGROUND_IMAGE_PROCESSING_LIMIT: 'รูปมีขนาดหรือความละเอียดเกินขีดจำกัดที่ Cloudflare ประมวลผลได้',
               BACKGROUND_TIMEOUT: 'การประมวลผลใช้เวลานานเกินไป กรุณาลองใหม่',
               BACKGROUND_PROCESSING_FAILED: 'Cloudflare ไม่สามารถประมวลผลรูปนี้ได้'
             };
