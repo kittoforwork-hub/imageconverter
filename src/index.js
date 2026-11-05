@@ -94,11 +94,14 @@ async function removeBackground(request, env) {
       type: contentType,
     }).stream();
 
-    const transformed = await env.IMAGES
+    // ImagesBinding.output() is asynchronous and resolves to an output handle.
+    // Call response() only after awaiting that handle (not on the Promise).
+    const imageOutput = await env.IMAGES
       .input(imageStream)
       .transform({ segment: 'foreground' })
-      .output({ format: 'image/png' })
-      .response();
+      .output({ format: 'image/png' });
+
+    const transformed = imageOutput.response();
 
     if (!transformed.ok) {
       const details = await transformed.text().catch(() => '');
