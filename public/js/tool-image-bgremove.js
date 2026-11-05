@@ -949,6 +949,13 @@
       this.processing =
         true;
 
+      // Explicit state for the workspace dropzone progress indicator.
+      // It prevents the global UI from inferring a stale processing state
+      // from the card's previous status text/class after the job completes.
+      if (this.el) {
+        this.el.dataset.processing = 'true';
+      }
+
       this.displayedProgress =
         0;
 
@@ -1135,6 +1142,12 @@
 
         this.processing =
           false;
+
+        // Always release the global dropzone progress state on success,
+        // failure, or timeout. The observer picks up this attribute change.
+        if (this.el && !this.disposed) {
+          this.el.dataset.processing = 'false';
+        }
 
         this.mode =
           null;
