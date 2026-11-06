@@ -9,9 +9,25 @@
   const byId = (id) => document.getElementById(id);
 
   const getCurrentPage = () => {
-    const path = window.location.pathname.toLowerCase();
-    if (path.endsWith('/file-converter.html')) return 'converter';
-    if (path.endsWith('/notepad.html')) return 'notepad';
+    // Prefer page landmarks over the URL. This also works when the host uses
+    // extensionless routes such as /file-converter or /notepad.
+    if (
+      document.querySelector('.fc-sheet') ||
+      document.body?.classList?.contains('file-converter-page')
+    ) return 'converter';
+
+    if (document.querySelector('.notepad-page')) return 'notepad';
+
+    const path = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+    const fileName = path.split('/').pop() || '';
+
+    if (fileName === 'file-converter.html' || fileName === 'file-converter' || fileName === 'converter') {
+      return 'converter';
+    }
+    if (fileName === 'notepad.html' || fileName === 'notepad') {
+      return 'notepad';
+    }
+
     return 'workspace';
   };
 
@@ -87,6 +103,7 @@
       const link = document.createElement('a');
       link.className = 'app-nav-link';
       link.href = href;
+      link.dataset.page = id;
       link.setAttribute('data-i18n', key);
       link.textContent = fallback;
       if (id === currentPage) {
