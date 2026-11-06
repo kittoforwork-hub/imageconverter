@@ -125,8 +125,6 @@
   }
 
   const routes = [
-    ['open-notepad', 'notepad.html'],
-    ['open-file-converter', 'file-converter.html'],
     ['btn-back-home', 'index.html']
   ];
 
