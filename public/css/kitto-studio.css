@@ -57,7 +57,7 @@ button, a { -webkit-tap-highlight-color:transparent; }
 .app-nav {
   position:sticky; top:12px; z-index:100;
   width:min(1240px,calc(100% - 48px)); min-height:76px;
-  grid-template-columns:minmax(190px,1fr) auto minmax(200px,1fr);
+  grid-template-columns:max-content minmax(0,1fr) max-content;
   gap:18px; margin:14px auto 22px; padding:9px 14px 9px 12px;
   border:1px solid rgba(235,219,234,.92); border-radius:22px;
   background:rgba(255,255,255,.90);
@@ -78,7 +78,7 @@ button, a { -webkit-tap-highlight-color:transparent; }
 .app-nav-brand-copy strong { font-size:19px; font-weight:800; letter-spacing:-.05em; line-height:1; }
 .brand-dot { color:#e9a2c5; }
 .app-nav-brand-copy small { color:#ab9ab4; font:700 8px/1.25 'IBM Plex Mono',monospace; letter-spacing:.13em; }
-.app-nav-links { gap:5px; justify-content:center; padding:5px; border:1px solid #f1e8f2; border-radius:16px; background:#faf7fc; }
+.app-nav-links { justify-self:center; max-width:100%; flex-wrap:wrap; gap:5px; justify-content:center; padding:5px; border:1px solid #f1e8f2; border-radius:16px; background:#faf7fc; }
 .app-nav-link {
   gap:8px; min-height:42px; padding:10px 15px; border-radius:12px;
   color:#84768e; font-size:12px; font-weight:700;
@@ -382,7 +382,7 @@ button, a { -webkit-tap-highlight-color:transparent; }
 @keyframes kitto-pulse { 0%,100%{box-shadow:0 0 0 4px #e1f3eb}50%{box-shadow:0 0 0 7px rgba(225,243,235,.6)} }
 
 @media (max-width:1100px) {
-  .app-nav { grid-template-columns:auto 1fr auto; gap:10px; }
+  .app-nav { grid-template-columns:max-content minmax(0,1fr) max-content; gap:10px; }
   .app-nav-links { gap:1px; }
   .app-nav-link { padding:10px 10px;font-size:11px; }
   .app-launch>span { display:none; }
