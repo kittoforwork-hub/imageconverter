@@ -1,10 +1,10 @@
 /* KITTO offline shell. Never cache API requests, user uploads or converted files. */
-const CACHE = 'kitto-app-v3.0.0';
+const CACHE = 'kitto-app-v3.0.1';
 const LOCAL_ASSETS = [
   './', './index.html', './workflow.html', './notepad.html', './file-converter.html',
-  './manifest.webmanifest', './favicon.ico', './favicon.png',
+  './favicon.ico', './favicon.png',
   './assets/illustrations/kitto-cat.svg',
-  './assets/icons/favicon-32.png', './assets/icons/apple-touch-icon.png', './assets/icons/kitto-pwa-192.png','./assets/icons/kitto-pwa-512.png',
+  './assets/icons/favicon-32.png', './assets/icons/apple-touch-icon.png',
   './css/style.css', './css/file-converter.css', './css/notepad.css', './css/ui-system.css', './css/kitto-studio.css', './css/kitto-next.css',
   './css/modules/workspace-components.css', './css/modules/file-converter-components.css','./css/modules/notepad-components.css',
   './js/app.js',
