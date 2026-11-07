@@ -1,4 +1,4 @@
-/* Dependency-free contract smoke tests for the queue, ZIP writer and PWA assets. */
+/* Dependency-free contract smoke tests for queue, ZIP writer and offline mode. */
 import { readFile, access } from 'node:fs/promises';
 import vm from 'node:vm';
 import path from 'node:path';
@@ -48,10 +48,16 @@ assert.equal(buf.readUInt32LE(buf.length-22),0x06054b50);
 assert.equal(buf.readUInt16LE(buf.length-22+10),2,'ZIP should contain two entries');
 assert.ok(buf.includes(Buffer.from('สินค้า.jpg')));
 assert.ok(buf.includes(Buffer.from('สินค้า (2).jpg')));
-const manifest=JSON.parse(await readFile(path.join(root,'public/manifest.webmanifest'),'utf8'));
-assert.equal(manifest.display,'standalone');
-for(const item of manifest.icons)await access(path.join(root,'public',item.src.slice(1)));
+for (const page of ['index.html','file-converter.html','notepad.html','workflow.html']) {
+  const html=await readFile(path.join(root,'public',page),'utf8');
+  assert.ok(!/<link\b[^>]*rel=["']manifest["']/i.test(html), `${page} must not register an install manifest`);
+}
+const shell=await readFile(path.join(root,'public/js/page-shell.js'),'utf8');
+assert.ok(!shell.includes('beforeinstallprompt'),'No app install prompt handler should remain');
+assert.ok(!shell.includes('app-install'),'No install app button should remain');
+const offlineWorker=await readFile(path.join(root,'public/sw.js'),'utf8');
+assert.ok(!offlineWorker.includes('manifest.webmanifest'),'Offline cache must not cache the old manifest');
 for(const file of ['workflow.html','sw.js','js/workflow-worker.js','js/workflow-image-core.js']){
   await access(path.join(root,'public',file));
 }
-console.log('Smoke tests passed: batch concurrency, cancellation/retry, ZIP output and PWA assets.');
+console.log('Smoke tests passed: batch concurrency, cancellation/retry, ZIP output and offline shell.');
