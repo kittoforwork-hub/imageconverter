@@ -16,14 +16,16 @@ A static, browser-based utility website for image editing, PDF workflows, genera
 │   │   ├── style.css        # Main workspace CSS entry point
 │   │   ├── file-converter.css
 │   │   ├── notepad.css
-│   │   ├── ui-system.css    # Shared design system and responsive UI
+│   │   ├── ui-system.css    # Shared base design system
+│   │   ├── kitto-studio.css # New cat-themed UI, animations and responsive layout
 │   │   └── modules/         # Detailed page/component styles
 │   ├── js/
 │   │   ├── app.js           # Main tool/category navigation
-│   │   ├── page-shell.js    # Shared language/navigation wiring
+│   │   ├── page-shell.js    # Shared navigation, shortcut finder, hero and language wiring
 │   │   ├── runtime-setup.js # PDF.js and canvas setup
 │   │   ├── i18n.js          # Translation runtime/catalog
 │   │   └── tool-*.js        # Individual image/PDF tools
+│   └── assets/illustrations/kitto-cat.svg # Lightweight mascot artwork
 │   └── assets/icons/        # Optimized favicon assets
 ├── scripts/check-project.mjs
 ├── ARCHITECTURE.md          # Module ownership and change guidelines
@@ -37,14 +39,17 @@ A static, browser-based utility website for image editing, PDF workflows, genera
 
 - Convert, resize, crop, rotate and compress images, including fit-within size presets (square, portrait, story, landscape and A4).
 - Set a target output size for JPG/WEBP compression; the browser adjusts quality first and reduces dimensions only when needed.
-- Remove image backgrounds in the browser with a downloaded AI model.
+- Remove image backgrounds using the Cloudflare Images segmentation service (the selected image is sent to the Worker for processing).
 - Convert images to PDF and PDF pages to images.
 - Reorder, rotate, split, merge and watermark PDF pages, and add page numbers.
 - Convert supported file formats using the file-converter page.
 - Save notes locally in the browser with autosave and editing history.
-- Batch image/PDF workflows remain local to the browser; there is no account, remote file storage or file-upload backend.
+- Most batch image/PDF workflows process locally. Background removal sends the chosen image to the Cloudflare Worker and returns the output without storing it permanently.
 - Thai, English, German, Japanese, Korean and Chinese UI translations where provided by the translation catalog.
-- A shared responsive UI system that keeps navigation, forms, cards and action buttons visually consistent across all three pages.
+- A shared responsive cat-themed UI across all three pages, with a desktop tool sidebar, animated mascot, polished drag/drop states and converter cards.
+- Global tool finder: **Ctrl + K** (or **Cmd + K** on Mac), **/** outside text inputs, arrow keys to choose, Enter to open, Escape to close.
+- Deep links to the existing Workspace tools: e.g. `/index.html?tool=pdf-merge` or `/index.html?tool=img-compress`.
+- Animations automatically minimize when the browser requests reduced motion.
 
 ## Run locally
 
@@ -104,7 +109,7 @@ Most image and PDF tools process files in the browser. Background removal is the
 ## Notes for maintenance
 
 - See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for where each type of code belongs.
-- Use `public/css/ui-system.css` for changes that should look consistent across the home, converter and notepad pages. Page-specific component styles live under `public/css/modules/`; the shorter CSS files at `public/css/` are entry points.
+- Use `public/css/kitto-studio.css` for shared 2.0 UI refinements, motion and responsive changes (it is loaded after `ui-system.css`). Use `public/css/ui-system.css` for the previous shared base styles. Page-specific component styles live under `public/css/modules/`; the shorter CSS files at `public/css/` are entry points.
 - Keep cross-page navigation and language-selector wiring in `public/js/page-shell.js`; keep shared PDF.js/canvas setup in `public/js/runtime-setup.js`.
 - Keep `public/` as the static publish directory so repository files such as scripts and documentation are not published as site content.
 - Keep the PDF worker and its client in the same `public/js/` directory; the client resolves the worker URL relative to its own script URL.
