@@ -20,6 +20,8 @@
   <link href="https://fonts.googleapis.com" rel="preconnect"/>
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Noto+Sans+Thai:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="./css/kitto-next.css?v=3"/>
+  <link rel="manifest" href="./manifest.webmanifest"/>
  </head>
  <body>
   <main class="notepad-page">
@@ -58,6 +60,22 @@
      </span>
     </div>
    </header>
+   <!-- NOTEBOOK / MULTI-NOTE WORKSPACE -->
+   <section class="nb-panel" aria-label="จัดการสมุดโน้ต">
+     <div class="nb-header"><div><strong>✿ สมุดโน้ตของฉัน</strong><small id="nb-count">1 โน้ต</small></div>
+       <div class="nb-editor-title"><label class="sr-only" for="nb-title">ชื่อโน้ต</label><input class="nb-title-input" id="nb-title" maxlength="100" placeholder="ตั้งชื่อโน้ต" aria-label="ชื่อโน้ต"></div></div>
+     <div class="nb-controls">
+       <button id="nb-create" class="wf-btn wf-btn-primary" type="button">＋ โน้ตใหม่</button>
+       <button id="nb-pin" class="wf-btn" type="button">☆ ปักหมุด</button>
+       <button id="nb-delete" class="wf-btn" type="button">ลบโน้ต</button>
+       <input id="nb-filter" type="search" class="nb-filter" aria-label="ค้นหาในทุกโน้ต" placeholder="⌕ ค้นหาทุกโน้ต...">
+       <button id="nb-export" class="wf-btn" type="button">↓ สำรอง JSON</button>
+       <button id="nb-import" class="wf-btn" type="button">↑ นำเข้า</button>
+       <input type="file" id="nb-file" accept=".json,.txt,application/json,text/plain" hidden>
+     </div>
+     <div id="nb-list" class="nb-notes" role="group" aria-label="รายการโน้ต"></div>
+     <small style="font-size:10px;color:#928397">ข้อมูลเก็บไว้ในเบราว์เซอร์นี้เท่านั้น · สำรองไฟล์ JSON ก่อนล้างข้อมูลเบราว์เซอร์</small>
+   </section>
    <!-- TOOLBAR -->
    <section aria-label="Notepad toolbar" class="notepad-toolbar" data-i18n-aria-label="notepad.toolbar">
     <!-- MAIN ACTIONS -->
@@ -237,5 +255,6 @@
   </script>
   <script src="js/page-shell.js">
   </script>
+  <script src="./js/kitto-next-lang.js"></script>
  </body>
 </html>

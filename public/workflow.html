@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#fcf9fe">
+  <meta name="description" content="KITTO Workflow Studio — จัดการรูปภาพหลายไฟล์ ลบพื้นหลัง ปรับขนาด แปลงและบีบอัดในขั้นตอนเดียว">
+  <title>Workflow Studio · KITTO</title>
+  <link rel="icon" href="./favicon.ico">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="./css/ui-system.css" rel="stylesheet">
+  <link href="./css/kitto-studio.css" rel="stylesheet">
+  <link href="./css/kitto-next.css" rel="stylesheet">
+</head>
+<body class="workflow-page">
+  <main class="wf-sheet">
+    <header class="wf-hero">
+      <div class="wf-eyebrow">✦ KITTO / CREATIVE AUTOMATION</div>
+      <h1>Workflow <span>Studio</span></h1>
+      <p>ทำรูปภาพหลายไฟล์ให้พร้อมใช้งานในครั้งเดียว — ลบพื้นหลัง (เลือกได้), ปรับขนาด, จัดกรอบ, แปลงไฟล์ และบีบอัด</p>
+      <div class="wf-hero-pills"><span>✿ Batch processing</span><span>✦ Preview ก่อนดาวน์โหลด</span><span>♡ ไม่ต้องสมัครสมาชิก</span></div>
+      <img src="./assets/illustrations/kitto-cat.svg" alt="" aria-hidden="true" class="wf-hero-cat" width="230" height="230">
+    </header>
+    <div class="wf-layout">
+      <section class="wf-settings wf-card" aria-labelledby="wf-steps-title">
+        <div class="wf-section-head"><div><span class="wf-kicker">01 / ตั้งค่างาน</span><h2 id="wf-steps-title">ออกแบบ Workflow</h2></div><span class="wf-bubble">✦</span></div>
+        <div class="wf-preset-row"><label for="wf-preset">รูปแบบสำเร็จรูป</label><select id="wf-preset"><option value="product">รูปสินค้าจัตุรัส · JPG</option><option value="web">สำหรับเว็บไซต์ · WEBP</option><option value="transparent">พื้นหลังโปร่งใส · PNG</option><option value="original">คงสัดส่วน · JPG</option></select></div>
+        <fieldset class="wf-fieldset"><legend>ขั้นตอนที่ 1 · ลบพื้นหลัง (AI)</legend><label class="wf-toggle"><input type="checkbox" id="wf-remove-bg"><span>ลบพื้นหลังอัตโนมัติ</span><span class="wf-ai-tag">Cloudflare AI · ออนไลน์</span></label><p class="wf-helper">เปิดเมื่อจำเป็นเท่านั้น ภาพจะถูกส่งไปประมวลผลที่ Cloudflare ตามคิว</p></fieldset>
+        <fieldset class="wf-fieldset"><legend>ขั้นตอนที่ 2 · ขนาดและกรอบภาพ</legend>
+          <label for="wf-mode">การจัดวางรูปภาพ</label><select id="wf-mode"><option value="square">จัตุรัสพร้อมขอบว่าง (ไม่ครอปสินค้า)</option><option value="fit">คงสัดส่วนเดิม</option></select>
+          <label for="wf-size">จำกัดด้านที่ยาวที่สุด</label><select id="wf-size"><option value="800">800 px</option><option value="1000">1000 px</option><option value="1200">1200 px</option><option value="1600">1600 px</option><option value="2048">2048 px</option><option value="4096">4096 px</option></select>
+          <label for="wf-bg">สีพื้นหลัง (กรณีมีพื้นที่ว่าง)</label><select id="wf-bg"><option value="white">ขาว</option><option value="transparent">โปร่งใส (PNG/WEBP)</option><option value="pink">ชมพูพาสเทล</option></select>
+        </fieldset>
+        <fieldset class="wf-fieldset"><legend>ขั้นตอนที่ 3 · ประเภทและคุณภาพ</legend>
+          <label for="wf-format">ไฟล์ผลลัพธ์</label><select id="wf-format"><option value="jpeg">JPG · เล็กและใช้ทั่วไป</option><option value="webp">WEBP · เหมาะกับเว็บ</option><option value="png">PNG · เก็บความโปร่งใส</option></select>
+          <label for="wf-quality"><span id="wf-quality-label">คุณภาพ</span> <strong id="wf-quality-value">85%</strong></label><input id="wf-quality" type="range" min="40" max="100" value="85" step="5">
+          <label for="wf-target">ขนาดไฟล์เป้าหมาย (KB) · ไม่บังคับ</label><input type="number" id="wf-target" min="0" max="15000" step="10" value="0" inputmode="numeric"><p class="wf-helper">JPG/WEBP จะพยายามลดคุณภาพให้ใกล้เป้าหมาย ส่วน PNG ไม่รองรับการกำหนดคุณภาพแบบนี้</p>
+        </fieldset>
+        <div class="wf-settings-actions"><button class="wf-btn wf-btn-primary" type="button" id="wf-save-preset">✧ บันทึกค่าของฉัน</button><button class="wf-btn" type="button" id="wf-reset">คืนค่าเริ่มต้น</button></div>
+      </section>
+      <section class="wf-main" aria-labelledby="wf-upload-title">
+        <div class="wf-card wf-upload-panel"><div class="wf-section-head"><div><span class="wf-kicker">02 / เลือกไฟล์</span><h2 id="wf-upload-title">อัปโหลดรูปภาพ</h2></div><span class="wf-bubble">♡</span></div>
+          <div class="wf-drop" id="wf-drop" role="button" tabindex="0" aria-label="เลือกภาพหรือลากภาพมาวาง"><span class="wf-drop-icon" aria-hidden="true">☁</span><strong>ลากรูปภาพมาวางที่นี่</strong><p>หรือคลิกเพื่อเลือกไฟล์ JPG, PNG, WEBP</p><small>สูงสุด 60 ไฟล์ · ไฟล์ละไม่เกิน 20 MB · รวมไม่เกิน 180 MB</small><input type="file" id="wf-files" accept="image/jpeg,image/png,image/webp" multiple hidden></div>
+          <div class="wf-upload-bottom"><span id="wf-upload-message" role="status" aria-live="polite">ไฟล์ประมวลผลในเบราว์เซอร์ (ยกเว้นกรณีเลือก AI)</span><button type="button" class="wf-btn wf-btn-primary" id="wf-start" disabled>✦ เริ่มประมวลผล</button></div>
+        </div>
+        <div class="wf-card wf-queue-panel"><div class="wf-section-head"><div><span class="wf-kicker">03 / ดูความคืบหน้า</span><h2><span id="wf-queue-title">คิวงาน</span> <span id="wf-total" class="wf-count">0</span></h2></div><button type="button" class="wf-btn wf-btn-small" id="wf-clear" disabled>ล้างงานที่เสร็จ</button></div>
+          <div class="wf-stats"><span><strong id="wf-done">0</strong> <span id="wf-done-label">สำเร็จ</span></span><span><strong id="wf-active">0</strong> <span id="wf-active-label">กำลังทำ</span></span><span><strong id="wf-error">0</strong> <span id="wf-error-label">ผิดพลาด</span></span></div>
+          <div class="wf-overall" role="progressbar" aria-label="ความคืบหน้ารวม" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="wf-overall"><div id="wf-overall-fill"></div></div>
+          <div id="wf-list" class="wf-list"><p class="wf-empty">ยังไม่มีรายการ เลือกรูปภาพเพื่อเริ่มงานได้เลย ✿</p></div>
+          <div class="wf-queue-actions"><button type="button" id="wf-cancel-all" class="wf-btn" disabled>ยกเลิกงานที่รอ/กำลังทำ</button><button type="button" id="wf-download-zip" class="wf-btn wf-btn-primary" disabled>↓ ดาวน์โหลดผลลัพธ์ ZIP</button></div>
+          <p id="wf-export-message" role="status" aria-live="polite" class="wf-helper"></p>
+        </div>
+        <div class="wf-card wf-compare-panel" id="wf-compare-panel" hidden><div class="wf-section-head"><div><span class="wf-kicker">04 / ตรวจผลงาน</span><h2>Before / After</h2></div><span class="wf-bubble">✧</span></div><p class="wf-preview-name" id="wf-preview-name"></p><div class="wf-compare" id="wf-compare"><img id="wf-after" alt="ภาพหลังปรับปรุง"><img id="wf-before" class="wf-before" alt="ภาพต้นฉบับ"><span class="wf-before-label">BEFORE</span><span class="wf-after-label">AFTER</span><div class="wf-divider" aria-hidden="true"></div><input type="range" id="wf-compare-slider" min="0" max="100" value="50" aria-label="เลื่อนเปรียบเทียบภาพก่อนและหลัง"></div><p class="wf-helper" id="wf-preview-info"></p></div>
+      </section>
+    </div>
+    <footer class="wf-footer">✿ KITTO WORKSHOP UTILITY <span>ทำงานให้เสร็จง่ายขึ้นทุกวัน</span></footer>
+  </main>
+  <script src="./js/i18n.js"></script>
+  <script src="./js/kitto-queue.js"></script>
+  <script src="./js/workflow-image-core.js"></script>
+  <script src="./js/zip-store.js"></script>
+  <script src="./js/workflow.js"></script>
+  <script src="./js/page-shell.js"></script>
+  <script src="./js/kitto-next-lang.js"></script>
+</body>
+</html>
