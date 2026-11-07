@@ -1,6 +1,6 @@
 # Workshop Utility BY KITTO
 
-A static, browser-based utility website for image editing, PDF workflows, general file conversion, and a local online notepad.
+A static, browser-based utility website for image editing, PDF workflows, general file conversion, a multi-note local notebook, and a batch image Workflow Studio.
 
 **Live site:** <https://utilitytools.kitto-for-work.workers.dev/>
 
@@ -17,13 +17,15 @@ A static, browser-based utility website for image editing, PDF workflows, genera
 │   │   ├── file-converter.css
 │   │   ├── notepad.css
 │   │   ├── ui-system.css    # Shared base design system
-│   │   ├── kitto-studio.css # New cat-themed UI, animations and responsive layout
+│   │   ├── kitto-studio.css # Shared cat-themed UI, animations and responsive layout
+│   │   ├── kitto-next.css # Workflow, notebook and v3 component styles
 │   │   └── modules/         # Detailed page/component styles
 │   ├── js/
 │   │   ├── app.js           # Main tool/category navigation
 │   │   ├── page-shell.js    # Shared navigation, shortcut finder, hero and language wiring
 │   │   ├── runtime-setup.js # PDF.js and canvas setup
 │   │   ├── i18n.js          # Translation runtime/catalog
+│   │   ├── kitto-queue.js, workflow*.js, zip-store.js # Batch image pipeline
 │   │   └── tool-*.js        # Individual image/PDF tools
 │   └── assets/illustrations/kitto-cat.svg # Lightweight mascot artwork
 │   └── assets/icons/        # Optimized favicon assets
@@ -43,7 +45,9 @@ A static, browser-based utility website for image editing, PDF workflows, genera
 - Convert images to PDF and PDF pages to images.
 - Reorder, rotate, split, merge and watermark PDF pages, and add page numbers.
 - Convert supported file formats using the file-converter page.
-- Save notes locally in the browser with autosave and editing history.
+- Save **multiple notes** locally in the browser with autosave, editing history, title, pinning, search and JSON backup/import. The original saved note is migrated into the notebook on first visit.
+- Use **Workflow Studio** (`/workflow.html`) to process multiple JPG/PNG/WEBP images using optional AI background removal, padding/resize, file conversion and compression, then inspect Before/After and export ZIP.
+- Install the site as a Progressive Web App on supported browsers. After an initial online visit, Workflow Studio without AI and Notepad can work offline with the cached app assets; PDF and Office-related tools may still need external dependencies or network access.
 - Most batch image/PDF workflows process locally. Background removal sends the chosen image to the Cloudflare Worker and returns the output without storing it permanently.
 - Thai, English, German, Japanese, Korean and Chinese UI translations where provided by the translation catalog.
 - A shared responsive cat-themed UI across all three pages, with a desktop tool sidebar, animated mascot, polished drag/drop states and converter cards.
@@ -58,6 +62,7 @@ Requirements: a supported Node.js/npm version. The pinned Wrangler CLI is instal
 ```bash
 npm install
 npm run check
+npm run test:smoke
 npm run dev
 ```
 
@@ -125,3 +130,12 @@ Background removal runs on Cloudflare Images using the `segment: "foreground"` t
 - Accepted formats: JPEG, PNG, WebP, and AVIF. Maximum upload size: 20 MB per image.
 - Cloudflare Images Free includes 5,000 unique transformations per calendar month. New transformations stop after the free allowance is exhausted.
 - Deploy with Wrangler or the existing Cloudflare Workers Builds connection.
+
+## Version 3 deployment and limitations
+
+- **Existing Workers deployment**: keep `public/` as the assets directory and `src/index.js` as the Worker entry. New routes are static assets; no extra Cloudflare bindings, D1 database or R2 bucket are required. API rate limiting was deliberately not added.
+- **Workflow Studio**: select one or more images, choose settings or a preset, and click Start. Processing uses up to 2 browser workers on desktop (1 for small screens or low-memory devices). Image data is not saved to a server unless AI background removal is enabled. The browser may reject very large pixel dimensions; output byte targets for JPEG/WEBP are best-effort, and PNG is lossless. Single results download individually; multiple results download as ZIP without using a third-party ZIP CDN.
+- **Notepad migration**: the original value in `online-notepad-content-v1` is imported into `kitto-notebook-v2` the first time it is used. This is local per-browser storage, **not sync across devices**. Export JSON before clearing site storage. Import merges notes; it does not silently overwrite existing notes.
+- **Offline**: the Service Worker caches same-origin app code, not user files, the background-removal API or third-party CDNs. Open the app online once to install its cache; offline functionality is primarily intended for Workflow Studio (without AI) and Notepad. The install option is shown only on browsers that support app installation.
+- **Office-to-PDF conversion fidelity**: DOCX→PDF and PPTX→PDF currently extract text and generate a new PDF; styles, tables, embedded images, fonts and slide geometry are not preserved. The UI now makes this limitation explicit; accurate Office rendering needs a dedicated rendering engine or conversion backend.
+- **Testing**: `npm run check` validates asset references, IDs and syntax; `npm run test:smoke` checks bounded queue execution, cancellation/retry, ZIP signatures and manifest assets. Cloudflare Images background-removal itself must be tested after deploying with an `IMAGES` binding, and any external PDF conversion dependencies require internet.

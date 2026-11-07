@@ -28,3 +28,10 @@
 3. Keep inline JavaScript out of HTML. Add shared page wiring to `js/page-shell.js`; add third-party runtime setup to `js/runtime-setup.js`.
 4. Keep all browser-served files inside `public/`. `wrangler.jsonc` deploys `public/` as Cloudflare Workers Static Assets.
 5. Run `npm run check` before pushing changes. This validates JavaScript syntax, required pages, duplicate IDs, and local file references.
+
+## 3.0 additions
+
+- `public/workflow.html` and `js/workflow.js` own the standalone batch image pipeline. `js/kitto-queue.js` is reusable queue control; `js/workflow-worker.js` uses `js/workflow-image-core.js` and falls back to the main thread where OffscreenCanvas is unavailable. `js/zip-store.js` is a no-dependency ZIP store writer.
+- `public/css/kitto-next.css` adds v3 UI components without replacing the previous shared CSS. `js/kitto-next-lang.js` provides bilingual copy for newly introduced screens.
+- `public/manifest.webmanifest` and `public/sw.js` implement installation and the offline shell. Do not cache API routes or user data.
+- Notepad multi-note storage lives alongside the original editing engine in `js/notepad.js`; the original single-note key is retained as a compatibility value.
