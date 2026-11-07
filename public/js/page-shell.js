@@ -228,24 +228,10 @@
     if(!palette.hidden) renderResults();
   }
   syncText(); document.addEventListener('languagechange',syncText);
-  // PWA: install action appears only if the browser reports installability.
-  let installEvent = null;
-  window.addEventListener('beforeinstallprompt', event => {
-    event.preventDefault(); installEvent = event;
-    if (!document.querySelector('.app-install')) {
-      const b = el('button','app-install','↓ ติดตั้งแอป');
-      b.type='button'; b.addEventListener('click',async () => {
-        if (!installEvent) return;
-        const promptEvent=installEvent;installEvent=null;b.remove();
-        await promptEvent.prompt();
-      });
-      navTools.prepend(b);
-    }
-  });
-  window.addEventListener('appinstalled',()=>{installEvent=null;document.querySelector('.app-install')?.remove();});
+  // Offline caching remains available without app installation or an install prompt.
   if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')) {
     window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(error => {
-      console.warn('[KITTO PWA] Offline setup unavailable:',error);
+      console.warn('[KITTO] Offline cache unavailable:',error);
     }));
   }
   const back=document.getElementById('btn-back-home');if(back)back.addEventListener('click',()=>{location.href='./index.html';});
