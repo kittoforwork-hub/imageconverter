@@ -18,4 +18,4 @@ jobs:
         with:
           node-version: 22
       - name: Validate project
-        run: npm run check
+        run: npm run check && npm run test:smoke
