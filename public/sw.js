@@ -1,17 +1,22 @@
 /* KITTO offline shell. Never cache API requests, user uploads or converted files. */
-const CACHE = 'kitto-app-v3.0.1';
+const CACHE = 'kitto-app-v4.0.0';
 const LOCAL_ASSETS = [
   './', './index.html', './workflow.html', './notepad.html', './file-converter.html',
   './favicon.ico', './favicon.png',
   './assets/illustrations/kitto-cat.svg',
   './assets/icons/favicon-32.png', './assets/icons/apple-touch-icon.png',
   './css/style.css', './css/file-converter.css', './css/notepad.css', './css/ui-system.css', './css/kitto-studio.css', './css/kitto-next.css',
-  './css/modules/workspace-components.css', './css/modules/file-converter-components.css','./css/modules/notepad-components.css',
+  './css/kitto-v4.css', './css/modules/workspace-components.css', './css/modules/file-converter-components.css','./css/modules/notepad-components.css',
   './js/app.js',
   './js/file-converter.js',
   './js/i18n.js',
   './js/kitto-next-lang.js',
   './js/kitto-queue.js',
+  './js/kitto-settings.js',
+  './js/kitto-settings-ui.js',
+  './js/kitto-filename.js',
+  './js/kitto-worker-pool.js',
+  './js/kitto-image-refine.js',
   './js/notepad.js',
   './js/page-shell.js',
   './js/pdf-worker-client.js',
@@ -63,14 +68,20 @@ self.addEventListener('fetch',event=>{
     })());
     return;
   }
-  // All bundled assets are immutable within this app version; fetch in background to refresh.
+  // Network-first for CSS/JS: deployed updates are never hidden by an older cache.
+  // Offline falls back to the pre-cached bundle (no APIs or user files are stored).
+  if(url.pathname.startsWith('/js/')||url.pathname.startsWith('/css/')){
+    event.respondWith((async()=>{
+      try {
+        const response=await fetch(req,{cache:'no-cache'});
+        if(response.ok){const cache=await caches.open(CACHE);cache.put(req,response.clone()).catch(()=>{});}
+        return response;
+      }catch(_){return await caches.match(req,{ignoreSearch:true})||Response.error();}
+    })());
+    return;
+  }
   event.respondWith((async()=>{
-    const cached=await caches.match(req,{ignoreSearch:true});
-    if(cached)return cached;
-    const response=await fetch(req);
-    if(response.ok&&(url.pathname.startsWith('/js/')||url.pathname.startsWith('/css/'))){
-      const cache=await caches.open(CACHE);cache.put(req,response.clone()).catch(()=>{});
-    }
-    return response;
+    try{return await fetch(req);}
+    catch(_){return await caches.match(req,{ignoreSearch:true})||Response.error();}
   })());
 });

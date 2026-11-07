@@ -14,6 +14,7 @@
   <link href="./css/ui-system.css" rel="stylesheet">
   <link href="./css/kitto-studio.css" rel="stylesheet">
   <link href="./css/kitto-next.css" rel="stylesheet">
+  <link href="./css/kitto-v4.css?v=4" rel="stylesheet">
 </head>
 <body class="workflow-page">
   <main class="wf-sheet">
@@ -39,6 +40,25 @@
           <label for="wf-quality"><span id="wf-quality-label">คุณภาพ</span> <strong id="wf-quality-value">85%</strong></label><input id="wf-quality" type="range" min="40" max="100" value="85" step="5">
           <label for="wf-target">ขนาดไฟล์เป้าหมาย (KB) · ไม่บังคับ</label><input type="number" id="wf-target" min="0" max="15000" step="10" value="0" inputmode="numeric"><p class="wf-helper">JPG/WEBP จะพยายามลดคุณภาพให้ใกล้เป้าหมาย ส่วน PNG ไม่รองรับการกำหนดคุณภาพแบบนี้</p>
         </fieldset>
+        <div class="wf-v4-stack" aria-labelledby="wf-v4-refine-title">
+          <h3 id="wf-v4-refine-title">✧ ขั้นตอนเสริม · เก็บขอบหลังลบพื้นหลัง AI</h3>
+          <label for="wf-alpha-trim"><span>ตัดขอบโปร่งใสจาง ๆ</span> <input id="wf-alpha-trim" type="range" min="0" max="100" value="0" step="10"></label>
+          <label for="wf-alpha-softness"><span>ความนุ่มของขอบ</span> <select id="wf-alpha-softness"><option value="0">ไม่ปรับ</option><option value="1">นุ่มเล็กน้อย</option><option value="2">นุ่มมาก</option></select></label>
+          <small>ปิดไว้เป็นค่าเริ่มต้น · ทำหลัง AI เสร็จในเบราว์เซอร์ อาจทำให้ขอบบางส่วนเล็กลงเมื่อปรับสูง</small>
+        </div>
+        <div class="wf-v4-stack" aria-labelledby="wf-v4-naming-title">
+          <h3 id="wf-v4-naming-title">✿ ตั้งชื่อไฟล์ผลลัพธ์</h3>
+          <label for="wf-name-template"><span>รูปแบบชื่อ</span> <input type="text" id="wf-name-template" maxlength="120" value="{name}-kitto" spellcheck="false"></label>
+          <label for="wf-name-start"><span>เริ่มลำดับที่</span> <input type="number" id="wf-name-start" min="0" max="999999" value="1"></label>
+          <label for="wf-name-digits"><span>จำนวนหลัก</span> <select id="wf-name-digits"><option value="2">2 หลัก</option><option value="3" selected>3 หลัก</option><option value="4">4 หลัก</option><option value="5">5 หลัก</option></select></label>
+          <small>แท็กที่ใช้ได้: {name} ชื่อเดิม · {n} เลขลำดับ · {date} วันที่ เช่น PRODUCT-{n}</small>
+          <small id="wf-name-preview" role="status" aria-live="polite"></small>
+        </div>
+        <div class="wf-v4-stack">
+          <h3>↶ คืนค่าการตั้งค่า</h3>
+          <div class="wf-v4-inline"><button class="wf-btn" type="button" id="wf-undo" disabled>↶ ย้อนกลับ</button><button class="wf-btn" type="button" id="wf-redo" disabled>↷ ทำซ้ำ</button></div>
+          <small>ย้อนกลับได้เฉพาะการตั้งค่า Workflow ไม่ย้อนรูปที่ประมวลผลเสร็จแล้ว</small>
+        </div>
         <div class="wf-settings-actions"><button class="wf-btn wf-btn-primary" type="button" id="wf-save-preset">✧ บันทึกค่าของฉัน</button><button class="wf-btn" type="button" id="wf-reset">คืนค่าเริ่มต้น</button></div>
       </section>
       <section class="wf-main" aria-labelledby="wf-upload-title">
@@ -53,17 +73,22 @@
           <div class="wf-queue-actions"><button type="button" id="wf-cancel-all" class="wf-btn" disabled>ยกเลิกงานที่รอ/กำลังทำ</button><button type="button" id="wf-download-zip" class="wf-btn wf-btn-primary" disabled>↓ ดาวน์โหลดผลลัพธ์ ZIP</button></div>
           <p id="wf-export-message" role="status" aria-live="polite" class="wf-helper"></p>
         </div>
-        <div class="wf-card wf-compare-panel" id="wf-compare-panel" hidden><div class="wf-section-head"><div><span class="wf-kicker">04 / ตรวจผลงาน</span><h2>Before / After</h2></div><span class="wf-bubble">✧</span></div><p class="wf-preview-name" id="wf-preview-name"></p><div class="wf-compare" id="wf-compare"><img id="wf-after" alt="ภาพหลังปรับปรุง"><img id="wf-before" class="wf-before" alt="ภาพต้นฉบับ"><span class="wf-before-label">BEFORE</span><span class="wf-after-label">AFTER</span><div class="wf-divider" aria-hidden="true"></div><input type="range" id="wf-compare-slider" min="0" max="100" value="50" aria-label="เลื่อนเปรียบเทียบภาพก่อนและหลัง"></div><p class="wf-helper" id="wf-preview-info"></p></div>
+        <div class="wf-card wf-compare-panel" id="wf-compare-panel" hidden><div class="wf-section-head"><div><span class="wf-kicker">04 / ตรวจผลงาน</span><h2>Before / After</h2></div><span class="wf-bubble">✧</span></div><p class="wf-preview-name" id="wf-preview-name"></p><div class="wf-compare bg-checker" id="wf-compare"><img id="wf-after" alt="ภาพหลังปรับปรุง"><img id="wf-before" class="wf-before" alt="ภาพต้นฉบับ"><span class="wf-before-label">BEFORE</span><span class="wf-after-label">AFTER</span><div class="wf-divider" aria-hidden="true"></div><input type="range" id="wf-compare-slider" min="0" max="100" value="50" aria-label="เลื่อนเปรียบเทียบภาพก่อนและหลัง"></div><p class="wf-helper" id="wf-preview-info"></p><label class="wf-v4-compare-bg"><span>พื้นหลังตัวอย่าง</span> <select id="wf-compare-bg"><option value="checker">ตารางโปร่งใส</option><option value="white">ขาว</option><option value="dark">เข้ม</option></select></label></div>
       </section>
     </div>
     <footer class="wf-footer">✿ KITTO WORKSHOP UTILITY <span>ทำงานให้เสร็จง่ายขึ้นทุกวัน</span></footer>
   </main>
   <script src="./js/i18n.js"></script>
+  <script src="./js/kitto-settings.js?v=4"></script>
+  <script src="./js/kitto-filename.js?v=4"></script>
+  <script src="./js/kitto-worker-pool.js?v=4"></script>
+  <script src="./js/kitto-image-refine.js?v=4"></script>
   <script src="./js/kitto-queue.js"></script>
   <script src="./js/workflow-image-core.js"></script>
   <script src="./js/zip-store.js"></script>
   <script src="./js/workflow.js"></script>
   <script src="./js/page-shell.js"></script>
   <script src="./js/kitto-next-lang.js"></script>
+  <script src="./js/kitto-settings-ui.js?v=4"></script>
 </body>
 </html>
