@@ -53,6 +53,21 @@ async function readLimitedBody(stream, maxBytes) {
   return bytes;
 }
 
+const IMAGE_ERRORS = {
+  '9422': ['BACKGROUND_FREE_LIMIT_REACHED', 429],
+  '9432': ['BACKGROUND_IMAGES_BILLING_NOT_SUPPORTED', 503],
+  '9413': ['BACKGROUND_IMAGE_PROCESSING_LIMIT', 413],
+  '9522': ['BACKGROUND_IMAGE_PROCESSING_LIMIT', 413],
+  '9520': ['BACKGROUND_UNSUPPORTED_FORMAT', 415],
+};
+
+function imageFailure(detail) {
+  const cfCode = String(detail).match(/\b(?:94|95)\d{2}\b/)?.[0];
+  const [code, status] = IMAGE_ERRORS[cfCode] || ['BACKGROUND_PROCESSING_FAILED', 502];
+  console.error('[Background Removal]', String(detail).slice(0, 500));
+  return jsonResponse({ code, cfCode: cfCode || null }, status);
+}
+
 async function removeBackground(request, env) {
   if (request.method !== 'POST') {
     return jsonResponse({ code: 'METHOD_NOT_ALLOWED' }, 405);
@@ -101,34 +116,12 @@ async function removeBackground(request, env) {
       .transform({ segment: 'foreground' })
       .output({ format: 'image/png' });
 
-    const transformed = imageOutput.response();
-
+    const transformed = await imageOutput.response();
     if (!transformed.ok) {
       const details = await transformed.text().catch(() => '');
-      const status = transformed.status || 502;
-
-      const cfCode = details.match(/\b(940[0-9]|941[0-9]|942[0-9]|943[0-9]|950[0-9]|951[0-9]|952[0-9])\b/)?.[1] || null;
-
-      if (cfCode === '9422') {
-        return jsonResponse({ code: 'BACKGROUND_FREE_LIMIT_REACHED' }, 429);
-      }
-      if (cfCode === '9432') {
-        return jsonResponse({ code: 'BACKGROUND_IMAGES_BILLING_NOT_SUPPORTED' }, 503);
-      }
-      if (cfCode === '9413' || cfCode === '9522') {
-        return jsonResponse({ code: 'BACKGROUND_IMAGE_PROCESSING_LIMIT' }, 413);
-      }
-      if (cfCode === '9520') {
-        return jsonResponse({ code: 'BACKGROUND_UNSUPPORTED_FORMAT' }, 415);
-      }
-
-      console.error('[Background Removal] Images transformation failed:', status, cfCode, details.slice(0, 500));
-      return jsonResponse({
-        code: 'BACKGROUND_PROCESSING_FAILED',
-        diagnostic: details.slice(0, 240) || `Cloudflare Images returned HTTP ${status}`,
-        cfCode,
-      }, 502);
+      return imageFailure(details || `HTTP ${transformed.status}`);
     }
+    if (!transformed.body) return imageFailure('Empty Images response');
 
     return new Response(transformed.body, {
       status: 200,
@@ -149,17 +142,7 @@ async function removeBackground(request, env) {
       return jsonResponse({ code }, 400);
     }
 
-    // Cloudflare may surface the Images Free quota error as an exception.
-    if (code.includes('9422')) {
-      return jsonResponse({ code: 'BACKGROUND_FREE_LIMIT_REACHED' }, 429);
-    }
-
-    const diagnostic = String(error && error.message ? error.message : error || 'Unknown error').slice(0, 240);
-    console.error('[Background Removal] Processing error:', diagnostic, error && error.stack ? error.stack : '');
-    return jsonResponse({
-      code: 'BACKGROUND_PROCESSING_FAILED',
-      diagnostic,
-    }, 502);
+    return imageFailure([error?.code, error?.message || error].filter(Boolean).join(' '));
   }
 }
 
@@ -178,6 +161,7 @@ export default {
       return removeBackground(request, env);
     }
 
+    if (url.pathname.startsWith('/api/')) return jsonResponse({ code: 'NOT_FOUND' }, 404);
     return env.ASSETS.fetch(request);
   },
 };
