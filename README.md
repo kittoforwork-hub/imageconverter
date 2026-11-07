@@ -1,6 +1,6 @@
 # Workshop Utility BY KITTO
 
-A static, browser-based utility website for image editing, PDF workflows, general file conversion, a multi-note local notebook, and a batch image Workflow Studio.
+A static, browser-based utility website for image editing, PDF workflows, general file conversion, a multi-note local notebook, and a batch image Workflow Studio. Version 4 adds quality-of-life improvements, safer image processing and shared local preferences.
 
 **Live site:** <https://utilitytools.kitto-for-work.workers.dev/>
 
@@ -19,6 +19,7 @@ A static, browser-based utility website for image editing, PDF workflows, genera
 │   │   ├── ui-system.css    # Shared base design system
 │   │   ├── kitto-studio.css # Shared cat-themed UI, animations and responsive layout
 │   │   ├── kitto-next.css # Workflow, notebook and v3 component styles
+│   │   ├── kitto-v4.css   # v4 settings / filename / edge tools
 │   │   └── modules/         # Detailed page/component styles
 │   ├── js/
 │   │   ├── app.js           # Main tool/category navigation
@@ -26,6 +27,8 @@ A static, browser-based utility website for image editing, PDF workflows, genera
 │   │   ├── runtime-setup.js # PDF.js and canvas setup
 │   │   ├── i18n.js          # Translation runtime/catalog
 │   │   ├── kitto-queue.js, workflow*.js, zip-store.js # Batch image pipeline
+│   │   ├── kitto-settings*.js # Site-wide preferences and diagnostics
+│   │   ├── kitto-filename.js, kitto-image-refine.js, kitto-worker-pool.js # v4 helpers
 │   │   └── tool-*.js        # Individual image/PDF tools
 │   └── assets/illustrations/kitto-cat.svg # Lightweight mascot artwork
 │   └── assets/icons/        # Optimized favicon assets
@@ -54,6 +57,17 @@ A static, browser-based utility website for image editing, PDF workflows, genera
 - Global tool finder: **Ctrl + K** (or **Cmd + K** on Mac), **/** outside text inputs, arrow keys to choose, Enter to open, Escape to close.
 - Deep links to the existing Workspace tools: e.g. `/index.html?tool=pdf-merge` or `/index.html?tool=img-compress`.
 - Animations automatically minimize when the browser requests reduced motion.
+
+## New in v4
+
+- Open the **⚙ Settings** control in the navigation bar to choose concurrency, default Workflow quality, ZIP or separate downloads (up to 10 files), and reduced animation. Settings are stored locally in the browser.
+- **Diagnostics** inside Settings reports browser capabilities and allows copying a technical report. Refresh KITTO cache clears only `kitto-app-v*` cache entries; it does not clear Notepad `localStorage` or uploaded images.
+- **Workflow output naming:** `{name}` = original base name, `{n}` = serial number (zero-padded), `{date}` = YYYYMMDD. Example: `PRODUCT-{n}` → `PRODUCT-001.png`.
+- **Undo / Redo:** Workflow configuration history (30 steps); image Crop supports undo/redo of selection rectangle, aspect ratio and format. Finished conversions are not reversed.
+- **Background edge options:** alpha trim and softness are optional and only applied locally after AI background removal. Use small values and preview on light/dark backgrounds; these adjustments cannot replace perfect segmentation.
+- **Image processing:** Worker threads are reused across Workflow jobs where supported, or a main-thread fallback is used. A network-first CSS/JS strategy prevents cached site code from persisting across updates when online.
+- **Recovery:** Workflow preferences may be restored after reload when enabled, but files and completed results are never persisted in browser storage. Notes retain their separate backup/import behavior.
+- The existing **Office to PDF** modes remain text-reconstruction based and cannot guarantee original formatting, charts or image preservation.
 
 ## Run locally
 
@@ -139,3 +153,11 @@ Background removal runs on Cloudflare Images using the `segment: "foreground"` t
 - **Offline**: the Service Worker caches same-origin app code, not user files, the background-removal API or third-party CDNs. Visit the website online once to populate the offline cache; this supports Workflow Studio (without AI) and Notepad. There is no app-install UI or web app manifest. Browsers may still offer their own generic Add to Home Screen or Create Shortcut option, which the website cannot disable.
 - **Office-to-PDF conversion fidelity**: DOCX→PDF and PPTX→PDF currently extract text and generate a new PDF; styles, tables, embedded images, fonts and slide geometry are not preserved. The UI now makes this limitation explicit; accurate Office rendering needs a dedicated rendering engine or conversion backend.
 - **Testing**: `npm run check` validates asset references, IDs and syntax; `npm run test:smoke` checks bounded queue execution, cancellation/retry, ZIP signatures and the offline shell. Cloudflare Images background-removal itself must be tested after deploying with an `IMAGES` binding, and any external PDF conversion dependencies require internet.
+
+## Updating from 3.0.1 without app installation
+
+Use the **v4 changed-files ZIP** and copy its files over the matching paths in GitHub, including `package.json`, the validation scripts, `public/` and the updated README/CHANGELOG. Do not upload the ZIP itself into `public/`. No old manifest needs to be added, and no D1/R2 resources or new Cloudflare bindings are required. Keep the existing `IMAGES` binding for AI background removal.
+
+After Cloudflare deploys, do a hard reload (Ctrl+Shift+R) once; use Settings → Refresh app cache if an old browser script remains. If you use the whole-project ZIP, preserve your production-specific Worker binding and project name configuration before replacing any customized files.
+
+Browser UI and live Cloudflare API must be checked on the deployed URL. Automated project/unit tests verify JavaScript syntax, link existence, queue, ZIP and v4 utility logic, but do not replace end-to-end checks across all file types and browsers.

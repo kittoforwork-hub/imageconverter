@@ -35,3 +35,20 @@
 - `public/css/kitto-next.css` adds v3 UI components without replacing the previous shared CSS. `js/kitto-next-lang.js` provides bilingual copy for newly introduced screens.
 - `public/sw.js` implements the offline shell without app-install support. Do not cache API routes or user data.
 - Notepad multi-note storage lives alongside the original editing engine in `js/notepad.js`; the original single-note key is retained as a compatibility value.
+
+
+## 4.0 additions
+
+- `public/js/kitto-settings.js` is the source of truth for validated, local-only preferences. `kitto-settings-ui.js` owns the Settings dialog and diagnostics. Keep user file contents out of localStorage.
+- `public/js/kitto-filename.js` safely handles filename templates and duplicate names for Workflow. Its output is also checked and disambiguated by the ZIP writer.
+- `public/js/kitto-worker-pool.js` reuses per-file Workers and terminates workers when a job is canceled. Job concurrency remains capped by `kitto-queue.js`.
+- `public/js/kitto-image-refine.js` modifies only alpha values, locally and only when users choose the optional AI edge settings. The pipeline (`workflow-image-core.js`) must refine alpha **before** flattening onto a JPEG background.
+- Workflow setting history is ephemeral; only the latest settings snapshot is optionally recovered. Crop-tool history is per-image and does not retain image files after the job is removed.
+- `public/css/kitto-v4.css` adds settings, history and filename controls without replacing the existing cat theme.
+- `public/sw.js` caches only site assets, never `/api/*`, uploaded files or conversion results. JS/CSS use network-first with offline fallback to avoid serving stale deployed code.
+- `scripts/test-v4.mjs` runs deterministic browser-independent regression tests and is included in `npm run test:smoke`.
+
+## Quality boundaries
+
+- The full JavaScript syntax/reference/unit suite is checked via CI. Live Cloudflare Images binding, true offline reload, and all Office/PDF conversion formats still require manual end-to-end verification on the deployed site.
+- Do not change DOCX/PPTX→PDF from text-based conversion to claim layout fidelity without replacing the conversion engine and adding real sample-document tests.

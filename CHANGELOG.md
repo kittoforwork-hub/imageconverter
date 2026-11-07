@@ -1,5 +1,18 @@
 # Changelog
 
+## 4.0.0 — 2026-11-07
+
+- Added shared local-only Settings (job concurrency, default Workflow quality, ZIP/separate download policy, animation reduction, setting recovery). No account, D1, R2, new API or install prompt.
+- Added Browser Diagnostics inside Settings (local storage, online status, Web Workers, OffscreenCanvas, offline cache), copyable diagnostic report and a safe KITTO-only cache refresh action that does not delete notes.
+- Added Workflow output-name templates `{name}`, `{n}`, `{date}`, customizable starting number and digit padding; duplicates are automatically disambiguated and unsafe characters are sanitized.
+- Added Workflow setting Undo/Redo (30 snapshots) and optional recovery of settings, not uploaded files; added per-image **Crop tool** Undo/Redo for aspect ratio, selection rectangle and output format.
+- Added optional AI post-processing alpha trim/edge softening with a preview background switch (checkerboard, white, dark). Disabled by default; effects are local after the existing Cloudflare background-removal call.
+- Added persistent bounded image-worker pool, throttled queue redraw, user-selected concurrency, canvas codec verification and original crop-state snapshots, retaining the existing fallback for browsers without OffscreenCanvas.
+- Updated browser cache version with network-first JavaScript/CSS, preserving offline fallback without PWA install controls.
+- Added deterministic regression tests for safe filenames, alpha adjustment, preference validation, crop edit history presence, and offline update checks. Existing v3 queue, ZIP and cancellation tests remain.
+- This release is a stability/UX improvement; it does **not** add a high-fidelity Office→PDF engine or claim all browser/device combinations have been validated. The existing limited DOCX/PPTX→PDF conversion warnings remain.
+
+
 ## 3.0.1 — 2026-11-07
 
 - Removed the website's **Install App** button, app-install event handling and Web App Manifest.
