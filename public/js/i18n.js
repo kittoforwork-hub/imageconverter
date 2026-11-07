@@ -254,10 +254,10 @@ window.I18n = (() => {
             'ชุดเครื่องมือจัดการไฟล์',
 
           subtitle:
-            'แปลงและแก้ไขรูปภาพ/PDF ทั้งหมดในเบราว์เซอร์ของคุณ ไม่มีการอัปโหลดไฟล์ขึ้นเซิร์ฟเวอร์ใดๆ',
+            'จัดการรูปภาพและ PDF ได้สะดวก เครื่องมือส่วนใหญ่ทำงานในเบราว์เซอร์ โดยการลบพื้นหลังใช้ Cloudflare ประมวลผลรูปที่เลือก',
 
           footer:
-            'ทำงานในเบราว์เซอร์ของคุณทั้งหมด — ไม่มีไฟล์ถูกส่งออกไปที่ใด',
+            'เครื่องมือส่วนใหญ่ประมวลผลในเบราว์เซอร์ • การลบพื้นหลังใช้ Cloudflare',
 
           notepadTitle:
             'เปิด Online Notepad'
@@ -1255,10 +1255,10 @@ window.I18n = (() => {
             'File Management Tools',
 
           subtitle:
-            'Convert and edit images/PDFs entirely in your browser. No files are uploaded to any server.',
+            'Convert and edit images and PDFs with browser-first tools. Background removal processes the selected image through Cloudflare.',
 
           footer:
-            'Everything runs in your browser — no files are sent anywhere.',
+            'Most tools run in your browser • Background removal uses Cloudflare.',
 
           notepadTitle:
             'Open Online Notepad'
@@ -2256,10 +2256,10 @@ window.I18n = (() => {
             'Dateiverwaltungs-Tools',
 
           subtitle:
-            'Bilder und PDFs direkt im Browser konvertieren und bearbeiten. Keine Dateien werden auf einen Server hochgeladen.',
+            'Bilder und PDFs bequem bearbeiten. Die meisten Tools laufen im Browser; bei der Hintergrundentfernung wird das Bild von Cloudflare verarbeitet.',
 
           footer:
-            'Alles läuft im Browser — keine Dateien werden irgendwohin gesendet.',
+            'Die meisten Tools laufen im Browser • Hintergrundentfernung nutzt Cloudflare.',
 
           notepadTitle:
             'Online Notepad öffnen'
@@ -3224,10 +3224,10 @@ window.I18n = (() => {
             'ファイル管理ツール',
 
           subtitle:
-            '画像とPDFをブラウザ上で変換・編集できます。ファイルはサーバーへアップロードされません。',
+            '画像やPDFを手軽に変換・編集。ほとんどのツールはブラウザ内で動作し、背景削除では選択した画像をCloudflareで処理します。',
 
           footer:
-            'すべてブラウザ上で処理 — ファイルは外部へ送信されません。',
+            'ほとんどの処理はブラウザ内で実行 • 背景削除はCloudflareを使用',
 
           notepadTitle:
             'オンラインメモ帳を開く'
@@ -4192,10 +4192,10 @@ window.I18n = (() => {
             '파일 관리 도구',
 
           subtitle:
-            '브라우저에서 이미지와 PDF를 변환하고 편집하세요. 파일은 서버로 업로드되지 않습니다.',
+            '이미지와 PDF를 간편하게 편집하세요. 대부분 브라우저에서 처리하며 배경 제거는 선택한 이미지를 Cloudflare에서 처리합니다.',
 
           footer:
-            '모든 작업은 브라우저에서 처리됩니다 — 파일은 외부로 전송되지 않습니다.',
+            '대부분 브라우저에서 처리 • 배경 제거에는 Cloudflare 사용',
 
           notepadTitle:
             '온라인 메모장 열기'
@@ -5160,10 +5160,10 @@ window.I18n = (() => {
             '文件管理工具',
 
           subtitle:
-            '直接在浏览器中转换和编辑图片/PDF。文件不会上传到服务器。',
+            '轻松转换和编辑图片与 PDF。多数工具在浏览器中运行，移除背景时会通过 Cloudflare 处理所选图片。',
 
           footer:
-            '所有处理都在浏览器中完成 — 文件不会被发送到其他地方。',
+            '多数工具在浏览器中处理 • 背景移除使用 Cloudflare',
 
           notepadTitle:
             '打开在线记事本'
@@ -6128,10 +6128,10 @@ window.I18n = (() => {
             '檔案管理工具',
 
           subtitle:
-            '直接在瀏覽器中轉換和編輯圖片/PDF。檔案不會上傳至伺服器。',
+            '輕鬆轉換及編輯圖片與 PDF。大部分工具在瀏覽器運作，移除背景時會透過 Cloudflare 處理所選圖片。',
 
           footer:
-            '所有處理都在瀏覽器中完成 — 檔案不會被傳送到其他地方。',
+            '大部分工具在瀏覽器中處理 • 背景移除使用 Cloudflare',
 
           notepadTitle:
             '開啟 Online Notepad'
