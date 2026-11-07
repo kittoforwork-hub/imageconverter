@@ -119,7 +119,7 @@ async function main() {
   const cssFiles = files.filter(file => file.endsWith('.css'));
   const jsFiles = files.filter(file => file.endsWith('.js'));
 
-  for (const required of ['index.html', 'file-converter.html', 'notepad.html']) {
+  for (const required of ['index.html', 'file-converter.html', 'notepad.html', 'workflow.html']) {
     if (!htmlFiles.includes(path.join(publicDir, required))) addError(`Missing required page: public/${required}`);
   }
 
@@ -134,7 +134,7 @@ async function main() {
   for (const file of htmlFiles) await checkHtml(file, await readFile(file, 'utf8'));
   for (const file of cssFiles) await checkCss(file, await readFile(file, 'utf8'));
 
-  for (const file of jsFiles) {
+  for (const file of [...jsFiles, path.join(root, 'src/index.js')]) {
     checked.js += 1;
     const result = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
     if (result.status !== 0) {

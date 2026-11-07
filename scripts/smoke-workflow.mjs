@@ -61,3 +61,24 @@ for(const file of ['workflow.html','sw.js','js/workflow-worker.js','js/workflow-
   await access(path.join(root,'public',file));
 }
 console.log('Smoke tests passed: batch concurrency, cancellation/retry, ZIP output and offline shell.');
+
+// Make the canceled attempt reject while its retry is waiting for the same item.
+const attempts=[];
+const retryQueue=new runtime.window.KittoQueue((_item,signal)=>new Promise((resolve,reject)=>{
+  attempts.push({signal,resolve,reject});
+}),()=>{},2);
+const [retried]=retryQueue.add([{name:'two attempts'}]);
+await wait(0);
+retryQueue.cancel(retried.id);
+retryQueue.retry(retried.id);
+await wait(0);
+assert.equal(attempts.length,1);
+attempts[0].reject(new Error('Canceled'));
+await wait(0);
+assert.equal(retried.controller.signal,attempts[1].signal);
+retryQueue.cancel(retried.id);
+assert.ok(attempts[1].signal.aborted);
+attempts[1].resolve({blob:new Blob(['late']),name:'late'});
+await wait(0);
+assert.equal(retried.status,'canceled');
+assert.equal(retryQueue.running,0);

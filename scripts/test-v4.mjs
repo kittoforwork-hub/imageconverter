@@ -14,8 +14,8 @@ for(const file of ['kitto-filename.js','kitto-image-refine.js','kitto-settings.j
   vm.runInContext(await readFile(path.join(root,'public/js',file),'utf8'),runtime,{filename:file});
 }
 const name=app.KittoFileName;
-assert.equal(name.render('PRODUCT-{n}','cat.png',1,{start:1,digits:3,date:new Date('2026-11-07')}),'PRODUCT-002');
-assert.equal(name.render('{name}-{date}','my.file.jpg',0,{date:new Date('2026-11-07')}),'my.file-20261107');
+assert.equal(name.render('PRODUCT-{n}','cat.png',1,{start:1,digits:3,date:new Date(2026,10,7)}),'PRODUCT-002');
+assert.equal(name.render('{name}-{date}','my.file.jpg',0,{date:new Date(2026,10,7)}),'my.file-20261107');
 assert.equal(name.render('../bad\\name:<x>','file.jpg',0,{}),'.._bad_name__x_');
 assert.ok(!name.render('<>/?','x.jpg',0).includes('/'));
 const unique=name.uniqueNames([{template:'{name}',source:'foo.png',index:0},{template:'{name}',source:'foo.webp',index:1},{template:'{name}',source:'Foo.png',index:2}],'jpg');
@@ -37,7 +37,7 @@ assert.equal(app.KittoSettings.effectiveConcurrency(2,500),1);
 assert.equal(app.KittoSettings.effectiveConcurrency(8,1440),2);
 app.KittoSettings.reset();assert.equal(app.KittoSettings.get().reduceMotion,false);
 const sw=await readFile(path.join(root,'public/sw.js'),'utf8');
-assert.match(sw,/kitto-app-v4\.0\.0/);
+assert.match(sw,/kitto-app-v4\.0\.1/);
 assert.match(sw,/cache:'no-cache'/);
 assert.doesNotMatch(sw,/manifest\.webmanifest/);
 for(const required of ['kitto-settings.js','kitto-settings-ui.js','kitto-filename.js','kitto-image-refine.js','kitto-worker-pool.js','kitto-v4.css'])assert.ok(sw.includes(required),`Missing v4 offline cache: ${required}`);
@@ -76,3 +76,13 @@ pool.dispose();
 assert.equal(terminated,2,'pool should terminate remaining idle worker');
 
 console.log('v4 regression checks passed: filenames, alpha edges, preferences, crop undo, offline updates.');
+
+assert.equal(name.render('{n}','a.png',0,{start:0,digits:2}),'00');
+const bounded = new workerRuntime.window.KittoWorkerPool('/fake-worker.js',1);
+const previousCount = created;
+await Promise.all([1,2,3].map(() => bounded.transform(new Blob(['one']),{})));
+assert.equal(created-previousCount,1);
+const activeJob = bounded.transform(new Blob(['active']),{});
+const waitingJob = bounded.transform(new Blob(['pending']),{});
+bounded.dispose();
+await Promise.all([assert.rejects(activeJob,/Canceled/),assert.rejects(waitingJob,/Canceled/)]);
