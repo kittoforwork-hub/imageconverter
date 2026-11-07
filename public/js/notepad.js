@@ -59,6 +59,123 @@
   const STORAGE_KEY =
     'online-notepad-content-v1';
 
+  // Notebook v2: migrate the original one-note storage without removing it.
+  const NOTEBOOK_KEY = 'kitto-notebook-v2';
+  let notebook = [];
+  let activeNoteId = null;
+  let notebookFilter = '';
+  let notebookReady = false;
+
+  const freshNote = (content = '', title = 'โน้ตใหม่') => ({
+    id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    title, content, pinned: false, updatedAt: Date.now()
+  });
+
+  function loadNotebook() {
+    let legacy = '';
+    try { legacy = localStorage.getItem(STORAGE_KEY) || ''; } catch (_) {}
+    try {
+      const saved = JSON.parse(localStorage.getItem(NOTEBOOK_KEY) || 'null');
+      if (saved && Array.isArray(saved.notes) && saved.notes.length) {
+        notebook = saved.notes.slice(0, 200).filter(n => n && typeof n.id === 'string' && typeof n.content === 'string')
+          .map(n => ({ id:n.id, title:String(n.title || 'ไม่มีชื่อ').slice(0, 100),
+            content:n.content, pinned:Boolean(n.pinned), updatedAt:Number(n.updatedAt) || Date.now() }));
+        if (notebook.length) activeNoteId = notebook.some(n => n.id === saved.activeId) ? saved.activeId : notebook[0].id;
+      }
+    } catch (error) { console.warn('[Notepad] Notebook restore failed', error); }
+    if (!notebook.length) { const first=freshNote(legacy,'โน้ตของฉัน');notebook=[first];activeNoteId=first.id; }
+    notebookReady = true;
+    // Original note content remains available as a legacy backup until first save.
+    renderNotebook();
+  }
+
+  function persistNotebook() {
+    if (!notebookReady) return;
+    try {localStorage.setItem(NOTEBOOK_KEY, JSON.stringify({version:2, activeId:activeNoteId,notes:notebook}));}
+    catch (error) { console.error('[Notepad] Notebook save failed',error);setStatus('notepad.status.saveFailed','error'); }
+  }
+
+  function activeNote() { return notebook.find(n => n.id === activeNoteId); }
+
+  function renderNotebook() {
+    const list = document.getElementById('nb-list');
+    if (!list) return;
+    const query=notebookFilter.toLocaleLowerCase();
+    const sorted=[...notebook].sort((a,b)=>Number(b.pinned)-Number(a.pinned)||Number(b.id===activeNoteId)-Number(a.id===activeNoteId)||b.updatedAt-a.updatedAt);
+    list.replaceChildren();
+    for (const n of sorted) {
+      if (query && !(n.title+' '+n.content).toLocaleLowerCase().includes(query)) continue;
+      const b=document.createElement('button');b.type='button';b.className='nb-note'+(n.id===activeNoteId?' is-active':'');
+      b.setAttribute('aria-pressed',String(n.id===activeNoteId));b.dataset.noteId=n.id;b.title=n.title;
+      const pin=document.createElement('span');pin.textContent=n.pinned?'★':'✎';
+      const title=document.createElement('span');title.className='nb-note-label';title.textContent=n.title||'ไม่มีชื่อ';
+      b.append(pin,title);b.addEventListener('click',()=>switchNote(n.id));list.append(b);
+    }
+    if (!list.children.length){const empty=document.createElement('small');empty.textContent='ไม่พบโน้ตที่ค้นหา';list.append(empty);}
+    const current=activeNote();
+    const titleInput=document.getElementById('nb-title');if(titleInput && document.activeElement!==titleInput)titleInput.value=current?.title||'';
+    const count=document.getElementById('nb-count');if(count)count.textContent=getLanguage()==='th'?`${notebook.length} โน้ต`:`${notebook.length} notes`;
+    const pinButton=document.getElementById('nb-pin');if(pinButton)pinButton.textContent=getLanguage()==='th'?(current?.pinned?'★ เลิกปักหมุด':'☆ ปักหมุด'):(current?.pinned?'★ Unpin':'☆ Pin note');
+  }
+
+  function switchNote(id, skipSave = false) {
+    if (id === activeNoteId && !skipSave) return;
+    if (!skipSave) {cancelScheduledSave();saveNote();}
+    const n=notebook.find(item=>item.id===id);
+    if (!n) return;
+    activeNoteId=n.id;textarea.value=n.content;
+    cancelPendingHistory();resetHistory();updateCounters();refreshSearchAfterTextChange();
+    persistNotebook();renderNotebook();setStatus('notepad.status.saved','saved');
+  }
+
+  function exportNotebook() {
+    cancelScheduledSave();saveNote();
+    const blob=new Blob([JSON.stringify({version:2,exportedAt:new Date().toISOString(),notes:notebook},null,2)],{type:'application/json;charset=utf-8'});
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;
+    a.download='KITTO-notebook-backup.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+
+  async function importNotebook(file) {
+    if (!file || file.size > 5*1024*1024) {alert('ไฟล์สำรองต้องมีขนาดไม่เกิน 5 MB');return;}
+    try {
+      const text=await file.text();
+      let entries;
+      if (/\.txt$/i.test(file.name)) entries=[{title:file.name.replace(/\.txt$/i,''),content:text}];
+      else {
+        const obj=JSON.parse(text);
+        if (!obj || !Array.isArray(obj.notes))throw new Error('รูปแบบไฟล์ไม่ถูกต้อง');
+        entries=obj.notes;
+      }
+      if (!entries.length || entries.length>200 || notebook.length+entries.length>200)throw new Error('รองรับไม่เกิน 200 โน้ต');
+      const cleaned=entries.map(n => {
+        if (!n || typeof n.content!=='string' || n.content.length>1000000)throw new Error('ข้อมูลโน้ตไม่ถูกต้องหรือใหญ่เกินไป');
+        const copy=freshNote(n.content,String(n.title||'นำเข้าโน้ต').slice(0,100));copy.pinned=Boolean(n.pinned);return copy;
+      });
+      cancelScheduledSave();saveNote();notebook.push(...cleaned);switchNote(cleaned[0].id,true);
+      persistNotebook();renderNotebook();
+    } catch(error) {alert(`นำเข้าไม่สำเร็จ: ${error.message}`);}
+  }
+
+  function setupNotebook() {
+    const get=id=>document.getElementById(id);
+    get('nb-create')?.addEventListener('click',createNewNote);
+    get('nb-filter')?.addEventListener('input',e=>{notebookFilter=e.target.value.trim();renderNotebook();});
+    get('nb-title')?.addEventListener('input',e=>{
+      const n=activeNote();if(!n)return;n.title=e.target.value.slice(0,100);n.updatedAt=Date.now();persistNotebook();renderNotebook();
+    });
+    get('nb-pin')?.addEventListener('click',()=>{const n=activeNote();if(!n)return;n.pinned=!n.pinned;persistNotebook();renderNotebook();});
+    get('nb-delete')?.addEventListener('click',()=>{
+      if (!window.confirm('ย้ายโน้ตนี้ออกจากสมุด? การลบไม่สามารถย้อนกลับได้ แนะนำให้สำรองก่อน'))return;
+      cancelScheduledSave();const id=activeNoteId;notebook=notebook.filter(n=>n.id!==id);
+      if (!notebook.length)notebook.push(freshNote('','โน้ตใหม่'));
+      switchNote(notebook[0].id,true);
+    });
+    get('nb-export')?.addEventListener('click',exportNotebook);
+    get('nb-import')?.addEventListener('click',()=>get('nb-file')?.click());
+    get('nb-file')?.addEventListener('change',async e=>{const file=e.target.files?.[0];if(file)await importNotebook(file);e.target.value='';});
+  }
+
+
   const AUTO_SAVE_DELAY =
     450;
 
@@ -315,38 +432,8 @@
   // ============================================================
 
   function loadNote() {
-
-    try {
-
-      const saved =
-        localStorage.getItem(
-          STORAGE_KEY
-        );
-
-
-      if (
-        saved !== null
-      ) {
-
-        textarea.value =
-          saved;
-      }
-
-    } catch (
-    error
-    ) {
-
-      console.warn(
-        '[Online Notepad] localStorage read failed:',
-        error
-      );
-
-
-      setStatus(
-        'notepad.errors.loadFailed',
-        'error'
-      );
-    }
+    const n=activeNote();
+    textarea.value=n?.content || '';
   }
 
 
@@ -358,6 +445,10 @@
         STORAGE_KEY,
         textarea.value
       );
+
+      const current=activeNote();
+      if (current) { current.content=textarea.value;current.updatedAt=Date.now(); }
+      persistNotebook();renderNotebook();
 
 
       isSaving =
@@ -1480,25 +1571,10 @@
 
 
   function createNewNote() {
-
-    cancelPendingHistory();
-
-
-    textarea.value =
-      '';
-
-
-    resetHistory();
-
-    updateCounters();
-
-    scheduleSave();
-
-    refreshSearchAfterTextChange();
-
-    closeConfirmModal();
-
-    focusTextarea();
+    cancelPendingHistory();cancelScheduledSave();saveNote();
+    if (notebook.length >= 200) {alert('รองรับไม่เกิน 200 โน้ต');return;}
+    const note=freshNote('','โน้ตใหม่');notebook.push(note);
+    switchNote(note.id,true);closeConfirmModal();focusTextarea();
   }
 
 
@@ -2036,6 +2112,7 @@
   // ============================================================
 
   function refreshLanguage() {
+    renderNotebook();
 
     /*
      * แปล static HTML ใหม่
@@ -2098,7 +2175,7 @@
 
     newNoteBtn.addEventListener(
       'click',
-      openConfirmModal
+      createNewNote
     );
   }
 
@@ -2301,7 +2378,9 @@
   // INITIALIZE
   // ============================================================
 
+  loadNotebook();
   loadNote();
+  setupNotebook();
 
   updateCounters();
 

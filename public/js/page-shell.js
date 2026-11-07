@@ -3,8 +3,8 @@
   'use strict';
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const page = $('.notepad-page') ? 'notepad' : $('.fc-sheet') ? 'converter' : 'workspace';
-  const root = $('.sheet, .fc-sheet, .notepad-page');
+  const page = $('.wf-sheet') ? 'workflow' : $('.notepad-page') ? 'notepad' : $('.fc-sheet') ? 'converter' : 'workspace';
+  const root = $('.sheet, .fc-sheet, .notepad-page, .wf-sheet');
   if (!root || $('.app-nav')) return;
 
   const icons = {
@@ -78,10 +78,11 @@
   for (const [id, href, key, fallback, glyph] of [
     ['workspace','./index.html','common.home','Workspace','home'],
     ['converter','./file-converter.html','page.fileConverter','File Converter','convert'],
+    ['workflow','./workflow.html',null,'Workflow Studio','spark'],
     ['notepad','./notepad.html','common.notepad','Notepad','note']
   ]) {
     const link=el('a','app-nav-link'); link.href=href; link.dataset.page=id;
-    link.innerHTML = `<span class="app-nav-link-icon">${svg(glyph)}</span><span data-i18n="${key}">${fallback}</span>`;
+    link.innerHTML = `<span class="app-nav-link-icon">${svg(glyph)}</span><span ${key ? `data-i18n="${key}"` : ""}>${fallback}</span>`;
     if (id===page) { link.classList.add('is-current');link.setAttribute('aria-current','page'); }
     links.append(link);
   }
@@ -99,7 +100,7 @@
   }
 
   // Friendly, SVG-based character artwork is decorative, never blocks interactions.
-  const hero = page==='workspace' ? $('.topbar') : page==='converter' ? $('.fc-hero') : $('.notepad-header');
+  const hero = page==='workspace' ? $('.topbar') : page==='converter' ? $('.fc-hero') : page==='notepad' ? $('.notepad-header') : null;
   if (hero) {
     hero.classList.add('kitto-hero','kitto-hero-'+page);
     const art=el('div','kitto-hero-art');
@@ -161,6 +162,7 @@
   const registry=[
     ['workspace','home','./index.html','Workspace / หน้าแรก','home main dashboard'],
     ['converter','convert','./file-converter.html','File Converter','convert files formats all'],
+    ['workflow','spark','./workflow.html','Workflow Studio / ทำรูปหลายไฟล์','batch image pipeline product images background resize compress'],
     ['notepad','note','./notepad.html','Notepad / สมุดโน้ต','notes text editor'],
     ...[['img-convert','image','แปลงรูปภาพ / Image Convert'],['img-crop','crop','ครอบตัดรูปภาพ / Crop'],
       ['img-bgremove','wand','ลบพื้นหลัง / Remove Background'],['img-compress','compress','บีบอัดรูปภาพ / Compress'],
@@ -226,5 +228,25 @@
     if(!palette.hidden) renderResults();
   }
   syncText(); document.addEventListener('languagechange',syncText);
+  // PWA: install action appears only if the browser reports installability.
+  let installEvent = null;
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault(); installEvent = event;
+    if (!document.querySelector('.app-install')) {
+      const b = el('button','app-install','↓ ติดตั้งแอป');
+      b.type='button'; b.addEventListener('click',async () => {
+        if (!installEvent) return;
+        const promptEvent=installEvent;installEvent=null;b.remove();
+        await promptEvent.prompt();
+      });
+      navTools.prepend(b);
+    }
+  });
+  window.addEventListener('appinstalled',()=>{installEvent=null;document.querySelector('.app-install')?.remove();});
+  if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')) {
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(error => {
+      console.warn('[KITTO PWA] Offline setup unavailable:',error);
+    }));
+  }
   const back=document.getElementById('btn-back-home');if(back)back.addEventListener('click',()=>{location.href='./index.html';});
 })();

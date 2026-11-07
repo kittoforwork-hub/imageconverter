@@ -6840,7 +6840,7 @@ ${body}
         "DOCX → PDF",
 
       description:
-        "แปลงข้อความจาก Word เป็น PDF",
+        "สร้าง PDF จากข้อความ Word (ไม่รักษาเลย์เอาต์/ภาพ)",
 
       category:
         "document",
@@ -6876,7 +6876,7 @@ ${body}
         "PPTX → PDF",
 
       description:
-        "ดึงข้อความจาก PowerPoint แล้วสร้าง PDF",
+        "สร้าง PDF จากข้อความสไลด์ (ไม่รักษาเลย์เอาต์/ภาพ)",
 
       category:
         "document",
@@ -7188,6 +7188,17 @@ ${body}
         converterId,
         "description"
       );
+
+    // DOCX/PPTX import only raw text from the source. State the limitation before conversion.
+    if (converterId === 'docx-pdf' || converterId === 'pptx-pdf') {
+      const warning = getLanguage() === 'th'
+        ? 'หมายเหตุ: ระบบนี้นำข้อความมาสร้าง PDF ใหม่ ไม่รักษาตาราง ภาพ แบบอักษร หรือเลย์เอาต์ของเอกสารต้นฉบับ เหมาะสำหรับดึงข้อความเท่านั้น'
+        : 'Note: This creates a text-only PDF. The original layout, fonts, tables and images are not preserved.';
+      modalDescription.textContent += '\n\n⚠ ' + warning;
+      modalDescription.style.whiteSpace = 'pre-line';
+    } else {
+      modalDescription.style.whiteSpace = '';
+    }
 
 
     modalCategory.textContent =
