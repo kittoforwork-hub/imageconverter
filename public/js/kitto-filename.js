@@ -9,8 +9,10 @@
   function basename(filename){return clean(String(filename).replace(/\.[^.]+$/,''));}
   function render(template,source,index,options={}){
     const digits=Math.max(1,Math.min(6,Number(options.digits)||3));
-    const start=Math.max(0,Math.min(999999,Number(options.start)||1));
-    const date=(options.date||new Date()).toISOString().slice(0,10).replaceAll('-','');
+    const first = Number(options.start ?? 1);
+    const start = Number.isFinite(first) && options.start !== '' ? Math.max(0, Math.min(999999, Math.trunc(first))) : 1;
+    const today=options.date||new Date();
+    const date=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('');
     const tokens={name:basename(source),n:String(start+index).padStart(digits,'0'),date};
     const pattern=String(template||'{name}-kitto').slice(0,120);
     const raw=pattern.replace(/\{(name|n|date)\}/g,(_,key)=>tokens[key]);

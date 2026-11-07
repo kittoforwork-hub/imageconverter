@@ -90,17 +90,8 @@
   // CONFIG
   // ============================================================
 
-  const OUTPUT_FORMAT =
-    'image/png';
-
   const OUTPUT_EXTENSION =
     'png';
-
-  const BACKGROUND_API_ENDPOINT =
-    '/api/remove-background';
-
-  const MAX_UPLOAD_BYTES =
-    20 * 1024 * 1024;
 
   // ============================================================
   // STATE
@@ -304,77 +295,18 @@
       throw new Error('BACKGROUND_CANCELLED');
     }
 
-    if (job.file.size > MAX_UPLOAD_BYTES) {
-      throw new Error('BACKGROUND_FILE_TOO_LARGE');
-    }
-
     const controller = new AbortController();
     job.abortController = controller;
     job.mode = 'cloudflare';
 
-    const timeout = setTimeout(
-      () => controller.abort(),
-      120 * 1000
-    );
-
     try {
       job.setProgress(8);
       job.setProgressText('ai', 10);
-
-      const response = await fetch(
-        BACKGROUND_API_ENDPOINT,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': job.file.type || 'application/octet-stream',
-            'Accept': 'image/png'
-          },
-          body: job.file,
-          signal: controller.signal
-        }
-      );
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        const diagnostic = [payload.cfCode, payload.diagnostic]
-          .filter(Boolean)
-          .join(' | ');
-        throw new Error(
-          `${payload.code || `BACKGROUND_API_HTTP_${response.status}`}${diagnostic ? ` [${diagnostic}]` : ''}`
-        );
-      }
-
-      const outputType = (response.headers.get('Content-Type') || '')
-        .split(';', 1)[0]
-        .trim()
-        .toLowerCase();
-
-      if (outputType !== OUTPUT_FORMAT) {
-        throw new Error('BACKGROUND_INVALID_OUTPUT');
-      }
-
+      const result = await window.KittoBackground.remove(job.file, controller.signal);
       job.setProgress(92);
       job.setProgressText('output', 90);
-
-      const blob = await response.blob();
-      if (!blob.size) {
-        throw new Error('BACKGROUND_EMPTY_RESULT');
-      }
-
-      return blob;
-
-    } catch (error) {
-      if (controller.signal.aborted || (error && error.name === 'AbortError')) {
-        throw new Error(
-          job.disposed
-            ? 'BACKGROUND_CANCELLED'
-            : 'BACKGROUND_TIMEOUT'
-        );
-      }
-      throw error;
-
+      return result;
     } finally {
-      clearTimeout(timeout);
       if (job.abortController === controller) {
         job.abortController = null;
       }
@@ -902,6 +834,12 @@
 
       }
 
+      if (this.errorKey) {
+        this.setError(this.errorKey, this.backgroundError
+          ? { message: window.KittoBackground.message(this.backgroundError) } : undefined);
+        return;
+      }
+
       this.status.textContent =
         t(
           'image.waitingBackground'
@@ -946,6 +884,8 @@
 
       }
 
+      this.errorKey = null;
+      this.backgroundError = null;
       this.processing =
         true;
 
@@ -1111,22 +1051,8 @@
             )
           ) {
 
-            const errorCode = message.split(/[ \[]/, 1)[0];
-            const errorDetails = {
-              BACKGROUND_FILE_TOO_LARGE: 'ไฟล์มีขนาดเกิน 20 MB',
-              BACKGROUND_UNSUPPORTED_FORMAT: 'รองรับไฟล์ JPG, PNG, WebP และ AVIF เท่านั้น',
-              BACKGROUND_FREE_LIMIT_REACHED: 'ใช้โควต้าฟรี Cloudflare Images 5,000 รายการต่อเดือนแล้ว',
-              BACKGROUND_SERVICE_NOT_CONFIGURED: 'ยังไม่ได้ตั้งค่า Cloudflare Images binding',
-              BACKGROUND_IMAGES_BILLING_NOT_SUPPORTED: 'บัญชี Cloudflare ใช้ระบบ Images Billing แบบเก่า ต้องเปลี่ยนเป็น Images plan ก่อน',
-              BACKGROUND_IMAGE_PROCESSING_LIMIT: 'รูปมีขนาดหรือความละเอียดเกินขีดจำกัดที่ Cloudflare ประมวลผลได้',
-              BACKGROUND_TIMEOUT: 'การประมวลผลใช้เวลานานเกินไป กรุณาลองใหม่',
-              BACKGROUND_PROCESSING_FAILED: 'Cloudflare ไม่สามารถประมวลผลรูปนี้ได้'
-            };
-
-            this.setError(
-              errorKey(error),
-              { message: errorDetails[errorCode] || errorCode || 'กรุณาลองใหม่อีกครั้ง' }
-            );
+            this.backgroundError = message;
+            this.setError(errorKey(error), { message: window.KittoBackground.message(message) });
 
             this.setProgress(
               0
@@ -1262,19 +1188,7 @@
     ).forEach(
       file => {
 
-        if (
-          !file ||
-          !String(
-            file.type ||
-            ''
-          ).startsWith(
-            'image/'
-          )
-        ) {
-
-          return;
-
-        }
+        if (!file) return;
 
         if (
           hasDuplicate(

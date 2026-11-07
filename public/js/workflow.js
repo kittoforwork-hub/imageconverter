@@ -10,6 +10,7 @@
   let namingIndex=0;
   let history=[];let historyPosition=-1;let restoring=false;
   let renderHandle=0;
+  let exporting=false;
   const sourceUrls = new Map();
   let previousPreview = null;
   let installedCustom = false;
@@ -68,7 +69,7 @@
     if(!preferences.get().preserveSettings){try{localStorage.removeItem(storedRecoveryKey);}catch(_){}}
   });
   function updateNamePreview(){
-    $('wf-name-preview').textContent=tr('ตัวอย่าง: ','Example: ')+filename.render($('wf-name-template').value,'product-photo.png',0,{start:$('wf-name-start').value,digits:$('wf-name-digits').value})+'.'+extension[$('wf-format').value];
+    $('wf-name-preview').textContent=tr('ตัวอย่าง: ','Example: ')+filename.render($('wf-name-template').value,'product-photo.png',namingIndex,{start:$('wf-name-start').value,digits:$('wf-name-digits').value})+'.'+extension[$('wf-format').value];
   }
   function commitHistory(){
     if(restoring)return;
@@ -134,15 +135,14 @@
     let input=item.file;
     if(item.config.removeBg){
       progress(.08,'กำลังลบพื้นหลัง');
-      const response=await fetch('/api/remove-background',{method:'POST',headers:{'Content-Type':mimeForFile(item.file)},body:input,signal,cache:'no-store'});
-      if(!response.ok){
-        let detail='';try{detail=(await response.json()).code||'';}catch(_){}
-        throw new Error(`ลบพื้นหลังไม่สำเร็จ (${response.status}${detail?' · '+detail:''})`);
+      try {
+        input=await window.KittoBackground.remove(input,signal);
+      } catch (error) {
+        throw new Error(window.KittoBackground.message(error.message));
       }
-      input=await response.blob();
       if(signal.aborted)throw new DOMException('Canceled','AbortError');
     }
-    progress(item.config.removeBg?.55:.2,'กำลังปรับภาพ');
+    progress(item.config.removeBg ? 0.55 : 0.2,'กำลังปรับภาพ');
     const result=await transformWithWorker(input,item.config,signal);
     if(signal.aborted)throw new DOMException('Canceled','AbortError');
     if(!result.blob||!result.blob.size)throw new Error('ไฟล์ผลลัพธ์ว่างเปล่า');
@@ -195,7 +195,7 @@
     $('wf-overall').setAttribute('aria-valuenow',Math.round(total));$('wf-overall-fill').style.width=total+'%';
     $('wf-clear').disabled=!items.some(i=>['done','failed','canceled'].includes(i.status));
     $('wf-cancel-all').disabled=!items.some(i=>['queued','processing'].includes(i.status));
-    $('wf-download-zip').disabled=!done.length;
+    $('wf-download-zip').disabled=exporting || !done.length;
     if(previousPreview&&!items.find(i=>i.id===previousPreview)){$('wf-compare-panel').hidden=true;previousPreview=null;}
   }
   function filesClick(){$('wf-files').click();}
@@ -217,6 +217,7 @@
       while(reserved.has(candidate.toLocaleLowerCase()))candidate=`${name} (${attempt++}).${extension[config.format]}`;
       reserved.add(candidate.toLocaleLowerCase());item.targetName=candidate;
     }
+    updateNamePreview();
     $('wf-start').disabled=true;
     announce(tr(`เพิ่ม ${pending.length} ไฟล์ในคิวแล้ว · ประมวลผลพร้อมกันสูงสุด ${queue.concurrency} ไฟล์`,`${pending.length} images queued · up to ${queue.concurrency} jobs at a time`));
     if(config.removeBg) $('wf-export-message').textContent='ขั้นตอน AI ส่งภาพที่เลือกไปยัง Cloudflare เพื่อประมวลผล ไม่เก็บไฟล์ถาวร';
@@ -225,8 +226,8 @@
   $('wf-cancel-all').addEventListener('click',()=>queue.stopAll());
   $('wf-compare-slider').addEventListener('input',adjustComparison);
   $('wf-download-zip').addEventListener('click',async()=>{
-    const done=queue.items.filter(i=>i.status==='done');if(!done.length)return;
-    const btn=$('wf-download-zip');btn.disabled=true;
+    const done=queue.items.filter(i=>i.status==='done');if(exporting || !done.length)return;
+    exporting=true;$('wf-download-zip').disabled=true;
     try {
       const mode=preferences?.get().zipMode||'auto';
       if((done.length===1&&mode==='auto')||(mode==='individual'&&done.length<=10)){
@@ -237,7 +238,7 @@
       const zip=await window.KittoZipStore.makeZip(done.map(i=>({name:i.outputName,blob:i.result})),p=>{$('wf-export-message').textContent=`กำลังเตรียม ZIP ${Math.round(p*100)}%`;});
       downloadBlob(zip,'KITTO-workflow-results.zip');$('wf-export-message').textContent=`เตรียม ZIP เสร็จ ${done.length} ไฟล์ · ${humanSize(zip.size)}`;
     }catch(error){$('wf-export-message').textContent=error.message||'สร้าง ZIP ไม่สำเร็จ';}
-    finally{btn.disabled=false;}
+    finally{exporting=false;scheduleRender();}
   });
   $('wf-quality').addEventListener('input',()=>{$('wf-quality-value').textContent=$('wf-quality').value+'%';});
   $('wf-format').addEventListener('change',()=>{ensureFormat();updateNamePreview();});
@@ -262,5 +263,5 @@
   if(preferences?.get().preserveSettings){try{const saved=JSON.parse(localStorage.getItem(storedRecoveryKey)||'null');if(saved&&typeof saved==='object'&&['fit','square'].includes(saved.mode))initial={...initial,...saved};}catch(_){}}
   applyConfig(initial);commitHistory();
   render([]);
-  window.addEventListener('pagehide',()=>{removeBlobLinks();queue.stopAll();workerPool?.dispose();});
+  window.addEventListener('pagehide',event=>{if(event.persisted)return;removeBlobLinks();queue.stopAll();workerPool?.dispose();});
 })();

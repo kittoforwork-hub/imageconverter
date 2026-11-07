@@ -90,9 +90,9 @@
   }
 
   function persistNotebook() {
-    if (!notebookReady) return;
-    try {localStorage.setItem(NOTEBOOK_KEY, JSON.stringify({version:2, activeId:activeNoteId,notes:notebook}));}
-    catch (error) { console.error('[Notepad] Notebook save failed',error);setStatus('notepad.status.saveFailed','error'); }
+    if (!notebookReady) return false;
+    try {localStorage.setItem(NOTEBOOK_KEY, JSON.stringify({version:2, activeId:activeNoteId,notes:notebook})); return true;}
+    catch (error) { console.error('[Notepad] Notebook save failed',error);setStatus('notepad.status.saveFailed','error'); return false; }
   }
 
   function activeNote() { return notebook.find(n => n.id === activeNoteId); }
@@ -125,7 +125,8 @@
     if (!n) return;
     activeNoteId=n.id;textarea.value=n.content;
     cancelPendingHistory();resetHistory();updateCounters();refreshSearchAfterTextChange();
-    persistNotebook();renderNotebook();setStatus('notepad.status.saved','saved');
+    if (persistNotebook()) setStatus('notepad.status.saved','saved');
+    renderNotebook();
   }
 
   function exportNotebook() {
@@ -441,16 +442,15 @@
 
     try {
 
-      localStorage.setItem(
-        STORAGE_KEY,
-        textarea.value
-      );
-
       const current=activeNote();
       if (current) { current.content=textarea.value;current.updatedAt=Date.now(); }
-      persistNotebook();renderNotebook();
-
-
+      const stored = persistNotebook();
+      renderNotebook();
+      if (!stored) {
+        isSaving = false;
+        saveTimer = null;
+        return;
+      }
       isSaving =
         false;
 

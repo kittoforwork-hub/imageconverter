@@ -27,7 +27,7 @@
     }
     pump() {
       while (this.running < this.concurrency) {
-        const item = this.items.find(i => i.status === 'queued');
+        const item = this.items.find(i => i.status === 'queued' && !i.controller);
         if (!item) return;
         item.status = 'processing'; item.controller = new AbortController();
         this.running++; this.emit();
@@ -39,8 +39,9 @@
             item.progress = 1; item.phase = 'เสร็จแล้ว'; item.status = 'done';
           })
           .catch(error => {
-            if (signal.aborted) { if (item.status !== 'queued') {item.status = 'canceled'; item.phase = 'ยกเลิก';} }
-            else { item.status = 'failed'; item.phase = 'ผิดพลาด'; item.error = error?.message || 'ประมวลผลไม่สำเร็จ'; }
+            if (signal.aborted) return;
+            item.status = 'failed'; item.phase = 'ผิดพลาด';
+            item.error = error?.message || 'ประมวลผลไม่สำเร็จ';
           })
           .finally(() => {
             item.controller = null; this.running--;
@@ -68,7 +69,15 @@
       });
       this.emit();
     }
-    stopAll() { this.items.forEach(i => this.cancel(i.id)); }
+    stopAll() {
+      for (const item of this.items) {
+        if (!['queued', 'processing'].includes(item.status)) continue;
+        item.status = 'canceled';
+        item.phase = 'ยกเลิก';
+        item.controller?.abort();
+      }
+      this.emit();
+    }
   }
   window.KittoQueue = KittoQueue;
 })();

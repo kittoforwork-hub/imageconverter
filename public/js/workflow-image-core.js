@@ -49,13 +49,15 @@
       // Lossless PNG does not have an adjustable quality setting. Do not claim a byte target was reached.
       if (target && mime !== 'image/png' && output.size > target) {
         let lo = .28, hi = quality;
+        let bestFit = null;
         for (let pass = 0; pass < 6; pass++) {
           quality = (lo + hi) / 2;
           const candidate = await encode(quality);
           if (candidate.size < output.size) output = candidate;
           if (candidate.size > target) hi = quality;
-          else lo = quality;
+          else { bestFit = candidate; lo = quality; }
         }
+        if (bestFit) output = bestFit;
         // A target is best-effort; reduction of dimensions is explicit in the UI.
       }
       if (output.type && output.type !== mime) throw new Error('เบราว์เซอร์นี้ไม่รองรับรูปแบบ '+mime+' ที่เลือก');
