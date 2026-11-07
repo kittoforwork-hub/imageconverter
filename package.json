@@ -1,14 +1,15 @@
 {
   "name": "workshop-utility-by-kitto",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "private": true,
+  "type": "module",
   "description": "Browser-based image, PDF and file utilities by KITTO.",
   "scripts": {
     "check": "node scripts/check-project.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "preview": "python -m http.server 8787 --directory public",
-    "test:smoke": "node scripts/smoke-workflow.mjs && node scripts/test-v4.mjs"
+    "test:smoke": "node scripts/smoke-workflow.mjs && node scripts/test-v4.mjs && node scripts/test-boundaries.mjs"
   },
   "devDependencies": {
     "wrangler": "4.154.0"
