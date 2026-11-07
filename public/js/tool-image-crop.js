@@ -270,6 +270,12 @@
       this.dragPointerId =
         null;
 
+      // Undo / redo tracks crop rectangle, ratio and format for this image only.
+      this.editHistory=[];
+      this.editIndex=-1;
+      this.historyUndoBtn=null;
+      this.historyRedoBtn=null;
+
 
       this.el =
         jobTemplate
@@ -388,6 +394,20 @@
 
       }
 
+
+      // Add controls to the existing crop card without replacing its editor.
+      const actions = this.cropBtn.parentElement;
+      if(actions){
+        const makeHistoryButton=(label,title,delta)=>{
+          const button=document.createElement('button');button.type='button';button.className='btn btn-small btn-ghost';
+          button.textContent=label;button.title=title;button.disabled=true;
+          button.setAttribute('aria-label',title);
+          button.addEventListener('click',()=>this.restoreEdit(delta));
+          actions.insertBefore(button,this.cropBtn);return button;
+        };
+        this.historyUndoBtn=makeHistoryButton('↶','ย้อนกลับการครอบตัด',-1);
+        this.historyRedoBtn=makeHistoryButton('↷','ทำซ้ำการครอบตัด',1);
+      }
 
       // ------------------------------------------------------
       // Processing state
@@ -628,6 +648,7 @@
             this.invalidateResult();
 
             this.applyRatioToBox();
+            this.captureEdit();
 
           }
         );
@@ -725,6 +746,7 @@
 
 
             this.invalidateResult();
+            this.captureEdit();
 
           }
         );
@@ -1297,6 +1319,41 @@
     // INITIAL CROP BOX
     // ========================================================
 
+    captureEdit() {
+      if(this.disposed||!this.box?.width||!this.box?.height)return;
+      const d=this.getDisplayRect();if(!d.width||!d.height)return;
+      const snapshot=JSON.stringify({
+        rectangle:{x:(this.box.left-d.left)/d.width,y:(this.box.top-d.top)/d.height,w:this.box.width/d.width,h:this.box.height/d.height},
+        ratio:this.ratioGroup?.querySelector('.seg-btn.is-active')?.dataset.ratio||'free',
+        format:this.format
+      });
+      if(this.editHistory[this.editIndex]===snapshot)return;
+      this.editHistory=this.editHistory.slice(0,this.editIndex+1);
+      this.editHistory.push(snapshot);
+      if(this.editHistory.length>30)this.editHistory.shift();
+      this.editIndex=this.editHistory.length-1;this.syncHistoryButtons();
+    }
+
+    syncHistoryButtons(){
+      if(this.historyUndoBtn)this.historyUndoBtn.disabled=this.editIndex<=0||this.isCropping;
+      if(this.historyRedoBtn)this.historyRedoBtn.disabled=this.editIndex>=this.editHistory.length-1||this.isCropping;
+    }
+
+    restoreEdit(delta){
+      if(this.disposed||this.isCropping)return;
+      const next=this.editIndex+delta;
+      if(next<0||next>=this.editHistory.length)return;
+      this.editIndex=next;
+      const state=JSON.parse(this.editHistory[next]);
+      if(this.ratioGroup){this.ratioGroup.querySelectorAll('.seg-btn').forEach(button=>button.classList.toggle('is-active',button.dataset.ratio===state.ratio));}
+      this.ratio=Object.prototype.hasOwnProperty.call(RATIOS,state.ratio)?RATIOS[state.ratio]:null;
+      this.format=state.format;
+      if(this.formatGroup){this.formatGroup.querySelectorAll('.seg-btn').forEach(button=>button.classList.toggle('is-active',button.dataset.format===state.format));}
+      const d=this.getDisplayRect();
+      this.box=this.normalizeBox({left:d.left+state.rectangle.x*d.width,top:d.top+state.rectangle.y*d.height,width:state.rectangle.w*d.width,height:state.rectangle.h*d.height});
+      this.invalidateResult();this.render();this.syncHistoryButtons();
+    }
+
     initBox() {
 
       if (
@@ -1547,6 +1604,7 @@
 
 
       this.render();
+      if(this.editIndex===-1)this.captureEdit();
 
     }
 
@@ -2874,6 +2932,7 @@
 
 
           cleanupPointer();
+          if(!this.disposed)this.captureEdit();
 
         };
 

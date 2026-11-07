@@ -25,7 +25,21 @@
       }
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(bitmap, Math.floor((width - scaledW) / 2), Math.floor((height - scaledH) / 2), scaledW, scaledH);
+      let source=bitmap;
+      // Refine alpha BEFORE flattening onto white/JPG; otherwise edge processing has no effect.
+      if (options.removeBg && (Number(options.alphaTrim)>0 || Number(options.alphaSoftness)>0)) {
+        if (typeof env.KittoRefineAlpha !== 'function') throw new Error('ไม่พบระบบปรับขอบภาพ');
+        const temp = env.OffscreenCanvas ? new env.OffscreenCanvas(scaledW, scaledH) : env.document.createElement('canvas');
+        temp.width=scaledW;temp.height=scaledH;
+        const edgeContext=temp.getContext('2d',{willReadFrequently:true});
+        if(!edgeContext)throw new Error('ไม่สามารถปรับขอบภาพได้');
+        edgeContext.drawImage(bitmap,0,0,scaledW,scaledH);
+        const pixels=edgeContext.getImageData(0,0,scaledW,scaledH);
+        env.KittoRefineAlpha(pixels.data,scaledW,scaledH,options.alphaTrim,options.alphaSoftness);
+        edgeContext.putImageData(pixels,0,0);
+        source=temp;
+      }
+      ctx.drawImage(source, Math.floor((width - scaledW) / 2), Math.floor((height - scaledH) / 2), scaledW, scaledH);
       const encode = async quality => canvas.convertToBlob
         ? canvas.convertToBlob({ type: mime, quality })
         : new Promise((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('เข้ารหัสรูปภาพไม่สำเร็จ')), mime, quality));
@@ -44,6 +58,7 @@
         }
         // A target is best-effort; reduction of dimensions is explicit in the UI.
       }
+      if (output.type && output.type !== mime) throw new Error('เบราว์เซอร์นี้ไม่รองรับรูปแบบ '+mime+' ที่เลือก');
       return { blob: output, width, height };
     } finally { bitmap.close?.(); }
   }

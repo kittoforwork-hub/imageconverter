@@ -3,6 +3,13 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const selected = [];
+  const preferences=window.KittoSettings;
+  const filename=window.KittoFileName;
+  const storedRecoveryKey='kitto-workflow-recovery-v4';
+  const workerPool=(typeof Worker!=='undefined'&&typeof OffscreenCanvas!=='undefined') ? new window.KittoWorkerPool('./js/workflow-worker.js',3) : null;
+  let namingIndex=0;
+  let history=[];let historyPosition=-1;let restoring=false;
+  let renderHandle=0;
   const sourceUrls = new Map();
   let previousPreview = null;
   let installedCustom = false;
@@ -22,7 +29,11 @@
     return {
       mode: $('wf-mode').value, maxDimension:Number($('wf-size').value), format:$('wf-format').value,
       quality:Number($('wf-quality').value)/100,background:$('wf-bg').value,
-      targetKB:$('wf-format').value==='png'?0:Math.max(0,Math.min(15000,Number($('wf-target').value)||0)), removeBg:$('wf-remove-bg').checked
+      targetKB:$('wf-format').value==='png'?0:Math.max(0,Math.min(15000,Number($('wf-target').value)||0)), removeBg:$('wf-remove-bg').checked,
+      alphaTrim:$('wf-remove-bg').checked ? Number($('wf-alpha-trim').value) : 0,
+      alphaSoftness:$('wf-remove-bg').checked ? Number($('wf-alpha-softness').value) : 0,
+      nameTemplate:$('wf-name-template').value || '{name}-kitto',
+      nameStart:Number($('wf-name-start').value??1), nameDigits:Number($('wf-name-digits').value)||3
     };
   }
   function applyConfig(conf) {
@@ -30,8 +41,13 @@
     $('wf-format').value=conf.format; $('wf-quality').value=String(Math.round(conf.quality*100));
     $('wf-bg').value=conf.background; $('wf-target').value=String(conf.targetKB||0);
     $('wf-remove-bg').checked=Boolean(conf.removeBg);
+    $('wf-alpha-trim').value=String(conf.alphaTrim||0);
+    $('wf-alpha-softness').value=String(conf.alphaSoftness||0);
+    $('wf-name-template').value=conf.nameTemplate||'{name}-kitto';
+    $('wf-name-start').value=String(conf.nameStart??1);
+    $('wf-name-digits').value=String(conf.nameDigits||3);
     $('wf-quality-value').textContent=$('wf-quality').value+'%';
-    ensureFormat();
+    ensureFormat();updateNamePreview();
   }
   function ensureFormat() {
     const isPng=$('wf-format').value==='png';
@@ -39,13 +55,45 @@
     $('wf-target').disabled=isPng;
     $('wf-quality').title=isPng?'PNG ใช้การบีบอัดแบบไม่สูญเสียข้อมูล':'';
     if ($('wf-format').value==='jpeg' && $('wf-bg').value==='transparent') $('wf-bg').value='white';
+    $('wf-alpha-trim').disabled=!$('wf-remove-bg').checked;
+    $('wf-alpha-softness').disabled=!$('wf-remove-bg').checked;
   }
   function announce(text) {$('wf-upload-message').textContent=text;}
   function tempObject(file) { return URL.createObjectURL(file); }
-  const lowMemory = (navigator.deviceMemory && navigator.deviceMemory < 4) || window.matchMedia('(max-width:700px)').matches;
-  const queue = new window.KittoQueue(processItem, render, lowMemory ? 1 : 2);
+  const queue = new window.KittoQueue(processItem, scheduleRender,preferences?.effectiveConcurrency(navigator.deviceMemory,window.innerWidth)||2);
+  function scheduleRender(){if(renderHandle)return;renderHandle=requestAnimationFrame(()=>{renderHandle=0;render(queue.items);});}
+  preferences?.onChange(()=>{
+    queue.concurrency=preferences.effectiveConcurrency(navigator.deviceMemory,window.innerWidth);
+    workerPool?.setMax(queue.concurrency);queue.pump();
+    if(!preferences.get().preserveSettings){try{localStorage.removeItem(storedRecoveryKey);}catch(_){}}
+  });
+  function updateNamePreview(){
+    $('wf-name-preview').textContent=tr('ตัวอย่าง: ','Example: ')+filename.render($('wf-name-template').value,'product-photo.png',0,{start:$('wf-name-start').value,digits:$('wf-name-digits').value})+'.'+extension[$('wf-format').value];
+  }
+  function commitHistory(){
+    if(restoring)return;
+    const snapshot=JSON.stringify(currentConfig());
+    if(history[historyPosition]===snapshot)return;
+    history=history.slice(0,historyPosition+1);history.push(snapshot);
+    if(history.length>30)history.shift();
+    historyPosition=history.length-1;
+    updateHistoryButtons();
+    if(preferences?.get().preserveSettings){try{localStorage.setItem(storedRecoveryKey,snapshot);}catch(_){}}
+  }
+  function updateHistoryButtons(){$('wf-undo').disabled=historyPosition<=0;$('wf-redo').disabled=historyPosition>=history.length-1;}
+  function travelHistory(delta){const next=historyPosition+delta;if(next<0||next>=history.length)return;
+    historyPosition=next;restoring=true;try{applyConfig(JSON.parse(history[next]));}finally{restoring=false;}updateHistoryButtons();
+  }
+  $('wf-undo').addEventListener('click',()=>travelHistory(-1));
+  $('wf-redo').addEventListener('click',()=>travelHistory(1));
+  function mimeForFile(file){
+    if(/^(image\/jpeg|image\/png|image\/webp)$/.test(file.type))return file.type;
+    if(file.type)return '';
+    const ext=file.name.toLowerCase().split('.').pop();
+    return ({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp'})[ext]||'';
+  }
   function validFile(file) {
-    return /^(image\/jpeg|image\/png|image\/webp)$/.test(file.type) && file.size>0 && file.size<=20*1024*1024;
+    return Boolean(mimeForFile(file))&&file.size>0&&file.size<=20*1024*1024;
   }
   function stageFiles(files) {
     let duplicates=0, bad=0; const keys=new Set([...selected,...queue.items.map(i=>i.file)].map(i=>[i.name,i.size,i.lastModified].join('|')));
@@ -70,16 +118,14 @@
   }
   async function transformWithWorker(blob,options,signal) {
     if(signal.aborted)throw new DOMException('Canceled','AbortError');
-    if(typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined') {
-      return new Promise((resolve,reject)=>{
-        const worker=new Worker('./js/workflow-worker.js');let settled=false;
-        const cleanup=()=>{worker.terminate();signal.removeEventListener('abort',abort);};
-        const abort=()=>{if(settled)return;settled=true;cleanup();reject(new DOMException('Canceled','AbortError'));};
-        signal.addEventListener('abort',abort,{once:true});
-        worker.onmessage=event=>{if(settled)return;settled=true;cleanup();event.data.ok?resolve(event.data):reject(new Error(event.data.error||'แปลงรูปภาพไม่สำเร็จ'));};
-        worker.onerror=event=>{if(settled)return;settled=true;cleanup();reject(new Error(event.message||'Image worker failed'));};
-        worker.postMessage({blob,options});
-      });
+    if(workerPool){
+      try {return await workerPool.transform(blob,options,signal);}
+      catch(error){
+        if(signal.aborted||(!/worker/i.test(error?.message||'')&&error?.name!=='SecurityError'))throw error;
+        // Some browsers block Worker creation under local previews or security policies.
+        // Decode on the main thread instead of making the whole queue fail.
+        console.warn('[KITTO] Worker unavailable, using local fallback');
+      }
     }
     // Non-OffscreenCanvas browsers fall back to the same transformation locally.
     return window.KittoTransformImage(blob,options,window);
@@ -88,7 +134,7 @@
     let input=item.file;
     if(item.config.removeBg){
       progress(.08,'กำลังลบพื้นหลัง');
-      const response=await fetch('/api/remove-background',{method:'POST',headers:{'Content-Type':input.type},body:input,signal,cache:'no-store'});
+      const response=await fetch('/api/remove-background',{method:'POST',headers:{'Content-Type':mimeForFile(item.file)},body:input,signal,cache:'no-store'});
       if(!response.ok){
         let detail='';try{detail=(await response.json()).code||'';}catch(_){}
         throw new Error(`ลบพื้นหลังไม่สำเร็จ (${response.status}${detail?' · '+detail:''})`);
@@ -101,8 +147,7 @@
     if(signal.aborted)throw new DOMException('Canceled','AbortError');
     if(!result.blob||!result.blob.size)throw new Error('ไฟล์ผลลัพธ์ว่างเปล่า');
     progress(.95,'กำลังจัดไฟล์');
-    const safeName=item.name.replace(/\.[^.]+$/,'').replace(/[\\/\x00-\x1f]/g,'_').slice(0,110);
-    return { blob:result.blob, name:`${safeName || 'kitto'}-kitto.${extension[item.config.format]}` };
+    return { blob:result.blob, name:item.targetName||`${filename.basename(item.name)}-kitto.${extension[item.config.format]}` };
   }
   function preview(item) {
     if(item.status!=='done')return;
@@ -163,7 +208,16 @@
   $('wf-start').addEventListener('click',()=>{
     if(!selected.length)return;
     const config=currentConfig();const pending=selected.splice(0);
-    queue.add(pending,config);$('wf-start').disabled=true;
+    const added=queue.add(pending,config);
+    // Reserve output names before any asynchronous job can complete.
+    const reserved=new Set(queue.items.filter(item=>!added.includes(item)).map(item=>String(item.targetName||'').toLocaleLowerCase()));
+    for(const item of added){
+      const name=filename.render(config.nameTemplate,item.name,namingIndex++,{start:config.nameStart,digits:config.nameDigits});
+      let candidate=`${name}.${extension[config.format]}`;let attempt=2;
+      while(reserved.has(candidate.toLocaleLowerCase()))candidate=`${name} (${attempt++}).${extension[config.format]}`;
+      reserved.add(candidate.toLocaleLowerCase());item.targetName=candidate;
+    }
+    $('wf-start').disabled=true;
     announce(tr(`เพิ่ม ${pending.length} ไฟล์ในคิวแล้ว · ประมวลผลพร้อมกันสูงสุด ${queue.concurrency} ไฟล์`,`${pending.length} images queued · up to ${queue.concurrency} jobs at a time`));
     if(config.removeBg) $('wf-export-message').textContent='ขั้นตอน AI ส่งภาพที่เลือกไปยัง Cloudflare เพื่อประมวลผล ไม่เก็บไฟล์ถาวร';
   });
@@ -174,7 +228,11 @@
     const done=queue.items.filter(i=>i.status==='done');if(!done.length)return;
     const btn=$('wf-download-zip');btn.disabled=true;
     try {
-      if(done.length===1){downloadBlob(done[0].result,done[0].outputName);$('wf-export-message').textContent='ดาวน์โหลดไฟล์เรียบร้อย';return;}
+      const mode=preferences?.get().zipMode||'auto';
+      if((done.length===1&&mode==='auto')||(mode==='individual'&&done.length<=10)){
+        for(const item of done)downloadBlob(item.result,item.outputName);
+        $('wf-export-message').textContent=tr(`เริ่มดาวน์โหลด ${done.length} ไฟล์แล้ว (เบราว์เซอร์อาจขออนุญาตดาวน์โหลดหลายไฟล์)`,`Started ${done.length} download(s). Your browser may request permission for multiple files.`);return;
+      }
       $('wf-export-message').textContent='กำลังเตรียม ZIP...';
       const zip=await window.KittoZipStore.makeZip(done.map(i=>({name:i.outputName,blob:i.result})),p=>{$('wf-export-message').textContent=`กำลังเตรียม ZIP ${Math.round(p*100)}%`;});
       downloadBlob(zip,'KITTO-workflow-results.zip');$('wf-export-message').textContent=`เตรียม ZIP เสร็จ ${done.length} ไฟล์ · ${humanSize(zip.size)}`;
@@ -182,19 +240,27 @@
     finally{btn.disabled=false;}
   });
   $('wf-quality').addEventListener('input',()=>{$('wf-quality-value').textContent=$('wf-quality').value+'%';});
-  $('wf-format').addEventListener('change',ensureFormat);
+  $('wf-format').addEventListener('change',()=>{ensureFormat();updateNamePreview();});
   $('wf-bg').addEventListener('change',ensureFormat);
+  $('wf-remove-bg').addEventListener('change',ensureFormat);
+  $('wf-compare-bg').addEventListener('change',()=>{$('wf-compare').classList.remove('bg-checker','bg-white','bg-dark');$('wf-compare').classList.add('bg-'+$('wf-compare-bg').value);});
+  for(const id of ['wf-mode','wf-size','wf-format','wf-quality','wf-bg','wf-target','wf-remove-bg','wf-alpha-trim','wf-alpha-softness','wf-name-template','wf-name-start','wf-name-digits']){
+    $(id).addEventListener('change',()=>{ensureFormat();updateNamePreview();commitHistory();});
+  }
+  for(const id of ['wf-name-template','wf-name-start','wf-name-digits'])$(id).addEventListener('input',updateNamePreview);
   $('wf-preset').addEventListener('change',()=>{if($('wf-preset').value==='custom'){
     try {applyConfig(JSON.parse(localStorage.getItem(savedKey)));}catch(_){} }
-    else applyConfig(presetOptions[$('wf-preset').value]);});
+    else applyConfig(presetOptions[$('wf-preset').value]);commitHistory();});
   $('wf-save-preset').addEventListener('click',()=>{try{localStorage.setItem(savedKey,JSON.stringify(currentConfig()));
     if(!$('wf-preset').querySelector('[value=custom]')){const o=document.createElement('option');o.value='custom';o.textContent=window.I18n?.getLanguage?.()==='th'?'✦ ค่าที่ฉันบันทึก':'✦ My saved preset';$('wf-preset').append(o);}
     $('wf-preset').value='custom';announce(tr('บันทึกค่า Workflow ในเบราว์เซอร์แล้ว','Workflow settings saved in this browser'));
   }catch(_){announce(tr('ไม่สามารถบันทึกค่าในเบราว์เซอร์ได้','Could not save settings in this browser'));}});
-  $('wf-reset').addEventListener('click',()=>{$('wf-preset').value='product';applyConfig(presetOptions.product);});
+  $('wf-reset').addEventListener('click',()=>{$('wf-preset').value='product';applyConfig({...presetOptions.product,quality:(preferences?.get().quality||85)/100});commitHistory();});
   try{if(localStorage.getItem(savedKey)){const o=document.createElement('option');o.value='custom';o.textContent=window.I18n?.getLanguage?.()==='th'?'✦ ค่าที่ฉันบันทึก':'✦ My saved preset';$('wf-preset').append(o);}}
   catch(_){};
-  applyConfig(presetOptions.product);
+  let initial={...presetOptions.product,quality:(preferences?.get().quality||85)/100};
+  if(preferences?.get().preserveSettings){try{const saved=JSON.parse(localStorage.getItem(storedRecoveryKey)||'null');if(saved&&typeof saved==='object'&&['fit','square'].includes(saved.mode))initial={...initial,...saved};}catch(_){}}
+  applyConfig(initial);commitHistory();
   render([]);
-  window.addEventListener('pagehide',()=>{removeBlobLinks();queue.stopAll();});
+  window.addEventListener('pagehide',()=>{removeBlobLinks();queue.stopAll();workerPool?.dispose();});
 })();

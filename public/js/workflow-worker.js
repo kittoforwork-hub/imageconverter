@@ -1,4 +1,4 @@
-importScripts('./workflow-image-core.js');
+importScripts('./kitto-image-refine.js','./workflow-image-core.js');
 self.onmessage = async event => {
   const { blob, options } = event.data;
   try {
