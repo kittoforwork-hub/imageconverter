@@ -1,5 +1,5 @@
 /* KITTO offline shell. Never cache API requests, user uploads or converted files. */
-const CACHE = 'kitto-app-v4.0.0';
+const CACHE = 'kitto-app-v4.0.1';
 const LOCAL_ASSETS = [
   './', './index.html', './workflow.html', './notepad.html', './file-converter.html',
   './favicon.ico', './favicon.png',
@@ -8,6 +8,7 @@ const LOCAL_ASSETS = [
   './css/style.css', './css/file-converter.css', './css/notepad.css', './css/ui-system.css', './css/kitto-studio.css', './css/kitto-next.css',
   './css/kitto-v4.css', './css/modules/workspace-components.css', './css/modules/file-converter-components.css','./css/modules/notepad-components.css',
   './js/app.js',
+  './js/background-client.js',
   './js/file-converter.js',
   './js/i18n.js',
   './js/kitto-next-lang.js',
@@ -64,7 +65,14 @@ self.addEventListener('fetch',event=>{
   if(req.mode==='navigate') {
     event.respondWith((async()=>{
       try {const response=await fetch(req);if(response.ok){const cache=await caches.open(CACHE);cache.put(req,response.clone()).catch(()=>{});}return response;}
-      catch(_){return await caches.match(req,{ignoreSearch:true}) || await caches.match('./index.html') || Response.error();}
+      catch(_) {
+        const cache = await caches.open(CACHE);
+        const saved = await cache.match(req, {ignoreSearch:true});
+        if (saved) return saved;
+        const page = url.pathname.replace(/\/$/, '') || '/index';
+        const fallback = await cache.match(page + '.html');
+        return fallback || Response.error();
+      }
     })());
     return;
   }
