@@ -33,5 +33,5 @@
 
 - `public/workflow.html` and `js/workflow.js` own the standalone batch image pipeline. `js/kitto-queue.js` is reusable queue control; `js/workflow-worker.js` uses `js/workflow-image-core.js` and falls back to the main thread where OffscreenCanvas is unavailable. `js/zip-store.js` is a no-dependency ZIP store writer.
 - `public/css/kitto-next.css` adds v3 UI components without replacing the previous shared CSS. `js/kitto-next-lang.js` provides bilingual copy for newly introduced screens.
-- `public/manifest.webmanifest` and `public/sw.js` implement installation and the offline shell. Do not cache API routes or user data.
+- `public/sw.js` implements the offline shell without app-install support. Do not cache API routes or user data.
 - Notepad multi-note storage lives alongside the original editing engine in `js/notepad.js`; the original single-note key is retained as a compatibility value.

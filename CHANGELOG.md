@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.0.1 — 2026-11-07
+
+- Removed the website's **Install App** button, app-install event handling and Web App Manifest.
+- Kept offline caching for browser-based Workflow and Notepad use (no AI/API calls offline).
+- Removed now-unused install icons and updated smoke tests. Existing installed copies may need to be uninstalled manually using the browser or OS.
+
+
 ## 3.0.0 — 2026-11-07
 
 - Added **Workflow Studio** with a new image pipeline for product imagery: optional Cloudflare AI background removal, square padding without cropping, fit-within resizing, JPG/WEBP/PNG output, adjustable quality and optional best-effort byte target.
