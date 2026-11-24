@@ -131,6 +131,16 @@
   const jobs =
     [];
 
+  const concurrency = navigator.hardwareConcurrency <= 4 || navigator.deviceMemory <= 4 ? 1 : 2;
+  const pool = typeof Worker === 'function' && typeof OffscreenCanvas === 'function' &&
+    typeof createImageBitmap === 'function' && window.KittoWorkerPool
+    ? new window.KittoWorkerPool(
+      new URL('image-convert-core.js', document.currentScript.src), concurrency
+    )
+    : null;
+  const batchProgress = document.getElementById('progress-img-convert');
+  const zipError = document.getElementById('zip-error-img-convert');
+
 
   const EXT_BY_FORMAT = {
 
@@ -169,26 +179,6 @@
       file.lastModified,
       file.type
     ].join('|');
-
-  }
-
-
-  function hasDuplicateFile(
-    file
-  ) {
-
-    const key =
-      getFileKey(
-        file
-      );
-
-
-    return jobs.some(
-      job =>
-        getFileKey(
-          job.file
-        ) === key
-    );
 
   }
 
@@ -553,7 +543,7 @@
 
 
           this.setError(
-            'image.openFailed'
+            'errors.imageLoadFailed'
           );
 
 
@@ -1506,9 +1496,11 @@
       }
 
 
+      const hadResult = Boolean(this.resultBlob);
       this.resultBlob =
         null;
 
+      if (hadResult) updateBulkUI();
 
       if (
         this.downloadBtn
@@ -1539,19 +1531,10 @@
         null;
 
 
-      /*
-       * ถ้าแก้ option แล้ว
-       * reset read-failed state เฉพาะกรณีรูปเดิมยังอ่านได้
-       */
-      if (
-        !this.imageReadFailed
-      ) {
-
-        this.imageReadFailed =
-          false;
-
+      if (this.imageReadFailed) {
+        this.setError('errors.imageLoadFailed');
+        return;
       }
-
 
       if (
         this.statusEl
@@ -1682,6 +1665,7 @@
                 true;
 
 
+              this.cancelImageWait = null;
               cleanup();
 
               resolve(
@@ -1690,6 +1674,8 @@
 
             };
 
+
+          this.cancelImageWait = () => finish(false);
 
           const onLoad =
             () => {
@@ -1769,538 +1755,93 @@
     // ========================================================
 
     async convert() {
+      if (this.isConverting || this.disposed) return;
 
-      if (
-        this.isConverting ||
-        this.disposed
-      ) {
-
-        return;
-
-      }
-
-
-      // ------------------------------------------------------
-      // Wait for image metadata
-      // ------------------------------------------------------
-
-      const loaded =
-        await this.waitForImage();
-
-
-      if (
-        this.disposed
-      ) {
-
-        return;
-
-      }
-
-
-      if (
-        !loaded ||
-        !this.naturalW ||
-        !this.naturalH
-      ) {
-
-        this.setError(
-          'image.readInfoFailed'
-        );
-
-
-        if (
-          this.convertBtn
-        ) {
-
-          this.convertBtn.disabled =
-            true;
-
-        }
-
-
-        return;
-
-      }
-
-
-      // ------------------------------------------------------
-      // Set processing state
-      // ------------------------------------------------------
-
-      this.isConverting =
-        true;
-
-
-      this.el.dataset.processing =
-        'true';
-
-
-      this.setControlsDisabled(
-        true
-      );
-
-
-      if (
-        this.convertBtn
-      ) {
-
-        this.convertBtn.disabled =
-          true;
-
-      }
-
-
-      if (
-        this.statusEl
-      ) {
-
-        this.statusEl.classList.remove(
-          'is-ready',
-          'is-error'
-        );
-
-
-        this.statusEl.textContent =
-          t(
-            'image.converting'
-          );
-
-      }
-
+      this.markStale();
+      this.isConverting = true;
+      this.el.dataset.processing = 'true';
+      this.setControlsDisabled(true);
+      this.convertBtn.disabled = true;
+      this.statusEl.textContent = t('image.converting');
+      const controller = new AbortController();
+      this.conversion = controller;
 
       try {
-
-        // --------------------------------------------------
-        // Rotation
-        // --------------------------------------------------
-
-        const rotated =
-          this.getRotatedNaturalSize();
-
-
-        // --------------------------------------------------
-        // Output dimensions
-        // --------------------------------------------------
-
-        const outW =
-          Math.max(
-            1,
-            parseInt(
-              this.widthInput.value,
-              10
-            ) ||
-            rotated.w
-          );
-
-
-        const outH =
-          Math.max(
-            1,
-            parseInt(
-              this.heightInput.value,
-              10
-            ) ||
-            rotated.h
-          );
-
-
-        // --------------------------------------------------
-        // Canvas
-        // --------------------------------------------------
-
-        const canvas =
-          document.createElement(
-            'canvas'
-          );
-
-
-        canvas.width =
-          outW;
-
-
-        canvas.height =
-          outH;
-
-
-        const ctx =
-          canvas.getContext(
-            '2d'
-          );
-
-
-        if (
-          !ctx
-        ) {
-
-          throw new Error(
-            'CANVAS_CONTEXT_FAILED'
-          );
-
-        }
-
-
-        /*
-         * ลดปัญหา image smoothing แบบหยาบ
-         */
-        ctx.imageSmoothingEnabled =
-          true;
-
-
-        ctx.imageSmoothingQuality =
-          'high';
-
-
-        // --------------------------------------------------
-        // JPEG background
-        // --------------------------------------------------
-
-        if (
-          this.format ===
-          'image/jpeg'
-        ) {
-
-          ctx.fillStyle =
-            '#FFFFFF';
-
-
-          ctx.fillRect(
-            0,
-            0,
-            outW,
-            outH
-          );
-
-        }
-
-
-        // --------------------------------------------------
-        // Draw dimensions
-        // --------------------------------------------------
-
-        /*
-         * เมื่อหมุน 90/270
-         * source width / height ต้องสลับตำแหน่ง
-         */
-        const dw =
-          this.rotation %
-            180 !==
-            0
-            ? outH
-            : outW;
-
-
-        const dh =
-          this.rotation %
-            180 !==
-            0
-            ? outW
-            : outH;
-
-
-        // --------------------------------------------------
-        // Transform
-        // --------------------------------------------------
-
-        ctx.save();
-
-
-        ctx.translate(
-          outW / 2,
-          outH / 2
-        );
-
-
-        ctx.rotate(
-          (
-            this.rotation *
-            Math.PI
-          ) /
-          180
-        );
-
-
-        ctx.scale(
-          this.flipH
-            ? -1
-            : 1,
-          this.flipV
-            ? -1
-            : 1
-        );
-
-
-        ctx.drawImage(
-          this.thumbImg,
-          -dw / 2,
-          -dh / 2,
-          dw,
-          dh
-        );
-
-
-        ctx.restore();
-
-
-        // --------------------------------------------------
-        // Encode
-        // --------------------------------------------------
-
-        const quality =
-          this.format ===
-            'image/png'
-            ? undefined
-            : parseFloat(
-              this.qualityInput.value
-            );
-
-
-        const blob =
-          await new Promise(
-            (
-              resolve,
-              reject
-            ) => {
-
-              canvas.toBlob(
-                result => {
-
-                  if (
-                    result
-                  ) {
-
-                    resolve(
-                      result
-                    );
-
-                  } else {
-
-                    reject(
-                      new Error(
-                        'CREATE_FAILED'
-                      )
-                    );
-
-                  }
-
-                },
-                this.format,
-                quality
-              );
-
-            }
-          );
-
-
-        /*
-         * ผู้ใช้ลบ job ระหว่าง toBlob()
-         * ไม่ต้องสร้าง result ต่อ
-         */
-        if (
-          this.disposed
-        ) {
-
+        const loaded = await this.waitForImage();
+        if (this.disposed) return;
+        if (!loaded || !this.naturalW || !this.naturalH) {
+          this.setError('image.imageReadFailed');
           return;
-
         }
 
-
-        if (
-          !blob
-        ) {
-
-          throw new Error(
-            'CREATE_FAILED'
-          );
-
+        const rotated = this.getRotatedNaturalSize();
+        const width = Math.max(1, parseInt(this.widthInput.value, 10) || rotated.w);
+        const height = Math.max(1, parseInt(this.heightInput.value, 10) || rotated.h);
+        if (width > 16384 || height > 16384 || width * height > 64000000) {
+          this.setError('errors.invalidImageDimensions');
+          return;
         }
 
+        const options = {
+          width,
+          height,
+          format: this.format,
+          rotation: this.rotation,
+          flipH: this.flipH,
+          flipV: this.flipV,
+          quality: this.format === 'image/png' ? undefined : Number(this.qualityInput.value)
+        };
 
-        // --------------------------------------------------
-        // Previous result URL
-        // --------------------------------------------------
-
-        if (
-          this.resultUrl
-        ) {
-
+        let blob;
+        if (pool && Object.hasOwn(EXT_BY_FORMAT, this.file.type)) {
           try {
-
-            URL.revokeObjectURL(
-              this.resultUrl
-            );
-
-          } catch (_) { }
-
-        }
-
-
-        // --------------------------------------------------
-        // Store result
-        // --------------------------------------------------
-
-        this.resultBlob =
-          blob;
-
-
-        this.resultUrl =
-          URL.createObjectURL(
-            blob
-          );
-
-
-        const ext =
-          EXT_BY_FORMAT[
-          this.format
-          ] ||
-          'png';
-
-
-        const filename =
-          `${U.baseName(
-            this.file.name
-          )}.${ext}`;
-
-
-        if (
-          this.downloadBtn
-        ) {
-
-          this.downloadBtn.href =
-            this.resultUrl;
-
-
-          this.downloadBtn.download =
-            filename;
-
-
-          this.downloadBtn.classList.remove(
-            'hidden'
-          );
-
-        }
-
-
-        // --------------------------------------------------
-        // Success
-        // --------------------------------------------------
-
-        if (
-          this.statusEl
-        ) {
-
-          this.statusEl.textContent =
-            t(
-              'image.readyDownload',
-              {
-                size:
-                  U.formatBytes(
-                    blob.size
-                  )
-              }
-            );
-
-
-          this.statusEl.classList.remove(
-            'is-error'
-          );
-
-
-          this.statusEl.classList.add(
-            'is-ready'
-          );
-
-        }
-
-      } catch (
-      err
-      ) {
-
-        console.error(
-          '[Image Convert]',
-          err
-        );
-
-
-        if (
-          this.disposed
-        ) {
-
-          return;
-
-        }
-
-
-        /*
-         * แปลง internal error เป็น i18n key
-         * ไม่เก็บข้อความที่ถูกแปลไว้ใน errorParams
-         */
-        const code =
-          err &&
-            err.message
-            ? err.message
-            : 'PROCESSING_FAILED';
-
-
-        if (
-          code ===
-          'CANVAS_CONTEXT_FAILED'
-        ) {
-
-          this.setError(
-            'errors.canvasContext'
-          );
-
-        } else if (
-          code ===
-          'CREATE_FAILED'
-        ) {
-
-          this.setError(
-            'errors.createFailed'
-          );
-
-        } else {
-
-          this.setError(
-            'image.conversionFailed'
-          );
-
-        }
-
-      } finally {
-
-        this.isConverting =
-          false;
-
-
-        this.el.dataset.processing =
-          'false';
-
-
-        if (
-          !this.disposed
-        ) {
-
-          this.setControlsDisabled(
-            false
-          );
-
-
-          if (
-            this.convertBtn
-          ) {
-
-            this.convertBtn.disabled =
-              false;
-
+            ({ blob } = await pool.transform(this.file, options, controller.signal));
+          } catch (error) {
+            if (controller.signal.aborted) return;
+            if (error.message === 'CREATE_FAILED') throw error;
           }
-
         }
 
+        if (!blob) {
+          // Yield a paint before drawing on browsers or image formats using the DOM canvas.
+          if (document.visibilityState === 'visible') {
+            await Promise.race([U.yieldToUI().then(U.yieldToUI), new Promise(resolve => setTimeout(resolve, 80))]);
+          }
+          if (this.disposed) return;
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          blob = await window.KittoEncodeImage(this.thumbImg, options, canvas);
+        }
+
+        if (this.disposed) return;
+
+        this.resultUrl = URL.createObjectURL(blob);
+        this.resultBlob = blob;
+        this.downloadBtn.href = this.resultUrl;
+        this.downloadBtn.download = `${U.baseName(this.file.name)}.${EXT_BY_FORMAT[this.format]}`;
+        this.downloadBtn.classList.remove('hidden');
+        this.statusEl.textContent = t('image.readyDownload', { size: U.formatBytes(blob.size) });
+        this.statusEl.classList.add('is-ready');
+      } catch (error) {
+        if (this.disposed) return;
+        console.error('[Image Convert]', error);
+        const errorKeys = {
+          CANVAS_CONTEXT_FAILED: 'errors.canvasContext',
+          CREATE_FAILED: 'errors.createFailed'
+        };
+        this.setError(errorKeys[error.message] || 'errors.processingFailed');
+      } finally {
+        this.conversion = null;
+        this.isConverting = false;
+        this.el.dataset.processing = 'false';
+        if (!this.disposed) {
+          this.setControlsDisabled(false);
+          this.convertBtn.disabled = this.imageReadFailed;
+          updateBulkUI();
+        }
       }
-
     }
-
 
     // ========================================================
     // DISPOSE
@@ -2324,6 +1865,10 @@
        */
       this.disposed =
         true;
+      this.cancelImageWait?.();
+      this.conversion?.abort();
+      this.thumbImg.onload = this.thumbImg.onerror = null;
+      this.thumbImg.removeAttribute('src');
 
 
       this.isConverting =
@@ -2419,6 +1964,8 @@
       );
 
 
+    if (!hasReady) zipError.hidden = true;
+
     downloadZipBtn.classList.toggle(
       'hidden',
       !hasReady
@@ -2437,6 +1984,8 @@
 
     let added =
       0;
+    const fragment = document.createDocumentFragment();
+    const existing = new Set(jobs.map(job => getFileKey(job.file)));
 
 
     Array.from(
@@ -2454,19 +2003,9 @@
       .forEach(
         file => {
 
-          /*
-           * ป้องกันไฟล์เดิมถูกเพิ่มซ้ำ
-           */
-          if (
-            hasDuplicateFile(
-              file
-            )
-          ) {
-
-            return;
-
-          }
-
+          const key = getFileKey(file);
+          if (existing.has(key)) return;
+          existing.add(key);
 
           const job =
             new ConvertJob(
@@ -2479,7 +2018,7 @@
           );
 
 
-          jobsEl.appendChild(
+          fragment.appendChild(
             job.el
           );
 
@@ -2490,6 +2029,7 @@
       );
 
 
+    jobsEl.append(fragment);
     updateBulkUI();
 
 
@@ -2622,6 +2162,9 @@
       }
 
 
+      const queue = jobs.filter(job => !job.isConverting);
+      if (!queue.length) return;
+
       convertAllBtn.disabled =
         true;
 
@@ -2632,84 +2175,27 @@
         );
 
 
+      batchProgress.max = queue.length;
+      batchProgress.value = 0;
+      batchProgress.hidden = false;
+      bulkFormatEl.disabled = true;
+
       try {
-
-        const CONCURRENCY =
-          3;
-
-
-        /*
-         * snapshot เอาไว้
-         * เพื่อไม่ให้การ remove job ระหว่าง convert
-         * ทำให้ index ของ queue เพี้ยน
-         */
-        const queue =
-          jobs.slice();
-
-
-        let index =
-          0;
-
-
+        let index = 0;
+        let completed = 0;
         async function worker() {
-
-          while (
-            true
-          ) {
-
-            const currentIndex =
-              index++;
-
-
-            if (
-              currentIndex >=
-              queue.length
-            ) {
-
-              return;
-
-            }
-
-
-            const job =
-              queue[
-              currentIndex
-              ];
-
-
-            if (
-              !job ||
-              job.disposed
-            ) {
-
-              continue;
-
-            }
-
-
-            await job.convert();
-
+          while (index < queue.length) {
+            const job = queue[index++];
+            if (!job.disposed) await job.convert();
+            batchProgress.value = ++completed;
           }
-
         }
 
-
-        await Promise.all(
-          Array.from(
-            {
-              length:
-                Math.min(
-                  CONCURRENCY,
-                  queue.length
-                )
-            },
-            () =>
-              worker()
-          )
-        );
-
+        await Promise.all(Array.from({ length: Math.min(concurrency, queue.length) }, worker));
 
       } finally {
+        batchProgress.hidden = true;
+        bulkFormatEl.disabled = false;
 
         convertAllBtn.disabled =
           false;
@@ -2763,6 +2249,7 @@
       }
 
 
+      zipError.hidden = true;
       downloadZipBtn.disabled =
         true;
 
@@ -2875,6 +2362,8 @@
       err
       ) {
 
+        zipError.textContent = t('errors.zipCreateFailed');
+        zipError.hidden = false;
         console.error(
           '[Image Convert] ZIP failed:',
           err

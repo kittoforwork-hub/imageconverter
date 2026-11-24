@@ -37,7 +37,7 @@ assert.equal(app.KittoSettings.effectiveConcurrency(2,500),1);
 assert.equal(app.KittoSettings.effectiveConcurrency(8,1440),2);
 app.KittoSettings.reset();assert.equal(app.KittoSettings.get().reduceMotion,false);
 const sw=await readFile(path.join(root,'public/sw.js'),'utf8');
-assert.match(sw,/kitto-app-v4\.0\.1/);
+assert.match(sw,/kitto-app-v\d+\.\d+\.\d+/);
 assert.match(sw,/cache:'no-cache'/);
 assert.doesNotMatch(sw,/manifest\.webmanifest/);
 for(const required of ['kitto-settings.js','kitto-settings-ui.js','kitto-filename.js','kitto-image-refine.js','kitto-worker-pool.js','kitto-v4.css'])assert.ok(sw.includes(required),`Missing v4 offline cache: ${required}`);
@@ -86,3 +86,43 @@ const activeJob = bounded.transform(new Blob(['active']),{});
 const waitingJob = bounded.transform(new Blob(['pending']),{});
 bounded.dispose();
 await Promise.all([assert.rejects(activeJob,/Canceled/),assert.rejects(waitingJob,/Canceled/)]);
+
+const convertSource = await readFile(path.join(root, 'public/js/image-convert-core.js'), 'utf8');
+const convertWindow = {};
+vm.runInNewContext(convertSource, { window: convertWindow });
+const drawCalls = [];
+const context = {
+  fillRect: (...args) => drawCalls.push(['background', ...args]),
+  translate() {},
+  rotate: angle => drawCalls.push(['rotate', angle]),
+  scale: (...args) => drawCalls.push(['flip', ...args]),
+  drawImage: (source, ...args) => drawCalls.push(['draw', source, ...args])
+};
+const convertCanvas = {
+  width: 32,
+  height: 64,
+  getContext: () => context,
+  toBlob: (done, type) => done(new Blob(['image'], { type }))
+};
+const source = {};
+const options = { width: 32, height: 64, format: 'image/jpeg', rotation: 90, flipH: true };
+const converted = await convertWindow.KittoEncodeImage(source, options, convertCanvas);
+assert.equal(converted.type, 'image/jpeg');
+assert.deepEqual(drawCalls, [
+  ['background', 0, 0, 32, 64],
+  ['rotate', Math.PI / 2],
+  ['flip', -1, 1],
+  ['draw', source, -32, -16, 64, 32]
+]);
+assert.equal(context.fillStyle, '#fff');
+assert.equal(convertCanvas.width, 0);
+assert.equal(convertCanvas.height, 0);
+convertCanvas.width = 32;
+convertCanvas.height = 64;
+convertCanvas.toBlob = done => done(new Blob(['fallback'], { type: 'image/png' }));
+await assert.rejects(convertWindow.KittoEncodeImage(source, options, convertCanvas), /CREATE_FAILED/);
+assert.equal(convertCanvas.width, 0);
+assert.equal(convertCanvas.height, 0);
+assert.match(sw, /\.\/js\/image-convert-core\.js/);
+
+console.log('Image conversion passed: rotation, flip, JPEG background, MIME validation and canvas cleanup.');

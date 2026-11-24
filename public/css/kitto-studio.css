@@ -238,7 +238,7 @@ button, a { -webkit-tap-highlight-color:transparent; }
 .kitto-panel-title small { color:#ae96ad; text-transform:uppercase; font:700 10px/1.7 'IBM Plex Mono',monospace; letter-spacing:.12em; }
 .kitto-panel-title h2 { margin:0; color:#4e3a57; font-size:clamp(17px,2vw,21px); font-weight:800; line-height:1.5; }
 .kitto-panel-ornament { color:#d8bad4; font-size:18px; white-space:nowrap; }
-.tool-panel { animation:kitto-panel-reveal .42s var(--kitto-ease) both; }
+.tool-panel { animation:kitto-panel-reveal .22s var(--kitto-ease) both; }
 .panel-hint { font-size:12px; line-height:1.85; margin:0 0 23px; color:#94869b; }
 .dropzone {
   position:relative; min-height:215px; overflow:hidden; padding:35px 20px;
@@ -373,7 +373,7 @@ button, a { -webkit-tap-highlight-color:transparent; }
 /* Motion choreography: gentle, GPU-friendly and accessible. */
 @keyframes kitto-nav-in { from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)} }
 @keyframes kitto-rise { from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)} }
-@keyframes kitto-panel-reveal { from{opacity:0;transform:translateY(9px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)} }
+@keyframes kitto-panel-reveal { from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)} }
 @keyframes kitto-fade-in { from{opacity:0}to{opacity:1} }
 @keyframes kitto-modal-in { from{opacity:0;transform:translateY(18px) scale(.967)}to{opacity:1;transform:translateY(0) scale(1)} }
 @keyframes kitto-float { 0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-12px) rotate(1deg)} }
@@ -479,4 +479,24 @@ button, a { -webkit-tap-highlight-color:transparent; }
 @media (prefers-reduced-motion:reduce) {
   *,*::before,*::after { animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;scroll-behavior:auto !important; }
   .kitto-hero-art img,.kitto-art-label,.kitto-art-star,.kitto-pulse { animation:none !important; }
+}
+
+
+#progress-img-convert {
+  display: block;
+  width: 100%;
+  height: .5rem;
+  margin: .75rem 0;
+  accent-color: #9a4e83;
+}
+
+#progress-img-convert[hidden],
+#zip-error-img-convert[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #jobs-img-convert > .ticket:nth-child(-n+6) {
+    animation: kitto-panel-reveal .18s var(--kitto-ease) backwards;
+  }
 }
