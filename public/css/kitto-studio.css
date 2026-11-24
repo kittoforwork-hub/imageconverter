@@ -500,3 +500,56 @@ button, a { -webkit-tap-highlight-color:transparent; }
     animation: kitto-panel-reveal .18s var(--kitto-ease) backwards;
   }
 }
+
+.kitto-hero.kitto-hero-workspace {
+  min-height: 0;
+  padding: clamp(25px, 4vw, 44px);
+  background: linear-gradient(112deg, #fff 42%, #f6eefb 100%);
+}
+
+.kitto-hero-workspace .kitto-hero-art {
+  width: min(34%, 285px);
+}
+
+.kitto-hero-workspace .kitto-hero-art img,
+.kitto-hero-workspace .kitto-pulse {
+  animation: none;
+}
+
+.kitto-hero-workspace .kitto-hero-micro {
+  color: #63546e;
+}
+
+.sheet .dropzone::after {
+  content: none;
+}
+
+.sheet .dropzone {
+  min-height: 0;
+  background: #fcf9fd;
+}
+
+.sheet .dropzone.drag-over,
+.sheet .dropzone.is-dragover {
+  background: #f5eafb;
+  border-color: #9c649e;
+}
+
+.kitto-paste-hint,
+.wf-drop .kitto-paste-hint {
+  display: block;
+  margin-top: .75rem;
+  color: #63516f;
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+@media (max-width: 540px) {
+  .kitto-hero-workspace .kitto-hero-art {
+    display: none;
+  }
+
+  .kitto-hero-workspace .kitto-hero-micro {
+    max-width: 100%;
+  }
+}

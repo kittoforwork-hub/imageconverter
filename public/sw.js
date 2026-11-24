@@ -1,5 +1,5 @@
 /* KITTO offline shell. Never cache API requests, user uploads or converted files. */
-const CACHE = 'kitto-app-v4.0.2';
+const CACHE = 'kitto-app-v4.0.3';
 const LOCAL_ASSETS = [
   './', './index.html', './workflow.html', './notepad.html', './file-converter.html',
   './favicon.ico', './favicon.png',

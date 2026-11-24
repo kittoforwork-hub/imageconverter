@@ -97,3 +97,54 @@ editor.save();
 assert.equal(status.textContent,'notepad.status.saved');
 assert.equal(JSON.parse(stored.get('kitto-notebook-v2')).notes[0].content,'new note');
 console.log('Passed Worker routes, upload validation, background client and notebook storage recovery.');
+
+const pasteHandlers = [];
+let activeDialogs = [];
+const pasteRuntime = {
+  window: {},
+  document: {
+    addEventListener(type, listener) {
+      assert.equal(type, 'paste');
+      pasteHandlers.push(listener);
+    },
+    querySelectorAll: () => activeDialogs
+  }
+};
+vm.runInNewContext(await readFile(new URL('../public/js/utils.js', import.meta.url), 'utf8'), pasteRuntime);
+const pasted = [];
+let visibleZone = 'image';
+const zone = name => ({ getClientRects: () => visibleZone === name ? [{}] : [] });
+const input = { accept: 'image/png,image/jpeg', multiple: true };
+const { setupImagePaste } = pasteRuntime.window.Utils;
+setupImagePaste(zone('image'), input, files => pasted.push(...files));
+setupImagePaste(zone('pdf'), { accept: 'application/pdf' }, () => assert.fail('PDF-only zone received a paste'));
+
+const png = new File(['png'], 'screenshot.png', { type: 'image/png' });
+const gif = new File(['gif'], 'animation.gif', { type: 'image/gif' });
+function sendPaste(clipboardData, target = {}) {
+  const event = {
+    clipboardData,
+    target,
+    defaultPrevented: false,
+    preventDefault() { this.defaultPrevented = true; }
+  };
+  for (const handler of pasteHandlers) handler(event);
+  return event.defaultPrevented;
+}
+
+assert.equal(sendPaste({ files: [png, gif] }), true);
+assert.deepEqual(pasted, [png]);
+assert.equal(sendPaste({ items: [{ kind: 'file', getAsFile: () => png }] }), true);
+assert.deepEqual(pasted, [png, png]);
+assert.equal(sendPaste({ files: [gif] }), false);
+assert.equal(sendPaste({ items: [{ kind: 'string' }] }), false);
+assert.equal(sendPaste({ files: [png] }, { isContentEditable: true }), false);
+assert.equal(sendPaste({ files: [png] }, { closest: () => ({}) }), false);
+activeDialogs = [{ getClientRects: () => [{}], contains: () => false }];
+assert.equal(sendPaste({ files: [png] }), false);
+activeDialogs = [];
+visibleZone = 'pdf';
+assert.equal(sendPaste({ files: [png] }), false);
+assert.deepEqual(pasted, [png, png]);
+
+console.log('Image paste passed: clipboard files/items, accepted formats, visible tools, text fields and modal isolation.');

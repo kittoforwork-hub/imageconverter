@@ -198,6 +198,7 @@
     $('wf-download-zip').disabled=exporting || !done.length;
     if(previousPreview&&!items.find(i=>i.id===previousPreview)){$('wf-compare-panel').hidden=true;previousPreview=null;}
   }
+  window.Utils.setupImagePaste($('wf-drop'), $('wf-files'), stageFiles);
   function filesClick(){$('wf-files').click();}
   $('wf-drop').addEventListener('click',event=>{if(event.target?.tagName!=='INPUT')filesClick();});
   $('wf-drop').addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();filesClick();}});

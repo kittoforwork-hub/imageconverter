@@ -255,6 +255,41 @@ window.Utils = (() => {
   // DROPZONE
   // ============================================================
 
+  function setupImagePaste(zone, input, onFiles) {
+    const acceptedTypes = input.accept.split(',').map(type => type.trim().toLowerCase());
+    if (!acceptedTypes.some(type => type.startsWith('image/'))) return;
+
+    document.addEventListener('paste', event => {
+      if (event.defaultPrevented || input.disabled || !zone.getClientRects().length) return;
+
+      const target = event.target;
+      if (target?.isContentEditable || target?.closest?.('input, textarea, select, [role="textbox"]')) return;
+
+      const activeDialog = Array.from(document.querySelectorAll('dialog[open], [aria-modal="true"]'))
+        .find(dialog => dialog.getClientRects().length);
+      if (activeDialog && !activeDialog.contains(zone)) return;
+
+      const clipboard = event.clipboardData;
+      if (!clipboard) return;
+
+      const acceptsImage = file => file?.type.startsWith('image/') &&
+        (acceptedTypes.includes('image/*') || acceptedTypes.includes(file.type.toLowerCase()));
+      const files = Array.from(clipboard.files || []).filter(acceptsImage);
+      // Some browsers expose screenshot blobs through items only.
+      if (!files.length) {
+        for (const item of Array.from(clipboard.items || [])) {
+          if (item.kind !== 'file') continue;
+          const file = item.getAsFile();
+          if (acceptsImage(file)) files.push(file);
+        }
+      }
+      if (!files.length) return;
+
+      event.preventDefault();
+      onFiles(input.multiple ? files : files.slice(0, 1));
+    });
+  }
+
   function setupDropzone(
     zone,
     input,
@@ -271,6 +306,8 @@ window.Utils = (() => {
       return;
     }
 
+
+    setupImagePaste(zone, input, onFiles);
 
     // ----------------------------------------------------------
     // CLICK
@@ -917,6 +954,7 @@ window.Utils = (() => {
      */
 
     setupDropzone,
+    setupImagePaste,
 
 
     /*

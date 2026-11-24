@@ -802,6 +802,8 @@ window.I18n = (() => {
 
         dropzone: {
 
+          pasteImage: 'วางรูปจากคลิปบอร์ดด้วย Ctrl+V หรือ ⌘V',
+
           image:
             'ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์',
 
@@ -1803,6 +1805,8 @@ window.I18n = (() => {
 
         dropzone: {
 
+          pasteImage: 'Paste an image with Ctrl+V or ⌘V',
+
           image:
             'Drag and drop an image here, or click to choose a file',
 
@@ -2770,6 +2774,8 @@ window.I18n = (() => {
 
 
         dropzone: {
+
+          pasteImage: 'Bild mit Strg+V oder ⌘V einfügen',
 
           image:
             'Bild hierher ziehen oder klicken',
@@ -3739,6 +3745,8 @@ window.I18n = (() => {
 
         dropzone: {
 
+          pasteImage: 'Ctrl+V または ⌘V で画像を貼り付け',
+
           image:
             '画像をここにドロップ、またはクリック',
 
@@ -4706,6 +4714,8 @@ window.I18n = (() => {
 
 
         dropzone: {
+
+          pasteImage: 'Ctrl+V 또는 ⌘V로 이미지 붙여넣기',
 
           image:
             '이미지를 여기에 놓거나 클릭하세요',
@@ -5675,6 +5685,8 @@ window.I18n = (() => {
 
         dropzone: {
 
+          pasteImage: '按 Ctrl+V 或 ⌘V 粘贴图片',
+
           image:
             '将图片拖到这里，或点击选择',
 
@@ -6642,6 +6654,8 @@ window.I18n = (() => {
 
 
         dropzone: {
+
+          pasteImage: '按 Ctrl+V 或 ⌘V 貼上圖片',
 
           image:
             '將圖片拖到這裡，或點擊選擇',

@@ -24,7 +24,7 @@
   <!-- MAIN CSS -->
   <link href="css/style.css" rel="stylesheet"/>
   <link href="css/ui-system.css" rel="stylesheet"/>
-  <link href="./css/kitto-studio.css?v=403" rel="stylesheet"/>
+  <link href="./css/kitto-studio.css?v=404" rel="stylesheet"/>
   <meta content="Free browser-based tools to convert, edit and compress images, manage PDF files, convert file formats and take notes with Workshop Utility BY KITTO." name="description"/>
   <meta content="#fcf9fe" name="theme-color"/>
   <meta content="index,follow" name="robots"/>
@@ -180,7 +180,7 @@
       แปลงนามสกุลไฟล์ (PNG / JPG / WEBP)
     ปรับขนาด คุณภาพ หมุน และพลิกรูปภาพ &mdash; ทำได้หลายไฟล์พร้อมกัน
      </p>
-     <section aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์" class="dropzone" data-i18n-aria-label="dropzone.image" id="dz-img-convert" role="button" tabindex="0">
+     <section aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์" class="dropzone" data-i18n-aria-label="dropzone.image" id="dz-img-convert" aria-describedby="paste-img-convert" role="button" tabindex="0">
       <span class="mark tl">
       </span>
       <span class="mark tr">
@@ -206,6 +206,7 @@
         รองรับหลายไฟล์ (JPG &middot; PNG &middot; WEBP &middot; GIF &middot; BMP)
        </div>
       </div>
+      <small class="kitto-paste-hint" id="paste-img-convert" data-i18n="dropzone.pasteImage">วางรูปจากคลิปบอร์ดด้วย Ctrl+V หรือ ⌘V</small>
       <input accept="image/*" hidden="" id="input-img-convert" multiple="" type="file"/>
      </section>
      <section class="bulkbar hidden" id="bulk-img-convert">
@@ -405,7 +406,7 @@
       ลากเลือกพื้นที่ที่ต้องการบนรูปภาพเพื่อครอบตัด
     ปรับกรอบได้อย่างอิสระ แล้วดาวน์โหลดผลลัพธ์
      </p>
-     <section aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์" class="dropzone" data-i18n-aria-label="dropzone.image" id="dz-img-crop" role="button" tabindex="0">
+     <section aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์" class="dropzone" data-i18n-aria-label="dropzone.image" id="dz-img-crop" aria-describedby="paste-img-crop" role="button" tabindex="0">
       <span class="mark tl">
       </span>
       <span class="mark tr">
@@ -429,6 +430,7 @@
         เพิ่มได้หลายรูป แต่ละรูปครอบตัดแยกกัน
        </div>
       </div>
+      <small class="kitto-paste-hint" id="paste-img-crop" data-i18n="dropzone.pasteImage">วางรูปจากคลิปบอร์ดด้วย Ctrl+V หรือ ⌘V</small>
       <input accept="image/*" hidden="" id="input-img-crop" multiple="" type="file"/>
      </section>
      <section class="jobs" id="jobs-img-crop">
@@ -560,7 +562,7 @@
        ประมวลผลด้วย AI บน Cloudflare ไม่ต้องดาวน์โหลดโมเดลลงเครื่อง รองรับไฟล์สูงสุด 20 MB ต่อรูป
       </span>
      </div>
-     <section aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์" class="dropzone" data-i18n-aria-label="dropzone.image" id="dz-img-bgremove" role="button" tabindex="0">
+     <section aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์" class="dropzone" data-i18n-aria-label="dropzone.image" id="dz-img-bgremove" aria-describedby="paste-img-bgremove" role="button" tabindex="0">
       <span class="mark tl">
       </span>
       <span class="mark tr">
@@ -588,6 +590,7 @@
         เพิ่มได้หลายรูป ผลลัพธ์เป็น PNG พื้นหลังโปร่งใส
        </div>
       </div>
+      <small class="kitto-paste-hint" id="paste-img-bgremove" data-i18n="dropzone.pasteImage">วางรูปจากคลิปบอร์ดด้วย Ctrl+V หรือ ⌘V</small>
       <input accept=".jpg,.jpeg,.png,.webp,.avif,image/jpeg,image/png,image/webp,image/avif" hidden="" id="input-img-bgremove" multiple="" type="file"/>
      </section>
      <section class="bulkbar hidden" id="bulk-img-bgremove">
@@ -695,7 +698,7 @@
       ลดขนาดไฟล์รูปภาพโดยปรับคุณภาพและขนาดภาพ
     ประมวลผลทั้งหมดในเบราว์เซอร์ของคุณ
      </p>
-     <section aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์" class="dropzone" data-i18n-aria-label="dropzone.image" id="dz-img-compress" role="button" tabindex="0">
+     <section aria-label="ลากไฟล์รูปภาพมาวางที่นี่ หรือกดเพื่อเลือกไฟล์" class="dropzone" data-i18n-aria-label="dropzone.image" id="dz-img-compress" aria-describedby="paste-img-compress" role="button" tabindex="0">
       <span class="mark tl">
       </span>
       <span class="mark tr">
@@ -721,6 +724,7 @@
         รองรับ JPG &middot; PNG &middot; WEBP และหลายไฟล์พร้อมกัน
        </div>
       </div>
+      <small class="kitto-paste-hint" id="paste-img-compress" data-i18n="dropzone.pasteImage">วางรูปจากคลิปบอร์ดด้วย Ctrl+V หรือ ⌘V</small>
       <input accept="image/jpeg,image/png,image/webp" hidden="" id="input-img-compress" multiple="" type="file"/>
      </section>
      <section class="bulkbar hidden" id="bulk-img-compress">
@@ -914,7 +918,7 @@
       รวมรูปภาพหลายไฟล์เป็น PDF เล่มเดียว
     เรียงลำดับหน้าได้ตามใจ
      </p>
-     <section aria-label="ลากไฟล์รูปภาพมาวางที่นี่" class="dropzone" data-i18n-aria-label="dropzone.imageOnly" id="dz-pdf-from-images" role="button" tabindex="0">
+     <section aria-label="ลากไฟล์รูปภาพมาวางที่นี่" class="dropzone" data-i18n-aria-label="dropzone.imageOnly" id="dz-pdf-from-images" aria-describedby="paste-pdf-from-images" role="button" tabindex="0">
       <span class="mark tl">
       </span>
       <span class="mark tr">
@@ -941,6 +945,7 @@
         (ปรับได้ทีหลัง)
        </div>
       </div>
+      <small class="kitto-paste-hint" id="paste-pdf-from-images" data-i18n="dropzone.pasteImage">วางรูปจากคลิปบอร์ดด้วย Ctrl+V หรือ ⌘V</small>
       <input accept="image/*" hidden="" id="input-pdf-from-images" multiple="" type="file"/>
      </section>
      <section class="bulkbar hidden" id="bulk-pdf-from-images">

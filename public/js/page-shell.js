@@ -107,8 +107,12 @@
     art.setAttribute('aria-hidden','true');
     art.innerHTML = '<span class="kitto-art-star star-one">✦</span><span class="kitto-art-star star-two">✳</span><img src="./assets/illustrations/kitto-cat.svg" alt="" loading="eager"><span class="kitto-art-label">✦ KITTO CREATIVE</span>';
     hero.append(art);
-    const badge=el('div','kitto-hero-tag');badge.innerHTML='<span aria-hidden="true">✦</span> <span>KITTO / HAPPY LITTLE TOOLS</span>';
-    hero.prepend(badge);
+    if (page === 'workspace') {
+      art.replaceChildren(art.querySelector('img'));
+    } else {
+      const badge=el('div','kitto-hero-tag');badge.innerHTML='<span aria-hidden="true">✦</span> <span>KITTO / HAPPY LITTLE TOOLS</span>';
+      hero.prepend(badge);
+    }
     if (page==='workspace') {
       const foot=el('div','kitto-hero-micro');
       foot.innerHTML=`<span class="kitto-pulse"></span><span data-kit-text="privacy"></span>`;
@@ -131,12 +135,12 @@
       btn.append(el('span','kitto-chip-chevron','›'));
     });
     const sidebarTitle=el('div','kitto-sidebar-title');
-    sidebarTitle.innerHTML='<span data-kit-text="tools"></span><span class="kitto-sidebar-paw" aria-hidden="true">✿</span>';
+    sidebarTitle.innerHTML='<span data-kit-text="tools"></span>';
     const firstChip=$('.tool-chips');if (firstChip) firstChip.before(sidebarTitle);
     const panels=$('.panels');
     if (panels) {
       const sectionHead=el('div','kitto-panel-heading');
-      sectionHead.innerHTML=`<div class="kitto-panel-title"><span class="kitto-panel-icon">${svg('spark')}</span><div><small data-kit-text="workspace"></small><h2 id="kitto-panel-name"></h2></div></div><span class="kitto-panel-ornament" aria-hidden="true">✧　✦</span>`;
+      sectionHead.innerHTML=`<div class="kitto-panel-title"><span class="kitto-panel-icon">${svg('spark')}</span><h2 id="kitto-panel-name"></h2></div>`;
       panels.prepend(sectionHead);
       const syncActive=() => {
         const active=$('.tool-chips:not(.hidden) .tool-chip.is-active');
